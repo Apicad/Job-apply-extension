@@ -14,6 +14,18 @@ is a separate tool and `docs/superpowers/` holds another build's design; do
 not edit either from this stream. Before editing a shared file, read it as it
 is at that moment.
 
+## Current hackathon candidate addendum
+
+The authoritative smaller scope in `docs/plans/2026-11-09-jobright-inspired-autofill.md`
+and its build handoff governs this isolated candidate. `lib/hackathon/` implements
+the integrated worker, evidence/library contracts and execution wrapper; the old
+`lib/types.ts` planner contracts below remain for compatibility with other streams.
+The popup may fill one specifically reviewed, explicitly saved project textarea.
+All other textarea/consent/custom-widget exclusions remain. AI transfer is explicit
+manual copy/paste from a preview; extension and page scripts make no AI requests.
+See the README for actual supported behavior and release limitations. Earlier
+roadmap sections below are not a claim that their entire planned UI exists here.
+
 ## Product rules — do not break these
 
 1. **Never submit.** Never click buttons or links, never tick checkboxes.

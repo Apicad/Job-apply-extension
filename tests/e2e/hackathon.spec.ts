@@ -208,3 +208,12 @@ test('all maintained sample fixtures execute through the actual extension withou
  }
  await testInfo.attach('fixture-metrics.json',{body:JSON.stringify(metrics,null,2),contentType:'application/json'});
 });
+
+test('persistent review workspace remains bound to the application tab', async ({context,openExtensionPage})=>{
+ const page=await context.newPage();await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('popup.html');const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+ await ui.goto(ui.url()+`?tabId=${tabId}`);
+ const opened=context.waitForEvent('page');await ui.getByRole('button',{name:'Open review workspace'}).click();const workspace=await opened;
+ await workspace.waitForLoadState();expect(new URL(workspace.url()).searchParams.get('tabId')).toBe(String(tabId));
+ await workspace.getByRole('button',{name:'Scan application'}).click();await expect(workspace.getByRole('status')).toContainText('Preview ready');await expect(page.locator('#first')).toHaveValue('');
+});

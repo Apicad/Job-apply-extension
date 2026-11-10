@@ -1,0 +1,12 @@
+# Contributions, research and license status
+
+This candidate builds on an existing repository; it is not presented as wholly new work.
+
+- Original repository baseline: `111de8f`. Existing active fill-engine improvements were copied without altering the shared checkout into snapshot `9540d64ccbfa8f04d2c6c0503cceba3a90bc5fff`. `baseline-snapshot.json` lists file hashes. Those classifier, choice, profile, source-guard, DOM/visibility, résumé and fixture contributions predate this build and belong to their original authors/work streams.
+- This Codex-assisted implementation adds the bounded evidence/approval contracts, manual AI boundary, sentence-source review, saved-answer library, native execution wrapper and background/popup wiring, actual-extension regression suite, isolated fixture runner and release materials. H0–H5 history and `WORKLOG.md` distinguish the checkpoints. No authorship is claimed for concurrent résumé-reader/builder work; that separate worktree was untouched and its unfinished stream was not made a prerequisite.
+- AI assistance: OpenAI Codex assisted design, coding, test creation, debugging, documentation and the synthetic model smoke. Preliminary external Grok reviews at another SHA informed regression checks. They are not a full audit of this candidate.
+- Research: the supplied plans describe REA/Jobright source inspection as prior research. This implementation reused this repository's own code and did not import Jobright bundles or extracted proprietary modules. Private research directories and browser profiles are excluded from the source export.
+
+Runtime dependencies: React / React DOM (MIT), Public Sans font via Fontsource (SIL OFL-1.1). Build/test dependencies include WXT (MIT), Vite (MIT, via WXT), TypeScript (Apache-2.0), Vitest (MIT), jsdom (MIT), Playwright (Apache-2.0), web-ext (MPL-2.0), and their transitive dependencies. Exact resolved versions are pinned by `package-lock.json`; their upstream license files remain authoritative. No new runtime dependency was added for this slice.
+
+**Project license status:** no open-source license grant has been invented or applied to the owner's existing code. The repository is marked private in package metadata, which is not a legal license or a statement about GitHub visibility. The owner must choose/confirm the project license and review inherited commit metadata before public publication. The exact source archive omits Git history; it does not purport to relicense any material. This is a publication checklist item, not permission to publish.

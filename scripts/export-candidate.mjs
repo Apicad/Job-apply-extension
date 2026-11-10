@@ -1,0 +1,12 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+const sha = git('rev-parse', 'HEAD');
+if (git('status', '--porcelain')) throw Error('Export only a clean, committed candidate.');
+const directory = path.resolve(process.argv[2] ?? `../release-artifacts/${sha}`);
+await fs.mkdir(directory, { recursive: true });
+for (const file of ['docs/plans/2026-11-09-jobright-inspired-autofill.md', 'docs/plans/2026-11-09-hackersquad-build-handoff.md', 'docs/plans/2026-11-09-grok-github-audit-prompt.md']) git('cat-file', '-e', `${sha}:${file}`);
+git('archive', '--format=zip', '--prefix=job-apply-assistant/', `--output=${path.join(directory,'source.zip')}`, sha);
+await fs.writeFile(path.join(directory, 'SNAPSHOT.json'), JSON.stringify({ candidate: sha, tree: git('rev-parse', 'HEAD^{tree}'), branch: git('branch', '--show-current'), base: '9540d64ccbfa8f04d2c6c0503cceba3a90bc5fff', plansIncluded: true, githubAccessible: false, accessNote: 'Local source export. No push is performed by this script; confirm GitHub accessibility separately.', createdAt: new Date().toISOString() }, null, 2) + '\n');
+console.log(JSON.stringify({sha,directory,archive:'source.zip'}));

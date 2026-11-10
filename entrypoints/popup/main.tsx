@@ -49,6 +49,7 @@ function App() {
   <header><small>HACKERSQUAD · REVIEWED APPLICATION ASSISTANT</small><h1>Job Apply Assistant</h1><p>Draft from saved experience. Review every claim. Submit yourself.</p></header>
   <button disabled={busy} onClick={() => void run('demo')}>Load synthetic applicant</button>
   <button disabled={busy || tabId === undefined} onClick={() => void run('scan')}>Scan application</button>
+  <button disabled={busy || tabId === undefined} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/popup.html') + `?tabId=${tabId}` })}>Open review workspace</button>
   <p role="status">{notice}</p>
   <details><summary>Saved experience · {facts.length} facts</summary>{facts.map(f => <article key={f.id}><strong>{f.location}</strong><p>{f.text}</p><small>{f.id} · revision {f.revision}</small><label>Edit saved fact<textarea defaultValue={f.text} id={`fact-${f.id}`} /></label><button disabled={busy} onClick={() => void run('fact-edit', { id: f.id, text: (document.getElementById(`fact-${f.id}`) as HTMLTextAreaElement).value })}>Save fact revision</button></article>)}</details>
   {plan && <section><h2>Draft one project answer</h2><p className="warning">Only the listed project questions are supported. Eligibility, demographics, consent and other questions stay manual.</p>
