@@ -3,7 +3,7 @@ import { readLibrary, saveAnswer, deleteAnswer } from '../../lib/hackathon/libra
 import { approve, makeRequest, parseReply } from '../../lib/hackathon/contracts';
 import { DEMO_FACTS } from '../../lib/hackathon/demo';
 function answer() {
- const context = { application: 'synthetic-app', question: 'Describe a relevant project.', job: '', control: 'textarea' as const };
+ const context = { questionKey: 'synthetic-question-1', application: 'synthetic-app', question: 'Describe a relevant project.', job: '', control: 'textarea' as const };
  const r = makeRequest(context, DEMO_FACTS); const draft = parseReply(JSON.stringify({ schema: 1, requestId: r.id, context, facts: r.facts.map(({id, revision})=>({id,revision})), segments: [{ text: DEMO_FACTS[0]!.text, sources: [{id: DEMO_FACTS[0]!.id, revision: 1}] }], missing: [] }), r, DEMO_FACTS);
  return approve(draft, context, DEMO_FACTS, true);
 }

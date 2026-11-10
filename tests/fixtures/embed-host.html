@@ -123,7 +123,7 @@
            as a form needs. Nothing here hides the frame, so the form inside it is the application
            and is filled like the form on greenhouse.html. -->
       <div id="grnhse_app">
-        <iframe id="grnhse_iframe" title="Job application" src="http://127.0.0.1:5179/greenhouse.html"></iframe>
+        <iframe id="grnhse_iframe" title="Job application" data-fixture-src="http://127.0.0.1:5179/greenhouse.html"></iframe>
       </div>
     </main>
 
@@ -145,5 +145,6 @@
         window.__fixture.submitted = true;
       });
     </script>
+  <script>for (const frame of document.querySelectorAll("iframe[data-fixture-src]")) { const url = new URL(frame.dataset.fixtureSrc); url.port = location.port; frame.src = url.href; }</script>
   </body>
 </html>

@@ -27,6 +27,17 @@ This section and the H0–H5 handoff supersede the broader milestone delivery se
 
 Use the existing planned helper only if it is already practical to integrate. Otherwise ship a validated copy/paste AI request/response route first. Both require a real model result, an honest description of the workflow, and a verified no-purchase judging path. A replay fixture alone does not meet the AI requirement. No new paid account, hosted backend or bundled provider credential is required by this plan.
 
+### First optional addition: LinkedIn profile import
+
+The owner would like LinkedIn to supply the starting experience if time permits. After the required flow passes its gates, prioritize a user-provided LinkedIn profile import over other stretch features. Start with pasted profile text; reuse an existing working PDF extraction path for a user-provided profile PDF if available. Do not build a new parser or account-sync service as a prerequisite for the core release.
+
+Preview extracted experience and education before saving. Require explicit selection/confirmation, preserve original snippets and source locations, record import date and source revision, and avoid silently merging duplicate or conflicting facts. An import is user-provided information, not verification by LinkedIn. Keep provenance through answer generation; changes to imported facts invalidate dependent approvals using the existing contract. Do not import unrelated contacts/messages or automatically send the whole profile to AI. Use synthetic imports in tests and the public demo.
+
+Label this capability “Import LinkedIn profile,” not live account connection or sync. Standard [LinkedIn OpenID Connect](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2) provides basic identity rather than full employment/education history. LinkedIn documents [profile PDF export](https://www.linkedin.com/help/linkedin/answer/a541960/); retain pasted text when export is unavailable. Direct connection or continuous sync needs a separately verified authorized data-access route and remains later work.
+
+Optional acceptance checks: import preview does not change saved facts; confirmation preserves source snippets; duplicates/conflicts require review; malformed/empty input reports an error; edited imported facts invalidate dependent answers. If this feature misses the core cutoff, document it as deferred and ship the core workflow.
+
+
 ### Source evidence: the central demo feature
 
 - [ ] Give each selected saved-experience fact a stable ID, revision, original text and human-readable location, such as “Projects → Sensor dashboard → contribution.” These are user-provided facts, not independently verified credentials.

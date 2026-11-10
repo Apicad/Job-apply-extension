@@ -24,6 +24,7 @@ function App() {
  async function refresh() {
   if (tabId === undefined) return;
   const data = await send('state'); setPlan(data.plan); setFacts(data.facts); setLibrary(data.library ?? []); setSession(data.session);
+  setJob(data.session?.context.job ?? ''); setQuestion(data.session?.rowKey ?? ''); setSelected((data.session?.request?.facts ?? data.session?.answer?.trace.request.facts ?? []).map((f: Fact) => f.id));
   setText(data.session?.answer?.text ?? ''); setDirty(false); setReviewed(false);
  }
  useEffect(() => { void refresh().catch(e => setNotice(String(e))); }, [tabId]);
@@ -42,6 +43,7 @@ function App() {
    else { await refresh(); setNotice(type === 'demo' ? 'Synthetic applicant saved in this browser.' : 'Saved.'); }
   } catch (e) { setNotice(String(e)); } finally { setBusy(false); }
  }
+ function resetContext() { if (session) { setSession(null); setReviewed(false); void send('context-reset').catch(e => setNotice(String(e))); } }
  const answer = session?.answer;
  return <main>
   <header><small>HACKERSQUAD · REVIEWED APPLICATION ASSISTANT</small><h1>Job Apply Assistant</h1><p>Draft from saved experience. Review every claim. Submit yourself.</p></header>
@@ -50,13 +52,13 @@ function App() {
   <p role="status">{notice}</p>
   <details><summary>Saved experience · {facts.length} facts</summary>{facts.map(f => <article key={f.id}><strong>{f.location}</strong><p>{f.text}</p><small>{f.id} · revision {f.revision}</small><label>Edit saved fact<textarea defaultValue={f.text} id={`fact-${f.id}`} /></label><button disabled={busy} onClick={() => void run('fact-edit', { id: f.id, text: (document.getElementById(`fact-${f.id}`) as HTMLTextAreaElement).value })}>Save fact revision</button></article>)}</details>
   {plan && <section><h2>Draft one project answer</h2><p className="warning">Only the listed project questions are supported. Eligibility, demographics, consent and other questions stay manual.</p>
-   <label>Application question<select value={question} onChange={e => { setQuestion(e.target.value); setReviewed(false); }}><option value="">Select a question</option>{plan.rows.filter(supportedQuestion).map(r => <option key={rowKey(r)} value={rowKey(r)}>{r.field.descriptor.label}</option>)}</select></label>
-   <label>Reviewed job context · requirements, not applicant experience<textarea value={job} maxLength={4000} onChange={e => { setJob(e.target.value); setReviewed(false); }} placeholder="Paste only the relevant, reviewed job requirements. Do not include contacts or private information." /></label>
-   <p>Select the saved facts to send:</p>{facts.map(f => <label key={f.id}><input type="checkbox" checked={selected.includes(f.id)} onChange={e => setSelected(e.target.checked ? [...selected, f.id] : selected.filter(id => id !== f.id))} />{f.text}</label>)}
+   <label>Application question<select value={question} onChange={e => { setQuestion(e.target.value); resetContext(); }}><option value="">Select a question</option>{plan.rows.filter(supportedQuestion).map(r => <option key={rowKey(r)} value={rowKey(r)}>{r.field.descriptor.label}</option>)}</select></label>
+   <label>Reviewed job context · requirements, not applicant experience<textarea value={job} maxLength={4000} onChange={e => { setJob(e.target.value); resetContext(); }} placeholder="Paste only the relevant, reviewed job requirements. Do not include contacts or private information." /></label>
+   <p>Select the saved facts to send:</p>{facts.map(f => <label key={f.id}><input type="checkbox" checked={selected.includes(f.id)} onChange={e => { setSelected(e.target.checked ? [...selected, f.id] : selected.filter(id => id !== f.id)); resetContext(); }} />{f.text}</label>)}
    <button disabled={busy || !question || !selected.length} onClick={() => void run('request', { rowKey: question, job, factIds: selected })}>Preview exact AI request</button>
   </section>}
   {session?.request && <section><h2>Exact request to AI</h2><p>Only the selected facts and the context below leave the extension when you manually paste them. The extension makes no AI network requests. Free AI chat access may have account and rate limits.</p><pre data-testid="ai-payload">{promptFor(session.request)}</pre><button disabled={busy || session.sent} onClick={() => void run('send')}>Copy reviewed request</button><button disabled={busy} onClick={() => void run('cancel')}>Cancel request</button>{session.sent && <><label>Paste AI JSON response<textarea aria-label="Paste AI JSON response" value={raw} maxLength={30001} onChange={e => setRaw(e.target.value)} /></label><button disabled={busy || !raw} onClick={() => void run('response', { raw })}>Validate response</button></>}</section>}
-  {answer && <section><h2>Review answer and sources</h2><p className="warning">Saved facts are user-provided. Valid source IDs do not prove factual correctness. Compare every sentence with its sources; remove unsupported claims.</p>
+  {answer && <section><h2>Review answer and sources</h2><p>Question: {answer.context.question}</p><p>Reviewed job context: {answer.context.job || 'None supplied'}</p><p className="warning">Saved facts are user-provided. Valid source IDs do not prove factual correctness. Compare every sentence with its sources; remove unsupported claims.</p>
    {answer.origin === 'edited' && <p className="warning">User edited · current sentence mappings removed. Compare the edited text with the original trace before approving.</p>}
    {answer.segments.map((s, i) => <article key={i}><p>{s.text}</p>{s.sources.map(ref => { const fact = answer.trace.request.facts.find(f => f.id === ref.id && f.revision === ref.revision); return <details className="source" key={ref.id}><summary>Source: {fact?.location} · r{ref.revision}</summary><p>{fact?.text}</p><small>{ref.id}</small></details>; })}{!s.sources.length && <b className="warning">Not supported by saved facts</b>}</article>)}
    {answer.gaps.map((g, i) => <p className="warning" key={i}>Missing or unsupported: {g}</p>)}

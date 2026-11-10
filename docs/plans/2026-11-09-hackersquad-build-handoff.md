@@ -30,6 +30,11 @@ The user submits manually. AI being unavailable must not break ordinary profile 
 
 Do not make new résumé tailoring, cover letters, a requirements dashboard, a full materials screen, additional ATS adapters, custom dropdowns, Workday navigation, semantic search or AI field recognition release prerequisites. Preserve existing implementations and regression tests. Use an already uploaded résumé if needed; whenever attaching a file, retain application/selected-file revision binding and existing-file protection. Do not wait for an entire résumé-builder stream to finish.
 
+## First optional addition if time remains
+
+The owner wants LinkedIn as a starting source of experience. Follow the main plan's “First optional addition: LinkedIn profile import” after the core passes. Prefer pasted profile text and reuse an already working PDF import path if available. Show extracted facts for confirmation, preserve original source snippets/revisions and handle duplicates without silent overwrite. Label it import, not account sync. Full LinkedIn history is not provided by standard sign-in. Do not let this addition delay required testing or create a new prerequisite; direct sync remains later work.
+
+
 ## Non-negotiable contracts
 
 **Source review:** each saved fact has an ID, revision, original text and readable location. Separate job requirements from applicant evidence. AI replies contain bounded sentence segments with supporting fact references and missing-information notes, plus schema/request/application/question/source-revision identity. Derive rendered text from validated segments. Clicking a reference reveals the exact original snippet. Reject invented references and stale identities; show unsupported statements as gaps requiring review. Valid IDs alone do not prove factual support. Never turn a job requirement into a personal accomplishment or fabricate credentials, numbers or dates.

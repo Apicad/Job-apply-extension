@@ -94,3 +94,117 @@ test('explicit save, reopen, renewed reuse, exact textarea readback and deleted-
  expect((await command(ui,{type:'fill',tabId,planId:pending.data.plan.id})).ok).toBe(false);
  await expect(page.locator('#project')).toHaveValue('');
 });
+
+test('context changes and changing selected question revoke previous approval and plan', async ({ context, openExtensionPage }) => {
+ const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui = await openExtensionPage('popup.html');
+ const tabId = await ui.evaluate(async url => (await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+ await command(ui,{type:'demo'}); const a=await prepareDraft(ui,tabId);
+ await page.locator('h1').evaluate(el=>el.textContent='Different job');
+ const approval=await command(ui,{type:'approve',tabId,reviewed:true,revision:a.revision,text:a.text});
+ expect(approval.ok).toBe(false);
+});
+
+test('two tabs, rescans, changed question, cancelled AI and native fallback', async ({ context, openExtensionPage }) => {
+ const p1=await context.newPage(); await p1.goto(`${ORIGIN.main}/hackathon.html?job=one`);
+ const p2=await context.newPage(); await p2.goto(`${ORIGIN.main}/hackathon.html?job=two`);
+ const ui=await openExtensionPage('popup.html');
+ const ids=await ui.evaluate(async urls => { const tabs=await (globalThis as any).chrome.tabs.query({}); return urls.map(url=>tabs.find((t:any)=>t.url===url).id); },[p1.url(),p2.url()]); const [t1,t2]=ids;
+ await command(ui,{type:'demo'}); const a=await prepareDraft(ui,t1);
+ await command(ui,{type:'approve',tabId:t1,reviewed:true,revision:a.revision,text:a.text}); await command(ui,{type:'save',tabId:t1,scope:'application'});
+ const saved=(await command(ui,{type:'state',tabId:t1})).data.library[0];
+ await prepareDraft(ui,t2);
+ expect((await command(ui,{type:'reuse',tabId:t2,id:saved.id})).ok).toBe(false);
+ const firstPlan=(await command(ui,{type:'state',tabId:t1})).data.plan;
+ const secondPlan=(await command(ui,{type:'state',tabId:t2})).data.plan;
+ expect((await command(ui,{type:'fill',tabId:t2,planId:firstPlan.id})).ok).toBe(false);
+ await command(ui,{type:'scan',tabId:t1}); expect((await command(ui,{type:'fill',tabId:t1,planId:firstPlan.id})).ok).toBe(false);
+ const a2=(await command(ui,{type:'state',tabId:t2})).data.session.answer;
+ await p2.locator('label').filter({has:p2.locator('#project')}).evaluate(el=>el.firstChild!.textContent='Explain salary expectations.');
+ expect((await command(ui,{type:'approve',tabId:t2,reviewed:true,revision:a2.revision,text:a2.text})).ok).toBe(false);
+ await p2.goto(`${ORIGIN.main}/hackathon.html?job=two`);
+ expect((await command(ui,{type:'fill',tabId:t2,planId:secondPlan.id})).data?.outcomes?.some((o:any)=>o.ok)).not.toBe(true);
+ const scan=await command(ui,{type:'scan',tabId:t2}); const row=scan.data.rows.find((r:any)=>r.field.descriptor.control==='textarea');
+ const requested=await command(ui,{type:'request',tabId:t2,planId:scan.data.id,rowKey:`${row.documentId}:${row.field.ref}`,job:'',factIds:['demo-project-build']});
+ await command(ui,{type:'send',tabId:t2}); await command(ui,{type:'cancel',tabId:t2});
+ expect((await command(ui,{type:'response',tabId:t2,raw:'{}'})).ok).toBe(false);
+ expect(requested.ok).toBe(true);
+ const native=await command(ui,{type:'fill',tabId:t2,planId:scan.data.id}); expect(native.ok).toBe(true); expect(native.data.outcomes.filter((o:any)=>o.ok)).toHaveLength(5);
+ await expect(p2.locator('#project')).toHaveValue('');
+});
+
+test('worker restart restores preview; interrupted execution marker prevents replay', async ({ context, openExtensionPage, extensionId }) => {
+ const page=await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('popup.html'); const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+ await command(ui,{type:'demo'}); const preview=await command(ui,{type:'scan',tabId});
+ const cdp=await context.newCDPSession(ui); const targets=await cdp.send('Target.getTargets');
+ const target=targets.targetInfos.find(t=>t.type==='service_worker'&&t.url.includes(extensionId)); expect(target).toBeTruthy();
+ await cdp.send('Target.closeTarget',{targetId:target!.targetId});
+ const fill=await command(ui,{type:'fill',tabId,planId:preview.data.id}); expect(fill.ok,fill.error).toBe(true); await expect(page.locator('#first')).toHaveValue('Ada');
+ await page.reload(); const fresh=await command(ui,{type:'scan',tabId});
+ // Fault injection at the durable execution boundary, representing a stopped worker after marking executing.
+ await ui.evaluate(async id=>{const k=`hackathon:plan:${id}`;const data=await (globalThis as any).chrome.storage.session.get(k);data[k].state='executing';await (globalThis as any).chrome.storage.session.set(data);},tabId);
+ const stopped=await command(ui,{type:'fill',tabId,planId:fresh.data.id}); expect(stopped.ok).toBe(false); expect(stopped.error).toContain('partial/unknown'); await expect(page.locator('#first')).toHaveValue('');
+});
+
+test('source change and malformed library, no storage success or unsafe fill', async ({ context, openExtensionPage }) => {
+ const page=await context.newPage();await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('popup.html');const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+ await command(ui,{type:'demo'});const a=await prepareDraft(ui,tabId);await command(ui,{type:'approve',tabId,reviewed:true,revision:a.revision,text:a.text});await command(ui,{type:'save',tabId,scope:'application'});const preview=await command(ui,{type:'answer-preview',tabId});
+ await command(ui,{type:'fact-edit',tabId,id:'demo-project-build',text:'I documented the synthetic dashboard.'});
+ expect((await command(ui,{type:'fill',tabId,planId:preview.data.plan.id})).ok).toBe(false);await expect(page.locator('#project')).toHaveValue('');
+ await ui.evaluate(async()=>{await (globalThis as any).chrome.storage.local.set({'hackathon:library':{schema:999,answers:[]}});});
+ const malformed=await command(ui,{type:'state',tabId});expect(malformed.ok).toBe(false);expect(malformed.error).toContain('preserved');
+ expect(await ui.evaluate(async()=>(await (globalThis as any).chrome.storage.local.get('hackathon:library'))['hackathon:library'].schema)).toBe(999);
+});
+
+test('storage quota error reaches UI without a saved-success message', async ({ context, openExtensionPage, serviceWorker }) => {
+ const page=await context.newPage();await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('popup.html');const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+ await command(ui,{type:'demo'});const a=await prepareDraft(ui,tabId);await command(ui,{type:'approve',tabId,reviewed:true,revision:a.revision,text:a.text});
+ await ui.goto(ui.url()+`?tabId=${tabId}`); await expect(ui.getByRole('button',{name:'Save approved answer'})).toBeVisible();
+ // External storage boundary fault only; all extension service and UI modules are real.
+ await serviceWorker.evaluate(()=>{ const storage=(globalThis as any).chrome.storage.local; const original=storage.set.bind(storage); storage.set=async (items:any)=>{if(Object.hasOwn(items,'hackathon:library'))throw Error('QUOTA test boundary');return original(items);}; });
+ await ui.getByRole('button',{name:'Save approved answer'}).click(); await expect(ui.getByRole('status')).toContainText('QUOTA');
+ await expect(ui.getByRole('heading',{name:'Saved answers · 0'})).toBeVisible(); await expect(ui.getByRole('status')).not.toContainText('answer saved');
+});
+
+test('native descriptor/options mutations, prefilled files, overlength and delayed rewrite are not reported as verified', async ({ context, openExtensionPage }) => {
+ const page=await context.newPage();await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('popup.html');const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+ await command(ui,{type:'demo'});await page.locator('#resume').setInputFiles({name:'synthetic.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic resume')});
+ const scan=await command(ui,{type:'scan',tabId});
+ await page.locator('#first').fill('Already typed');
+ await page.locator('#last').evaluate(el=>el.setAttribute('hidden',''));
+ await page.locator('#email').evaluate(el=>el.addEventListener('input',()=>setTimeout(()=>{(el as HTMLInputElement).value='unexpected@example.com';},0)));
+ await page.locator('#country option').nth(1).evaluate(el=>el.textContent='Canada');
+ await page.locator('#phone').evaluate(el=>el.setAttribute('maxlength','2'));
+ const fill=await command(ui,{type:'fill',tabId,planId:scan.data.id});expect(fill.ok).toBe(true);expect(fill.data.outcomes.filter((o:any)=>o.ok)).toHaveLength(0);
+ await expect(page.locator('#first')).toHaveValue('Already typed');await expect(page.locator('#last')).toHaveValue('');await expect(page.locator('#country')).toHaveValue('');await expect(page.locator('#phone')).toHaveValue('');
+ expect(await page.locator('#resume').evaluate(el=>(el as HTMLInputElement).files?.[0]?.name)).toBe('synthetic.txt');
+});
+
+test('all maintained sample fixtures execute through the actual extension without arbitrary actions', async ({context,openExtensionPage}, testInfo) => {
+ const ui=await openExtensionPage('popup.html');await command(ui,{type:'demo'});
+ const metrics: object[] = [];
+ const oracle: Record<string,Record<string,string>> = { generic:{'first-name':'Ada','last-name':'Lovelace',email:'ada@example.com',city:'San Francisco',country:'US'}, greenhouse:{first_name:'Ada',last_name:'Lovelace',email:'ada@example.com',phone:'555-0100'}, lever:{name:'Ada Lovelace',email:'ada@example.com',phone:'555-0100'}, ashby:{_systemfield_name:'Ada Lovelace',_systemfield_email:'ada@example.com','2f6c1c0e-5b7a-4f0d-9a3e-6d1b8c2e4f01':'555-0100'}, hostile:{'full-name':'Ada Lovelace',email:'ada@example.com'}, shadow:{'first-name':'Ada','last-name':'Lovelace',email:'ada@example.com',phone:'555-0100'}, 'same-origin-frame':{}, 'embed-hidden':{}, 'embed-host':{}, 'embed-blocked':{} };
+ const fixtures=['generic','greenhouse','lever','ashby','hostile','shadow','same-origin-frame','embed-hidden','embed-host','embed-blocked'];
+ for (const fixture of fixtures) {
+  const page=await context.newPage();await page.goto(`${ORIGIN.main}/${fixture}.html`);
+  const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+  const before=await page.locator('input,select,textarea').evaluateAll(els=>els.map(el=>({key:(el as HTMLInputElement).id||(el as HTMLInputElement).name,value:(el as HTMLInputElement).value,checked:(el as HTMLInputElement).checked})));
+  const scan=await command(ui,{type:'scan',tabId});expect(scan.ok,fixture).toBe(true);
+  const fill=await command(ui,{type:'fill',tabId,planId:scan.data.id});expect(fill.ok,fixture).toBe(true);
+  const outcome=await page.evaluate(()=>{const f=(window as any).__fixture;return {submitted:!!f?.submitted,actions:(f?.events??[]).filter((e:any)=>e.type==='keydown'||e.type==='click'||e.type==='focus'),writes:(f?.events??[]).filter((e:any)=>e.type==='input')};});
+  const after=await page.locator('input,select,textarea').evaluateAll(els=>els.map(el=>({key:(el as HTMLInputElement).id||(el as HTMLInputElement).name,value:(el as HTMLInputElement).value,checked:(el as HTMLInputElement).checked})));
+  let writes=0;
+  for(let i=0;i<after.length;i++){const current=after[i]!;const previous=before[i]!;expect(current.checked,fixture+':'+current.key).toBe(previous.checked);if(current.value!==previous.value){writes++;expect(current.value,fixture+':'+current.key).toBe(oracle[fixture]![current.key]);}}
+  expect(writes,fixture).toBe(Object.keys(oracle[fixture]!).length);
+  metrics.push({fixture,discovered:scan.data.rows.length,planned:scan.data.rows.filter((r:any)=>r.action).length,verified:fill.data.outcomes.filter((o:any)=>o.ok).length,manual:scan.data.rows.filter((r:any)=>!r.action).length,wrongWrites:0});
+  expect(outcome.submitted,fixture).toBe(false);expect(outcome.actions,fixture).toEqual([]);
+  // Every actual successful write must be one of the exact previewed actions.
+  for (const result of fill.data.outcomes.filter((o:any)=>o.ok)) expect(scan.data.rows.some((r:any)=>r.documentId===result.documentId&&r.field.ref===result.ref&&r.action),fixture).toBe(true);
+  await page.close();
+ }
+ await testInfo.attach('fixture-metrics.json',{body:JSON.stringify(metrics,null,2),contentType:'application/json'});
+});

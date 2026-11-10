@@ -2,10 +2,10 @@ import { stableKey } from './identity';
 import { classifyField } from '../classify';
 import { textValueFor } from '../profile';
 import { pickChoice } from '../choices';
-import type { FieldDescriptor, Profile } from '../types';
+import type { FieldDescriptor, Profile, JobInfo } from '../types';
 import type { NativeScan, NativeField, NativeAction } from './page';
 export interface Frame { frameId: number; documentId: string; scan: NativeScan }
-export interface Row { documentId: string; frameId: number; scanId: string; url: string; field: NativeField; action: NativeAction | null; status: string }
+export interface Row { job: JobInfo; documentId: string; frameId: number; scanId: string; url: string; field: NativeField; action: NativeAction | null; status: string }
 export interface NativePlan { id: string; tabId: number; url: string; profileKey: string; rows: Row[]; state: 'preview' | 'executing' | 'finished'; answerBinding?: { id: string; revision: number; savedId?: string }; errors?: string[]; outcomes?: { ref: number; documentId: string; ok: boolean }[] }
 export const fieldSignature = (descriptor: FieldDescriptor, form: number, maxLength: number): string => stableKey({ descriptor, form, maxLength });
 export function planNative(frames: Frame[], profile: Profile): Row[] {
@@ -20,13 +20,14 @@ export function planNative(frames: Frame[], profile: Profile): Row[] {
   return frame.scan.fields.map(field => {
    const d = field.descriptor; const kind = classifyField(d); let action: NativeAction | null = null;
    let status = !field.empty ? 'Kept existing answer' : 'Manual / unsupported';
-   if (field.empty && best?.frame.documentId === frame.documentId && best.form === field.form && kind && !used.has(kind) && kind !== 'location') {
+   const unsafe = /signature|certif|attest|acknowledg|declar|consent/i.test([d.label, d.groupLabel, d.placeholder, d.name, d.id, d.hints].join(' '));
+   if (!unsafe && field.empty && best?.frame.documentId === frame.documentId && best.form === field.form && kind && !used.has(kind) && kind !== 'location') {
     const signature = fieldSignature(d, field.form, field.maxLength);
     if (d.control === 'text') { const value = textValueFor(kind, profile, d); if (value && (field.maxLength < 0 || value.length <= field.maxLength)) action = { ref: field.ref, type: 'text', value, signature }; }
     if (d.control === 'select' || d.control === 'radio') { const choice = pickChoice(kind, profile, d.options); if (choice.status === 'match') action = { ref: field.ref, type: d.control, index: choice.index, signature }; }
     if (action) { used.add(kind); status = 'Ready for preview'; }
    }
-   return { documentId: frame.documentId, frameId: frame.frameId, scanId: frame.scan.scanId, url: frame.scan.url, field, action, status };
+   return { job: frame.scan.job, documentId: frame.documentId, frameId: frame.frameId, scanId: frame.scan.scanId, url: frame.scan.url, field, action, status };
   });
  });
 }

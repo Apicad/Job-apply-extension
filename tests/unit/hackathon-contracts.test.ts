@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { approve, editAnswer, makeRequest, parseReply, reusableDraft, currentApproval, factsCurrent } from '../../lib/hackathon/contracts';
 import { DEMO_FACTS } from '../../lib/hackathon/demo';
-const context = { application: 'https://example.test/job/1', question: 'Describe a relevant project.', job: 'Sample developer role', control: 'textarea' as const };
+const context = { questionKey: 'synthetic-question-1', application: 'https://example.test/job/1', question: 'Describe a relevant project.', job: 'Sample developer role', control: 'textarea' as const };
 const request = () => makeRequest(context, DEMO_FACTS, 100);
 const reply = (r = request()) => JSON.stringify({ schema: 1, requestId: r.id, context: r.context, facts: r.facts.map(({ id, revision }) => ({ id, revision })), segments: [{ text: DEMO_FACTS[0]!.text, sources: [{ id: DEMO_FACTS[0]!.id, revision: 1 }] }], missing: [] });
 describe('evidence and approval contracts', () => {
@@ -44,4 +44,12 @@ describe('evidence and approval contracts', () => {
   const draft = reusableDraft({ ...a, scope: 'factual' }, other, DEMO_FACTS);
   expect(draft.approval).toBeNull(); expect(currentApproval(draft, other, DEMO_FACTS)).toBe(false);
  });
+});
+
+it('canonical identity survives storage key reordering and rejects unsupported job technology', () => {
+ const r = makeRequest({...context, job: 'The job requires Rust.'}, DEMO_FACTS, 100);
+ const response = JSON.parse(reply(r)); response.context = { questionKey: r.context.questionKey, control: r.context.control, job: r.context.job, question: r.context.question, application: r.context.application };
+ response.facts = response.facts.map((f:any)=>({revision:f.revision,id:f.id}));
+ response.segments[0].text = 'I used Rust to build the dashboard.';
+ expect(parseReply(JSON.stringify(response),r,DEMO_FACTS,101).gaps.join(' ')).toMatch(/Rust/);
 });

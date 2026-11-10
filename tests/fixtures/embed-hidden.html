@@ -96,18 +96,19 @@
          be written to. Each frame's id names how it is concealed. -->
 
     <!-- 1. opacity:0. A frame of normal size, in the normal flow of the page, fully transparent. -->
-    <iframe id="frame-opacity-0" class="way-1" title="hidden frame 1" src="http://127.0.0.1:5179/greenhouse.html" width="800" height="600"></iframe>
+    <iframe id="frame-opacity-0" class="way-1" title="hidden frame 1" data-fixture-src="http://127.0.0.1:5179/greenhouse.html" width="800" height="600"></iframe>
 
     <!-- 2. visibility:hidden. Again of normal size and in the flow; the frame's own document
          still reports visibility "visible" for everything inside it. -->
-    <iframe id="frame-visibility-hidden" class="way-2" title="hidden frame 2" src="http://127.0.0.1:5179/greenhouse.html" width="800" height="600"></iframe>
+    <iframe id="frame-visibility-hidden" class="way-2" title="hidden frame 2" data-fixture-src="http://127.0.0.1:5179/greenhouse.html" width="800" height="600"></iframe>
 
     <!-- 3. Parked off-screen: fixed at left:-10000px, 800 by 3000 pixels, so that the whole form
          is laid out inside it without scrolling. -->
-    <iframe id="frame-off-screen" class="way-3" title="hidden frame 3" src="http://127.0.0.1:5179/greenhouse.html" width="800" height="3000"></iframe>
+    <iframe id="frame-off-screen" class="way-3" title="hidden frame 3" data-fixture-src="http://127.0.0.1:5179/greenhouse.html" width="800" height="3000"></iframe>
 
     <!-- 4. One pixel by one pixel. The only case a frame can notice by itself: its window is
          too small to be a form. -->
-    <iframe id="frame-1x1" title="hidden frame 4" src="http://127.0.0.1:5179/greenhouse.html" width="1" height="1"></iframe>
+    <iframe id="frame-1x1" title="hidden frame 4" data-fixture-src="http://127.0.0.1:5179/greenhouse.html" width="1" height="1"></iframe>
+  <script>for (const frame of document.querySelectorAll("iframe[data-fixture-src]")) { const url = new URL(frame.dataset.fixtureSrc); url.port = location.port; frame.src = url.href; }</script>
   </body>
 </html>

@@ -1,5 +1,6 @@
+import { assertLiveRow } from './live';
 import { readLibrary, saveAnswer, deleteAnswer } from './library';
-import { currentApproval, reusableDraft } from './contracts';
+import { currentApproval, reusableDraft, factsCurrent } from './contracts';
 import { fieldSignature } from './engine';
 import { browser } from 'wxt/browser';
 import { readHackathon, writeHackathon } from '../storage';
@@ -10,7 +11,7 @@ export interface AnswerSession { planId: string; rowKey: string; context: Contex
 export const rowKey = (row: Row): string => `${row.documentId}:${row.field.ref}`;
 export function supportedQuestion(row: Row): boolean {
  const d = row.field.descriptor;
- return d.control === 'textarea' && row.field.empty && allowedQuestion(d.label) && !/signature|certif|attest|acknowledg|declar|consent|sponsor|visa|disabil|gender|race|salary|citizen|password|social.security/i.test([d.name, d.id, d.groupLabel, d.hints].join(' '));
+ return d.control === 'textarea' && row.field.empty && allowedQuestion(d.label) && !/signature|certif|attest|acknowledg|declar|consent|sponsor|visa|disabil|gender|race|salary|citizen|password|social.security/i.test([d.name, d.id, d.groupLabel, d.hints, d.placeholder].join(' '));
 }
 export async function loadFacts(): Promise<Fact[]> {
  const facts = await readHackathon<unknown>('facts');
@@ -26,20 +27,28 @@ export async function getSession(tabId: number): Promise<AnswerSession> {
 }
 export async function invalidatePlan(tabId: number): Promise<void> {
  const plan = await readHackathon<NativePlan>(`plan:${tabId}`, true);
- if (plan?.answerBinding) { plan.state = 'finished'; await writeHackathon(`plan:${tabId}`, plan, true); }
+ if (plan?.answerBinding) { plan.state = 'finished'; delete plan.answerBinding; for (const row of plan.rows) if (row.action?.type === 'answer') { row.action = null; row.status = 'Review required'; } await writeHackathon(`plan:${tabId}`, plan, true); }
 }
 export async function answerCommand(message: Record<string, unknown>, plan: NativePlan): Promise<unknown> {
  const tabId = plan.tabId; const facts = await loadFacts();
- if (message.type === 'state') return { library: await readLibrary(libraryStore), facts, session: await readHackathon<AnswerSession>(sessionKey(tabId), true), plan };
+ if (message.type === 'state') {
+  const session = await readHackathon<AnswerSession>(sessionKey(tabId), true);
+  if (session?.answer && !factsCurrent(session.answer.facts, facts)) { session.answer.approval = null; await writeHackathon(sessionKey(tabId), session, true); }
+  return { library: await readLibrary(libraryStore), facts, session, plan };
+ }
+ if (message.type === 'context-reset') { await invalidatePlan(tabId); await writeHackathon(sessionKey(tabId), null, true); return { reset: true }; }
  if (message.type === 'request') {
   const row = plan.rows.find(r => rowKey(r) === message.rowKey);
   if (!row || !supportedQuestion(row) || plan.id !== message.planId) throw Error('Select a current, empty supported question.');
   if (typeof message.job !== 'string' || message.job.length > 4000 || !Array.isArray(message.factIds) || message.factIds.length > 20 || !message.factIds.every(id => typeof id === 'string')) throw Error('Invalid selected facts or reviewed job context.');
+  await assertLiveRow(plan, row);
   const selected = message.factIds.map(id => facts.find(f => f.id === id)); if (selected.some(f => !f)) throw Error('Selected fact no longer exists.');
   // Opaque application identity avoids transmitting URLs, query tokens or contacts to AI.
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(plan.url));
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key([plan.url, row.job])));
   const application = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-  const context: Context = { application, question: row.field.descriptor.label, job: message.job, control: 'textarea' };
+  const questionDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fieldSignature(row.field.descriptor, row.field.form, row.field.maxLength)));
+  const questionKey = Array.from(new Uint8Array(questionDigest), b => b.toString(16).padStart(2, '0')).join('');
+  const context: Context = { application, questionKey, question: row.field.descriptor.label, job: message.job, control: 'textarea' };
   const request = makeRequest(context, selected as Fact[]);
   await invalidatePlan(tabId);
   const session: AnswerSession = { planId: plan.id, rowKey: rowKey(row), context, request, sent: false, answer: null };
@@ -55,6 +64,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
  if (message.type === 'delete') { if (typeof message.id !== 'string') throw Error('Invalid answer ID.'); await deleteAnswer(libraryStore, message.id); await invalidatePlan(tabId); return { deleted: true }; }
  const session = await getSession(tabId);
  if ((await browser.tabs.get(tabId)).url !== plan.url || session.planId !== plan.id) throw Error('Application was rescanned or changed. Select the question again.');
+ if (!['cancel', 'edit', 'invalidate'].includes(message.type as string)) { const row = plan.rows.find(r => rowKey(r) === session.rowKey); if (!row) throw Error('Question changed.'); await assertLiveRow(plan, row); }
  if (message.type === 'send') {
   if (!session.request || session.sent || Date.now() > session.request.expiresAt) throw Error('Request cancelled, expired or already copied. Preview a new request.');
   session.sent = true; await writeHackathon(sessionKey(tabId), session, true); return { prompt: promptFor(session.request), session };
@@ -81,6 +91,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
   if (!saved || saved.revision !== session.answer.revision || saved.text !== session.answer.text || !currentApproval(session.answer, session.context, facts)) throw Error('Save this exact approved revision before previewing. Deleted or stale answers cannot fill.');
   const row = plan.rows.find(r => rowKey(r) === session.rowKey);
   if (!row || !supportedQuestion(row) || (row.field.maxLength >= 0 && saved.text.length > row.field.maxLength)) throw Error('Question is unavailable or answer exceeds its length limit.');
+  for (const other of plan.rows) if (other.action?.type === 'answer') { other.action = null; other.status = 'Manual / unsupported'; }
   plan.id = crypto.randomUUID(); plan.state = 'preview'; plan.outcomes = undefined;
   plan.answerBinding = { id: session.answer.id, revision: session.answer.revision, savedId: saved.id };
   row.action = { ref: row.field.ref, type: 'answer', value: saved.text, signature: fieldSignature(row.field.descriptor, row.field.form, row.field.maxLength) }; row.status = 'Approved saved answer';

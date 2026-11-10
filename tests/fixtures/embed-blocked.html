@@ -85,7 +85,8 @@
       <!-- A visible, form-sized frame from an origin the extension may not read. The browser
            skips such a frame without a word, so nothing can be scanned or written in it. The
            user must still be told that there is a form here that could not be reached. -->
-      <iframe id="application-frame" title="Job application" src="http://blocked.localhost:5179/lever.html"></iframe>
+      <iframe id="application-frame" title="Job application" data-fixture-src="http://blocked.localhost:5179/lever.html"></iframe>
     </main>
+  <script>for (const frame of document.querySelectorAll("iframe[data-fixture-src]")) { const url = new URL(frame.dataset.fixtureSrc); url.port = location.port; frame.src = url.href; }</script>
   </body>
 </html>

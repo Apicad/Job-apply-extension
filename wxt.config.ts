@@ -16,7 +16,7 @@ export default defineConfig({
     commands: {
       autofill: {
         suggested_key: { default: 'Alt+Shift+F' },
-        description: 'Fill the application form on this page',
+        description: 'Open the application review popup',
       },
     },
   }),

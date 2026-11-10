@@ -15,7 +15,7 @@
     "compile": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "npm run build:e2e && playwright test",
+    "test:e2e": "npm run build:e2e && node scripts/e2e.mjs",
     "fixtures": "vite --config tests/fixtures/vite.config.ts --open",
     "check": "npm run compile && npm run test && npm run test:e2e",
     "postinstall": "wxt prepare"

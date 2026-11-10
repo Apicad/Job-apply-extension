@@ -9,7 +9,7 @@ import { defineConfig } from 'vite';
 //                                    e2e build of the extension may access)
 //   http://blocked.localhost:5179  – a third origin the extension has no
 //                                    permission for
-export const FIXTURE_PORT = 5179;
+export const FIXTURE_PORT = Number(process.env.JAA_FIXTURE_PORT ?? 5179);
 
 export default defineConfig({
   root: import.meta.dirname,

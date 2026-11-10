@@ -29,3 +29,27 @@ it('refuses overlength textarea and unexpected rewrites', () => {
  expect(applyNative(document, env, { scanId: updated.scanId, url: updated.url, actions: [action] })[0]?.ok).toBe(false);
  expect(el.value).toBe(''); expect(field).toBeDefined();
 });
+
+it('Grok F1 regression: complete safety tails survive describe → guard → planner, or fields fail closed', async () => {
+ const { sanitizeFrameScan } = await import('../../lib/report');
+ const cases = [
+  `<fieldset><legend>${'context '.repeat(40)}you certify</legend><label>Full name<input></label></fieldset>`,
+  `<label>Are you legally authorized to work in the United States ${'context '.repeat(45)}without the need for employer sponsorship?<select><option value="">Select</option><option>Yes</option><option>No</option></select></label>`,
+  `<label>Are you legally authorized to work in the United States?<select><option value="">Select</option><option>Yes ${'context '.repeat(45)}I acknowledge and certify</option><option>No</option></select></label>`,
+ ];
+ for (const markup of cases) {
+  document.body.innerHTML = `<form><label>First name<input></label><label>Email<input></label><label>Phone<input></label>${markup}</form>`;
+  const raw = scanNative(document, env);
+  const guarded = sanitizeFrameScan({ ...raw, top:true,childOrigins:[],error:'' })!;
+  const scan = {...raw,fields:guarded.fields.map(f=>({...f,maxLength:-1}))};
+  const rows = planNative([{frameId:0,documentId:'d',scan}],normalizeProfile({firstName:'Ada',lastName:'Lovelace',email:'ada@example.com',phone:'555-0100',country:'United States',workAuthorization:'yes'}));
+  expect(rows.slice(3).filter(r=>r.action)).toHaveLength(0);
+ }
+});
+
+it('signature cue in placeholder is manual even with a short recognized label', () => {
+ const scan = fixture(); document.querySelector('#first')!.setAttribute('placeholder','Type your signature');
+ const fresh = scanNative(document,env);
+ const rows=planNative([{frameId:0,documentId:'d',scan:fresh}],normalizeProfile({firstName:'Ada',email:'ada@example.com',phone:'555-0100'}));
+ expect(rows[0]?.action).toBeNull();expect(scan).toBeDefined();
+});

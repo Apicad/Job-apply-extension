@@ -12,13 +12,13 @@ export default defineConfig({
   // independent and can run in parallel.
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  reporter: 'list',
+  reporter: [['list'], ['json', { outputFile: 'test-results/results.json' }]],
   use: {
     trace: 'retain-on-failure',
   },
   webServer: {
     command: 'vite --config tests/fixtures/vite.config.ts',
     url: `http://127.0.0.1:${FIXTURE_PORT}/`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 });
