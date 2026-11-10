@@ -25,3 +25,5 @@ The artifacts above are historical and do not certify the audit-cycle candidate.
 ## Public audit evidence for cycle 2
 
 The previous filesystem-only handoff did not reach the external reviewers. Cycle 2 publishes a separate evidence-only commit on `codex/audit/evidence-cycle-2`. The final handoff supplies its immutable GitHub link and the separate exact tested source SHA. Its sanitized summary, test results and fresh synthetic request/response/result/screenshots identify the tested source commit, not the evidence commit. Historical artifacts in this folder remain historical.
+
+Cycle 3 follows the same exact-source protocol on `codex/audit/evidence-cycle-3`. Earlier evidence and attribution mappings are retained at their historical immutable links; a new source smoke receives a fresh request and response rather than relabeling or replaying them.

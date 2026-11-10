@@ -21,6 +21,10 @@ export async function loadFacts(): Promise<Fact[]> {
 }
 export const libraryStore = { read: () => readHackathon<unknown>('library'), write: (value: unknown) => writeHackathon('library', value) };
 export const sessionKey = (tabId: number) => `answer:${tabId}`;
+function matchesSavedApproval(saved: Answer | undefined, session: AnswerSession, facts: Fact[]): boolean {
+ const answer = session.answer;
+ return !!saved && !!answer && saved.id === answer.id && session.savedId === saved.id && session.savedRevision === saved.revision && saved.revision === answer.revision && saved.text === answer.text && key(saved.approval) === key(answer.approval) && currentApproval(saved, session.context, facts) && currentApproval(answer, session.context, facts);
+}
 export async function getSession(tabId: number): Promise<AnswerSession> {
  const session = await readHackathon<AnswerSession>(sessionKey(tabId), true);
  if (!session) throw Error('Select a question and preview a request first.'); return session;
@@ -90,7 +94,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
  } else if (message.type === 'answer-preview') {
   if (plan.state !== 'preview') throw Error('This plan was used or invalidated. Scan again before previewing an answer; prior outcomes are preserved.');
   const saved = (await readLibrary(libraryStore)).find(a => a.id === session.savedId);
-  if (!saved || saved.revision !== session.answer.revision || saved.text !== session.answer.text || !currentApproval(session.answer, session.context, facts)) throw Error('Save this exact approved revision before previewing. Deleted or stale answers cannot fill.');
+  if (!saved || !matchesSavedApproval(saved, session, facts)) throw Error('Save this exact approved revision before previewing. Deleted or stale answers cannot fill.');
   const row = plan.rows.find(r => rowKey(r) === session.rowKey);
   if (!row || !supportedQuestion(row) || (row.field.maxLength >= 0 && saved.text.length > row.field.maxLength)) throw Error('Question is unavailable or answer exceeds its length limit.');
   for (const other of plan.rows) if (other.action?.type === 'answer') { other.action = null; other.status = 'Manual / unsupported'; }
@@ -115,7 +119,7 @@ export async function validateAnswerBinding(plan: NativePlan): Promise<void> {
  if (!plan.answerBinding) return;
  const session = await getSession(plan.tabId); const a = session.answer;
  const saved = (await readLibrary(libraryStore)).find(s => s.id === plan.answerBinding!.savedId);
- if (!a || !saved || session.planId !== plan.id || a.id !== plan.answerBinding.id || a.revision !== plan.answerBinding.revision || saved.revision !== a.revision || saved.text !== a.text || !currentApproval(a, session.context, await loadFacts())) throw Error('Answer was edited, deleted, or became stale. Review and preview again.');
+ if (!a || session.planId !== plan.id || a.id !== plan.answerBinding.id || a.revision !== plan.answerBinding.revision || !matchesSavedApproval(saved, session, await loadFacts())) throw Error('Answer was edited, deleted, or became stale. Review and preview again.');
  const row = plan.rows.find(r => rowKey(r) === session.rowKey);
  if (!row || row.action?.type !== 'answer' || row.action.value !== a.text) throw Error('Answer plan mismatch.');
 }

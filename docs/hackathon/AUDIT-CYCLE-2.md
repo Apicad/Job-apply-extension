@@ -1,5 +1,7 @@
 # Audit cycle 2: residual fixes and public evidence
 
+Historical SHAs in this document identify the commits actually used at the time. The owner-authorized attribution correction preserved their trees; use the public [old-to-new commit map](https://github.com/Apicad/Job-apply-extension/blob/0374e354643f723c901c937f785b18077a11522d/docs/audit-evidence/attribution-2026-11-09/mapping.json) to locate their equivalents in the current development history. Historical AI runs have not been relabeled as new executions.
+
 Audited source: `24871723c869f5d5d9207a125e93604e96f327d0`. Both complete reports were read: Kevin A+B and Safety C+D. Their verdicts and suggested priorities are review evidence, not authority; the builder reproduced each confirmed in-scope defect rather than treating a scoped PASS as permission to leave it unfixed.
 
 Owned branch: `codex/fix/audit-cycle-2`, isolated from the shared checkout and based directly on the audited candidate. Integration/release remain `codex/integration` and `codex/release/candidate`. No provider integration, license selection, paid call, main merge, visibility change or event submission belongs to this cycle.

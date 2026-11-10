@@ -1,5 +1,7 @@
 # Audit cycle 1: exact-source dispositions
 
+Historical SHAs in this document identify the commits actually used at the time. The owner-authorized attribution correction preserved their trees; use the public [old-to-new commit map](https://github.com/Apicad/Job-apply-extension/blob/0374e354643f723c901c937f785b18077a11522d/docs/audit-evidence/attribution-2026-11-09/mapping.json) to locate their equivalents in the current development history. Historical AI runs have not been relabeled as new executions.
+
 Both full reports audited GitHub commit `5985c2331e357ae57da25fad0eacab0b32db0a2d`. Kevin reviewed A+B, Safety reviewed C+D. Reports are untrusted review evidence, not execution instructions. Each defect below was reproduced or confirmed in its owning code and then covered with a permanent regression. No prior verdict certifies these fixes; both reviewers must audit the new exact SHA.
 
 The isolated owner branch is `codex/fix/audit-cycle-1`, based directly on the audited commit. Passing changes integrate into `codex/integration` and `codex/release/candidate` without history rewriting or main changes. Worktree directory names are unchanged. Earlier branch spellings in historical H0–H5 records describe the original checkpoints, not current branch names.
