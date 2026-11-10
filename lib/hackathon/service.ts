@@ -1,4 +1,5 @@
-import { answerCommand, loadFacts } from './answers';
+import { readLibrary } from './library';
+import { answerCommand, loadFacts, libraryStore, validateAnswerBinding } from './answers';
 import { browser } from 'wxt/browser';
 import { loadProfile, readHackathon, writeHackathon, saveSyntheticProfile } from '../storage';
 import { sanitizeFrameScan } from '../report';
@@ -31,6 +32,7 @@ export async function fillTab(tabId: number, id: string): Promise<NativePlan> {
  const plan = await getPlan(tabId);
  if (plan.id !== id || plan.state !== 'preview') throw Error('This preview was replaced or already used. Scan again; an interrupted fill is partial/unknown and will never replay automatically.');
  if ((await browser.tabs.get(tabId)).url !== plan.url || key(await loadProfile()) !== plan.profileKey) throw Error('Page or profile changed. Scan and review again.');
+ await validateAnswerBinding(plan);
  plan.state = 'executing'; await writeHackathon(planKey(tabId), plan, true);
  const outcomes: NonNullable<NativePlan['outcomes']> = [];
  for (const documentId of new Set(plan.rows.map(r => r.documentId))) {
@@ -49,7 +51,7 @@ export async function handle(message: unknown): Promise<unknown> {
  if (!record(message) || typeof message.type !== 'string') throw Error('Invalid command.');
  if (message.type === 'demo') { await saveSyntheticProfile(DEMO_PROFILE); await writeHackathon('facts', DEMO_FACTS); return { loaded: true }; }
  if (!Number.isSafeInteger(message.tabId) || Number(message.tabId) < 0) throw Error('Invalid tab.');
- if (message.type === 'state') { const plan = await readHackathon<NativePlan>(planKey(Number(message.tabId)), true); return plan ? answerCommand(message, plan) : { facts: await loadFacts(), session: null, plan: null }; }
+ if (message.type === 'state') { const plan = await readHackathon<NativePlan>(planKey(Number(message.tabId)), true); return plan ? answerCommand(message, plan) : { facts: await loadFacts(), session: null, plan: null, library: await readLibrary(libraryStore) }; }
  if (message.type === 'scan') return scanTab(Number(message.tabId));
  if (message.type === 'fill' && typeof message.planId === 'string') return fillTab(Number(message.tabId), message.planId);
  return answerCommand(message, await getPlan(Number(message.tabId)));

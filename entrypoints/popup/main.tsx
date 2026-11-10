@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { NativePlan } from '../../lib/hackathon/engine';
-import type { Fact } from '../../lib/hackathon/contracts';
+import type { Answer, Fact } from '../../lib/hackathon/contracts';
 import { promptFor } from '../../lib/hackathon/contracts';
 import type { AnswerSession } from '../../lib/hackathon/answers';
 import { rowKey, supportedQuestion } from '../../lib/hackathon/answers';
@@ -11,6 +11,7 @@ function App() {
  const [tabId, setTab] = useState<number>();
  const [plan, setPlan] = useState<NativePlan | null>(null);
  const [facts, setFacts] = useState<Fact[]>([]); const [selected, setSelected] = useState<string[]>([]);
+ const [library, setLibrary] = useState<Answer[]>([]); const [scope, setScope] = useState('application');
  const [session, setSession] = useState<AnswerSession | null>(null);
  const [question, setQuestion] = useState(''); const [job, setJob] = useState('');
  const [raw, setRaw] = useState(''); const [text, setText] = useState(''); const [dirty, setDirty] = useState(false);
@@ -22,7 +23,7 @@ function App() {
  }
  async function refresh() {
   if (tabId === undefined) return;
-  const data = await send('state'); setPlan(data.plan); setFacts(data.facts); setSession(data.session);
+  const data = await send('state'); setPlan(data.plan); setFacts(data.facts); setLibrary(data.library ?? []); setSession(data.session);
   setText(data.session?.answer?.text ?? ''); setDirty(false); setReviewed(false);
  }
  useEffect(() => { void refresh().catch(e => setNotice(String(e))); }, [tabId]);
@@ -36,7 +37,8 @@ function App() {
     setSession(data.session);
     try { await navigator.clipboard.writeText(data.prompt); setNotice('Request copied. Paste it into your AI chat, then paste its JSON response below.'); }
     catch { setNotice('Clipboard unavailable. Select and copy the exact request text below manually.'); }
-   } else if (data.session) { setSession(data.session); setText(data.session.answer?.text ?? ''); setDirty(false); setReviewed(false); setNotice(type === 'approve' ? 'Exact answer approved. It has not been saved or filled.' : 'Updated. Review before continuing.'); }
+   } else if (type === 'save') { await refresh(); setNotice('Approved answer saved. Reopen this extension to retrieve it.'); }
+   else if (data.session) { if (data.plan) setPlan(data.plan); setSession(data.session); setText(data.session.answer?.text ?? ''); setDirty(false); setReviewed(false); setNotice(type === 'approve' ? 'Exact answer approved. It has not been saved or filled.' : 'Updated. Review before continuing.'); }
    else { await refresh(); setNotice(type === 'demo' ? 'Synthetic applicant saved in this browser.' : 'Saved.'); }
   } catch (e) { setNotice(String(e)); } finally { setBusy(false); }
  }
@@ -63,8 +65,9 @@ function App() {
    {dirty && <button disabled={busy || !text.trim()} onClick={() => void run('edit', { text })}>Apply edits for review</button>}
    <label><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} />I compared the exact text with the original saved facts, removed unsupported claims, and reviewed its relevance to this application.</label>
    <button disabled={busy || dirty || !reviewed || !!answer.gaps.length} onClick={() => void run('approve', { reviewed, revision: answer.revision, text: answer.text })}>Approve exact answer</button>
-   {answer.approval && <p>Approved revision {answer.revision}. Approval alone does not save or fill.</p>}
+   {answer.approval && <><p>Approved revision {answer.revision}. Approval alone does not save or fill.</p><label>Save scope<select value={scope} onChange={e => setScope(e.target.value)}><option value="application">Current application only</option><option value="factual">Reusable factual experience · new review each application</option></select></label><button disabled={busy || dirty} onClick={() => void run('save', { scope })}>Save approved answer</button><button disabled={busy || dirty || !session.savedId} onClick={() => void run('answer-preview')}>Preview approved textarea fill</button></>}
   </section>}
+  <section><h2>Saved answers · {library.length}</h2><p>Open a saved answer as a draft for renewed review. Select a question and preview its current context first.</p>{library.map(a => <article key={a.id}><details><summary>{a.context.question} · {a.scope === 'factual' ? 'Reusable factual experience' : 'Current application'} · r{a.revision}</summary><p>{a.text}</p><p>Reviewed job context: {a.context.job || 'None supplied'}</p>{a.trace.request.facts.map(f => <p key={f.id}>{f.location}: {f.text}</p>)}</details><p>{a.facts.every(ref => facts.some(f => f.id === ref.id && f.revision === ref.revision)) ? 'Review required before reuse' : 'Stale sources · generate a new answer'}</p><button disabled={busy || !session} onClick={() => void run('reuse', { id: a.id })}>Open for review</button><button disabled={busy} onClick={() => void run('delete', { id: a.id })}>Delete saved answer</button></article>)}</section>
   {plan && <section><h2>Fill preview</h2><p>{plan.url}</p>{plan.rows.map(r => <article key={rowKey(r)}><strong>{r.field.descriptor.label || r.field.descriptor.name}</strong><p>{r.action ? 'value' in r.action ? r.action.value : r.field.descriptor.options[r.action.index]?.label : r.status}</p>{plan.state === 'finished' && r.action && <b>{plan.outcomes?.find(o => o.documentId === r.documentId && o.ref === r.field.ref)?.ok ? 'Verified write' : 'Not verified / left manual'}</b>}</article>)}{plan.errors?.map((e, i) => <p key={i} className="warning">{e}</p>)}<button disabled={busy || dirty || plan.state !== 'preview' || !plan.rows.some(r => r.action)} onClick={() => void run('fill')}>Fill previewed fields</button></section>}
  </main>;
 }

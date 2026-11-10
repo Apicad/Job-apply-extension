@@ -48,3 +48,49 @@ test('copy/paste boundary validates identity, shows original sources and revokes
  expect((await command(ui, { type: 'state', tabId })).data.session.answer.approval).toBeNull();
  expect((await command(ui, { type: 'response', tabId, raw: JSON.stringify(reply) })).ok).toBe(false);
 });
+
+async function prepareDraft(ui: Page, tabId: number) {
+ const scan = await command(ui, { type: 'scan', tabId });
+ const facts = (await command(ui, { type: 'state', tabId })).data.facts;
+ const row = scan.data.rows.find((r: any) => r.field.descriptor.control === 'textarea');
+ const requested = await command(ui, { type: 'request', tabId, planId: scan.data.id, rowKey: `${row.documentId}:${row.field.ref}`, job: 'Testing and documentation required.', factIds: [facts[0].id] });
+ expect(requested.ok, requested.error).toBe(true);
+ const request = requested.data.session.request;
+ await command(ui, { type: 'send', tabId });
+ const response = { schema: 1, requestId: request.id, context: request.context, facts: request.facts.map(({id,revision}:any)=>({id,revision})), segments: [{text: request.facts[0].text, sources: [{id: request.facts[0].id, revision: 1}]}], missing: [] };
+ expect((await command(ui, { type: 'response', tabId, raw: JSON.stringify(response) })).ok).toBe(true);
+ return (await command(ui, { type: 'state', tabId })).data.session.answer;
+}
+test('explicit save, reopen, renewed reuse, exact textarea readback and deleted-plan rejection', async ({ context, openExtensionPage }) => {
+ const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ let ui = await openExtensionPage('popup.html');
+ const tabId = await ui.evaluate(async url => (await (globalThis as any).chrome.tabs.query({})).find((t: any) => t.url === url).id, page.url());
+ expect((await command(ui, { type: 'demo' })).ok).toBe(true);
+ const a = await prepareDraft(ui, tabId);
+ expect((await command(ui, { type: 'state', tabId })).data.library).toHaveLength(0);
+ expect((await command(ui, { type: 'save', tabId, scope: 'application' })).ok).toBe(false);
+ expect((await command(ui, { type: 'approve', tabId, reviewed: true, revision: a.revision, text: a.text })).ok).toBe(true);
+ expect((await command(ui, { type: 'state', tabId })).data.library).toHaveLength(0);
+ expect((await command(ui, { type: 'save', tabId, scope: 'factual' })).ok).toBe(true);
+ await ui.close(); ui = await openExtensionPage(`popup.html?tabId=${tabId}`);
+ await expect(ui.getByRole('heading', { name: 'Saved answers · 1' })).toBeVisible();
+ const saved = (await command(ui, { type: 'state', tabId })).data.library[0];
+ const reused = await command(ui, { type: 'reuse', tabId, id: saved.id }); expect(reused.ok).toBe(true); expect(reused.data.session.answer.approval).toBeNull();
+ expect((await command(ui, { type: 'answer-preview', tabId })).ok).toBe(false);
+ const fresh = reused.data.session.answer;
+ expect((await command(ui, { type: 'approve', tabId, reviewed: true, revision: fresh.revision, text: fresh.text })).ok).toBe(true);
+ expect((await command(ui, { type: 'save', tabId, scope: 'factual' })).ok).toBe(true);
+ const preview = await command(ui, { type: 'answer-preview', tabId }); expect(preview.ok, preview.error).toBe(true);
+ const filled = await command(ui, { type: 'fill', tabId, planId: preview.data.plan.id }); expect(filled.ok, filled.error).toBe(true);
+ expect(filled.data.outcomes.filter((o:any)=>o.ok)).toHaveLength(6);
+ await expect(page.locator('#project')).toHaveValue(a.text); await expect(page.locator('#existing')).toHaveValue('Keep my answer');
+ await expect(page.locator('#signature')).toHaveValue(''); await expect(page.locator('#location')).toHaveValue(''); await expect(page.locator('#hidden')).toHaveValue(''); await expect(page.locator('#consent')).not.toBeChecked(); await expect(page.locator('#submitted')).toHaveText('Not submitted');
+ expect(await page.evaluate(()=> (window as any).events.filter((e:any)=>e.type==='keydown'||e.type==='click').length)).toBe(0);
+ await page.goto(`${ORIGIN.main}/hackathon.html?job=two`); await prepareDraft(ui, tabId);
+ const second = await command(ui, {type:'reuse',tabId,id:saved.id}); expect(second.ok).toBe(true); expect(second.data.session.answer.approval).toBeNull();
+ const b = second.data.session.answer; await command(ui,{type:'approve',tabId,reviewed:true,revision:b.revision,text:b.text}); await command(ui,{type:'save',tabId,scope:'factual'});
+ const pending = await command(ui,{type:'answer-preview',tabId}); expect(pending.ok).toBe(true);
+ expect((await command(ui,{type:'delete',tabId,id:saved.id})).ok).toBe(true);
+ expect((await command(ui,{type:'fill',tabId,planId:pending.data.plan.id})).ok).toBe(false);
+ await expect(page.locator('#project')).toHaveValue('');
+});

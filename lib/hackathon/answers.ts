@@ -1,3 +1,6 @@
+import { readLibrary, saveAnswer, deleteAnswer } from './library';
+import { currentApproval, reusableDraft } from './contracts';
+import { fieldSignature } from './engine';
 import { browser } from 'wxt/browser';
 import { readHackathon, writeHackathon } from '../storage';
 import { allowedQuestion, approve, bounded, editAnswer, isFact, key, makeRequest, parseReply, promptFor } from './contracts';
@@ -15,6 +18,7 @@ export async function loadFacts(): Promise<Fact[]> {
  if (!Array.isArray(facts) || facts.length > 100 || !facts.every(isFact) || new Set(facts.map(f => f.id)).size !== facts.length) throw Error('Saved facts are malformed; existing data was preserved.');
  return facts;
 }
+export const libraryStore = { read: () => readHackathon<unknown>('library'), write: (value: unknown) => writeHackathon('library', value) };
 export const sessionKey = (tabId: number) => `answer:${tabId}`;
 export async function getSession(tabId: number): Promise<AnswerSession> {
  const session = await readHackathon<AnswerSession>(sessionKey(tabId), true);
@@ -26,7 +30,7 @@ export async function invalidatePlan(tabId: number): Promise<void> {
 }
 export async function answerCommand(message: Record<string, unknown>, plan: NativePlan): Promise<unknown> {
  const tabId = plan.tabId; const facts = await loadFacts();
- if (message.type === 'state') return { facts, session: await readHackathon<AnswerSession>(sessionKey(tabId), true), plan };
+ if (message.type === 'state') return { library: await readLibrary(libraryStore), facts, session: await readHackathon<AnswerSession>(sessionKey(tabId), true), plan };
  if (message.type === 'request') {
   const row = plan.rows.find(r => rowKey(r) === message.rowKey);
   if (!row || !supportedQuestion(row) || plan.id !== message.planId) throw Error('Select a current, empty supported question.');
@@ -48,6 +52,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
   const updated = facts.map(f => f.id === fact.id ? { ...f, revision: f.revision + 1, text: message.text as string } : f);
   await writeHackathon('facts', updated); await invalidatePlan(tabId); return { facts: updated };
  }
+ if (message.type === 'delete') { if (typeof message.id !== 'string') throw Error('Invalid answer ID.'); await deleteAnswer(libraryStore, message.id); await invalidatePlan(tabId); return { deleted: true }; }
  const session = await getSession(tabId);
  if ((await browser.tabs.get(tabId)).url !== plan.url || session.planId !== plan.id) throw Error('Application was rescanned or changed. Select the question again.');
  if (message.type === 'send') {
@@ -61,8 +66,27 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
   session.answer = answer; session.request = null; session.sent = false;
   await writeHackathon(sessionKey(tabId), session, true); return { session };
  }
+ if (message.type === 'reuse') {
+  const saved = (await readLibrary(libraryStore)).find(a => a.id === message.id);
+  if (!saved) throw Error('Saved answer was deleted.');
+  await invalidatePlan(tabId); session.answer = reusableDraft(saved, session.context, facts); session.savedId = saved.id; session.request = null; session.sent = false;
+  await writeHackathon(sessionKey(tabId), session, true); return { session };
+ }
  if (!session.answer) throw Error('Generate or open an answer first.');
- if (message.type === 'edit' || message.type === 'invalidate') {
+ if (message.type === 'save') {
+  const saved = await saveAnswer(libraryStore, session.answer, facts, message.scope, session.savedId);
+  session.answer = saved; session.savedId = saved.id; await invalidatePlan(tabId);
+ } else if (message.type === 'answer-preview') {
+  const saved = (await readLibrary(libraryStore)).find(a => a.id === session.savedId);
+  if (!saved || saved.revision !== session.answer.revision || saved.text !== session.answer.text || !currentApproval(session.answer, session.context, facts)) throw Error('Save this exact approved revision before previewing. Deleted or stale answers cannot fill.');
+  const row = plan.rows.find(r => rowKey(r) === session.rowKey);
+  if (!row || !supportedQuestion(row) || (row.field.maxLength >= 0 && saved.text.length > row.field.maxLength)) throw Error('Question is unavailable or answer exceeds its length limit.');
+  plan.id = crypto.randomUUID(); plan.state = 'preview'; plan.outcomes = undefined;
+  plan.answerBinding = { id: session.answer.id, revision: session.answer.revision, savedId: saved.id };
+  row.action = { ref: row.field.ref, type: 'answer', value: saved.text, signature: fieldSignature(row.field.descriptor, row.field.form, row.field.maxLength) }; row.status = 'Approved saved answer';
+  session.planId = plan.id; await writeHackathon(`plan:${tabId}`, plan, true);
+  await writeHackathon(sessionKey(tabId), session, true); return { session, plan };
+ } else if (message.type === 'edit' || message.type === 'invalidate') {
   await invalidatePlan(tabId);
   session.answer = editAnswer(session.answer, message.type === 'invalidate' ? session.answer.text : String(message.text ?? ''));
  } else if (message.type === 'approve') {
@@ -70,4 +94,13 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
   session.answer = approve(session.answer, session.context, facts, message.reviewed === true);
  } else throw Error('Unsupported answer command.');
  await writeHackathon(sessionKey(tabId), session, true); return { session };
+}
+
+export async function validateAnswerBinding(plan: NativePlan): Promise<void> {
+ if (!plan.answerBinding) return;
+ const session = await getSession(plan.tabId); const a = session.answer;
+ const saved = (await readLibrary(libraryStore)).find(s => s.id === plan.answerBinding!.savedId);
+ if (!a || !saved || session.planId !== plan.id || a.id !== plan.answerBinding.id || a.revision !== plan.answerBinding.revision || saved.revision !== a.revision || saved.text !== a.text || !currentApproval(a, session.context, await loadFacts())) throw Error('Answer was edited, deleted, or became stale. Review and preview again.');
+ const row = plan.rows.find(r => rowKey(r) === session.rowKey);
+ if (!row || row.action?.type !== 'answer' || row.action.value !== a.text) throw Error('Answer plan mismatch.');
 }
