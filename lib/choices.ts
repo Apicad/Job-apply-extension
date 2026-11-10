@@ -8,8 +8,19 @@
  * is inside "Female", "no" starts "None" and "Non-binary", and on real forms
  * all three veteran options contain "protected veteran". Zero matches or two
  * matches both mean: choose nothing and let the user decide.
+ *
+ * How texts are compared: as lower-case words (`words` in regions.ts), so
+ * capitals, accents, punctuation, hyphens and apostrophe styles do not count.
+ * For the answers that forms word themselves (yes/no, gender, race, veteran,
+ * disability) the explanation an option carries is dropped first: anything in
+ * brackets and anything after the first sentence. For what the user typed (a
+ * school, a degree) nothing is dropped.
+ *
+ * The result names an option by its position in the list it was given, which
+ * is its position on the page.
  */
-import { words } from './regions';
+import { MONTH_NAMES, yearAndMonth } from './profile';
+import { countryCode, findCountries, stateCode, words } from './regions';
 import type { ChoiceOption, ChoicePick, Disability, Gender, PickChoice, Race, Veteran, YesNo } from './types';
 
 const MISSING: ChoicePick = { status: 'missing' };
@@ -19,14 +30,11 @@ const NO_OPTION: ChoicePick = { status: 'noOption' };
 // Reading an option
 // ---------------------------------------------------------------------------
 
-/** An explanation in brackets after the answer: "White (Not Hispanic or Latino)". */
-const IN_BRACKETS = /\([^()]*\)/g;
-
 /**
- * The end of a first sentence that has more text after it. A full stop after
- * a single letter is an initial ("a U.S. citizen"), not the end of a sentence.
+ * The end of a first sentence that has more text after it: "Yes. I can show
+ * proof." A question mark ends no answer: "Yes? I am not sure." is a doubt.
  */
-const SENTENCE_END = /(?<!(?<![\p{L}\p{N}])\p{L})[.!?](?=\s+\S)/u;
+const SENTENCE_END = /[.!](?=\s+\S)/;
 
 /** The answer an option gives, without the explanations forms add: brackets, and anything after the first sentence. */
 function answerPart(label: string): string {
@@ -35,10 +43,29 @@ function answerPart(label: string): string {
   return end === null ? text : text.slice(0, end.index);
 }
 
+/**
+ * Drops explanations in brackets: "White (Not Hispanic or Latino)" reads
+ * "White". A bracket that never closes is kept with all that follows: the
+ * text was cut short somewhere, and what the cut hid is unknown.
+ *
+ * One pass over the text, whatever a page puts into it.
+ */
 function withoutBrackets(text: string): string {
-  const shorter = text.replace(IN_BRACKETS, ' ');
-  // Brackets inside brackets go from the inside out, one round at a time.
-  return shorter === text ? text : withoutBrackets(shorter);
+  const kept: string[] = [];
+  /** Where each bracket that is still open begins in `kept`. */
+  const open: number[] = [];
+  for (const character of text) {
+    const start = character === ')' ? open.pop() : undefined;
+    if (start !== undefined) {
+      // The bracket closes: forget everything since it opened.
+      kept.length = start;
+      kept.push(' ');
+      continue;
+    }
+    if (character === '(') open.push(kept.length);
+    kept.push(character);
+  }
+  return kept.join('');
 }
 
 /** A text as lower-case words with single spaces: the form in which texts are compared. */
@@ -49,10 +76,14 @@ function asWords(text: string): string {
 /** Consent, agreement and attestation are never given for the user, however the question was understood. */
 const NEVER_CHOSEN = /consent|agree|acknowledg|certif/;
 
-/** What dropdowns show before anything is chosen: "Select...", "Please choose", "Click Here (...)". Not "Choose not to disclose". */
-const PROMPT = /^(please )?(select|choose|pick|click here)\b(?! not\b)/;
+/**
+ * What dropdowns show before anything is chosen: "Select...", "Please choose",
+ * "Pick one", Lever's "Click Here (...)". Not "Choose not to disclose" or
+ * "Choose to self-describe", which are answers.
+ */
+const PROMPT = /^(please )?(select|choose|pick|click here)\b(?! (not|to)\b)/;
 
-/** An option that may be chosen: enabled, with text, not the dropdown's placeholder, not a consent. */
+/** An option the user could pick: enabled, with text, and not the dropdown's placeholder. */
 interface Readable {
   /** Position among all options of the control, placeholders and disabled ones included. */
   index: number;
@@ -72,11 +103,10 @@ function readable(options: readonly ChoiceOption[]): Readable[] {
     if (option.disabled) return;
     // Only the text the user sees counts. Values are internal ("on" for every
     // Ashby radio), and an option nobody can read is never chosen.
-    const phrase = asWords(answerPart(option.label));
-    if (phrase === '') return;
-    if (index === 0 && PROMPT.test(phrase)) return;
     const text = asWords(option.label);
-    list.push({ index, label: option.label, text, phrase, neverChosen: NEVER_CHOSEN.test(text) });
+    if (text === '') return;
+    if (index === 0 && PROMPT.test(text)) return;
+    list.push({ index, label: option.label, text, phrase: asWords(answerPart(option.label)), neverChosen: NEVER_CHOSEN.test(text) });
   });
   return list;
 }
@@ -92,7 +122,7 @@ function only(fitting: readonly Readable[]): ChoicePick {
 // Answers that forms word in their own ways
 // ---------------------------------------------------------------------------
 
-/** How forms word one answer of the profile. */
+/** How forms word one answer of the profile: what is accepted, and what is refused. */
 interface Wording {
   /** Accepted phrases, as words. The answer part of an option must be one of them, whole. */
   phrases: ReadonlySet<string>;
@@ -102,7 +132,10 @@ interface Wording {
   deny: readonly string[];
 }
 
-/** Phrases are written here as forms write them; they are compared as words, so capitals, hyphens and apostrophe styles do not matter. */
+/**
+ * Phrases are written here the way forms write them. They are compared as
+ * words, so capitals, hyphens and apostrophe styles do not matter.
+ */
 function wording(accept: readonly (string | RegExp)[], deny: readonly string[] = []): Wording {
   const phrases = new Set<string>();
   const patterns: RegExp[] = [];
@@ -113,6 +146,7 @@ function wording(accept: readonly (string | RegExp)[], deny: readonly string[] =
   return { phrases, patterns, deny };
 }
 
+/** True when the option gives this answer: its answer part is an accepted wording and no deny word stands anywhere in its text. */
 function says(option: Readable, answer: Wording): boolean {
   const all = option.text.split(' ');
   if (answer.deny.some((word) => all.includes(word))) return false;
@@ -125,9 +159,13 @@ function says(option: Readable, answer: Wording): boolean {
  * want to answer". "I prefer to self-describe" is not one: it asks for more.
  */
 const DECLINE =
-  /^(i (would |'d )?)?(decline|prefer not|choose not|do not wish|don't wish|do not want|don't want) to (answer|say|disclose|respond|state|specify|identify|self identify)$/;
+  /^(i |i'd |i would )?(decline|prefer not|choose not|do not wish|don't wish|do not want|don't want) to (answer|say|disclose|respond|state|specify|identify|self identify)$/;
 
-/** Brackets are dropped before an option is compared, so "Protected veteran (not ...)" needs this second check. */
+/**
+ * The deny-list of an answer that a negation turns into its opposite.
+ * Brackets are dropped before an option is compared, so without this second
+ * check "Protected veteran (not ...)" would read "Protected veteran".
+ */
 const NEGATIONS = ['not', 'non', 'no', 'never'];
 
 const DECLINING = wording([DECLINE]);
@@ -135,7 +173,7 @@ const DECLINING = wording([DECLINE]);
 const GENDER: Record<Exclude<Gender, ''>, Wording> = {
   male: wording(['Male', 'Man']),
   female: wording(['Female', 'Woman']),
-  nonbinary: wording(['Non-binary', 'Nonbinary', 'Non-binary or third gender']),
+  nonbinary: wording(['Non-binary', 'Nonbinary', 'Non-binary or third gender', 'Non-binary / third gender']),
   decline: DECLINING,
 };
 
@@ -143,7 +181,7 @@ const GENDER: Record<Exclude<Gender, ''>, Wording> = {
 // Islander": a profile does not say which sub-group, and half an option is not an answer.
 const RACE: Record<Exclude<Race, ''>, Wording> = {
   asian: wording(['Asian']),
-  black: wording(['Black or African American', 'Black', 'African American', 'Black or of African descent']),
+  black: wording(['Black or African American', 'Black/African American', 'Black', 'African American', 'Black or of African descent']),
   hispanic: wording(['Hispanic or Latino', 'Hispanic', 'Latino', 'Hispanic/Latino']),
   white: wording(['White', 'White or European', 'Caucasian']),
   nativeAmerican: wording(['American Indian or Alaska Native', 'American Indian or Alaskan Native', 'Native American']),
@@ -189,7 +227,7 @@ function pickWorded<Answer extends string>(table: Record<Answer, Wording>, answe
  * "Yes, I am authorized", "No - I will need a visa". Not "None", "No-one",
  * "Not applicable" or "Yes with sponsorship".
  */
-const YES_OR_NO = /^(yes|no)(?:\s*[,–—].*|\s+-.*|[\s.!]*)$/su;
+const YES_OR_NO = /^(yes|no)(?:\s*[,–—].*|\s+-.*|[\s.!]*)$/s;
 
 function yesOrNo(option: Readable): YesNo {
   // "Yes, I consent" is a yes to something we never say yes to.
@@ -213,15 +251,40 @@ function pickYesNo(answer: YesNo, options: readonly ChoiceOption[], besides?: Wo
   // from a hand-edited file, which must never be read as "not yes, so no".
   if (answer !== 'yes' && answer !== 'no') return MISSING;
 
+  // An option nobody can read ("?", an emoji, a radio button whose label the
+  // scan did not find) may be a third answer. Only in first place is it the
+  // empty line a dropdown starts with.
+  const unreadable = options.some((option, index) => index > 0 && !option.disabled && asWords(option.label) === '');
+  if (unreadable) return NO_OPTION;
+
   const found: { yes: Readable[]; no: Readable[] } = { yes: [], no: [] };
   for (const option of readable(options)) {
     const said = yesOrNo(option);
-    if (said !== '') found[said].push(option);
-    // A third kind of answer: this is not a plain yes/no question.
-    else if (besides === undefined || !says(option, besides)) return NO_OPTION;
+    if (said !== '') {
+      found[said].push(option);
+    } else if (besides === undefined || !says(option, besides)) {
+      // A third kind of answer: this is not a plain yes/no question.
+      return NO_OPTION;
+    }
   }
   if (found.yes.length !== 1 || found.no.length !== 1) return NO_OPTION;
   return only(found[answer]);
+}
+
+/**
+ * Work authorization and sponsorship: the answers are about the country the
+ * user lives in (Profile in types.ts). Whether the question names another
+ * country is for the planner to check, but some lists name one only in their
+ * options: "No, I can work for any US employer without sponsorship (eg: US
+ * citizen…)" stands under a question that names no country. Such a list is
+ * answered only for somebody whose profile says they live there.
+ */
+function pickEligibility(answer: YesNo, country: string, options: readonly ChoiceOption[]): ChoicePick {
+  const pick = pickYesNo(answer, options);
+  if (pick.status !== 'match') return pick;
+  const home = countryCode(country);
+  const named = readable(options).flatMap((option) => findCountries(option.label));
+  return named.every((code) => code === home) ? pick : NO_OPTION;
 }
 
 /** "Yes, I have a disability, or have had one in the past" / "No, I do not have..." / "I do not want to answer". */
@@ -231,15 +294,104 @@ function pickDisability(answer: Disability, options: readonly ChoiceOption[]): C
 }
 
 // ---------------------------------------------------------------------------
+// Answers the user typed: places, schools, dates
+// ---------------------------------------------------------------------------
+
+/**
+ * The option that reads exactly like one of the given texts, all of it.
+ * Nothing is dropped here, brackets included: "University of California
+ * (Berkeley)" and "(Davis)" differ only inside them, and the first full stop
+ * of "St. John's University" does not end the name.
+ */
+function pickSameText(texts: readonly string[], options: readonly ChoiceOption[]): ChoicePick {
+  const wanted = new Set(texts.map(asWords));
+  return only(readable(options).filter((option) => wanted.has(option.text)));
+}
+
+/** A school, a degree, a major: the option must read as the user typed it. No guessing that a "Bachelor of Science" is a "Bachelor's Degree". */
+function pickTyped(typed: string, options: readonly ChoiceOption[]): ChoicePick {
+  return typed.trim() === '' ? MISSING : pickSameText([typed], options);
+}
+
+/**
+ * A state or a country: the option that names the same place as the profile,
+ * however either side writes it ("CA", "California", "CA - California").
+ * `codeOf` is the lookup in regions.ts for the kind of place asked for, which
+ * is what keeps Georgia the state and Georgia the country apart.
+ */
+function pickPlace(typed: string, codeOf: (value: string) => string | null, options: readonly ChoiceOption[]): ChoicePick {
+  const wanted = codeOf(typed);
+  // No place, or one the table does not know ("Ontario"): only an option that reads the same will do.
+  if (wanted === null) return pickTyped(typed, options);
+  const list = readable(options);
+  // A list that offers a yes and a no is a question, not a list of places,
+  // though "No" is also how ISO writes Norway.
+  const offers = (answer: YesNo) => list.some((option) => yesOrNo(option) === answer);
+  if (offers('yes') && offers('no')) return NO_OPTION;
+  return only(list.filter((option) => codeOf(option.label) === wanted));
+}
+
+/** ISO codes of the United States and its territories: the places whose addresses use US postal codes. */
+const USES_US_POSTAL_CODES: ReadonlySet<string> = new Set(['US', 'AS', 'GU', 'MP', 'PR', 'VI']);
+
+/**
+ * A state. The US table is right for somebody who lives in the United States
+ * and wrong for everybody else: "TN" is Tamil Nadu to an applicant in Chennai,
+ * "SC" is Santa Catarina in Brazil, "WA" is Western Australia. So once the
+ * profile names another country, only an option that reads as typed will do.
+ * A profile that names no country is taken to be American, as before.
+ */
+function pickState(typed: string, country: string, options: readonly ChoiceOption[]): ChoicePick {
+  const home = countryCode(country);
+  const mayLiveInTheUs = country.trim() === '' || (home !== null && USES_US_POSTAL_CODES.has(home));
+  return mayLiveInTheUs ? pickPlace(typed, stateCode, options) : pickTyped(typed, options);
+}
+
+/**
+ * A sign that turns a date into a range: "<2027", "2027+", "≥ May 2027".
+ * Texts are compared as words, which drops signs, so the label itself is asked.
+ */
+const RANGE_SIGN = /[<>≤≥+~]/;
+
+/**
+ * The graduation date, as a year ("2027") or as month and year ("May 2027",
+ * "Sept 2027", "05/2027", "5/2027", "2027-05"). An option that holds more
+ * than that is something else: "May/June 2027" is two months, "Spring 2027"
+ * a season, "2027 or later" and ">2027" a range.
+ */
+function pickGraduation(stored: string, part: 'year' | 'month and year', options: readonly ChoiceOption[]): ChoicePick {
+  const date = yearAndMonth(stored);
+  if (date === null) return MISSING;
+  const { year, month } = date;
+  // A range is not a date: "<2027" must not be chosen for 2027, and ">2027"
+  // must not count as a second "2027". Treated like options that cannot be
+  // chosen, they keep every other option at its position on the page.
+  const dates = options.map((option) => (RANGE_SIGN.test(option.label) ? { ...option, disabled: true } : option));
+  if (part === 'year') return pickSameText([year], dates);
+
+  const name = MONTH_NAMES[month - 1] ?? '';
+  const digits = String(month).padStart(2, '0');
+  // "Sept" is the one short form that is not the first three letters.
+  const shortNames = name === 'September' ? ['Sep', 'Sept'] : [name.slice(0, 3)];
+  const spellings = [name, ...shortNames].map((written) => `${written} ${year}`);
+  return pickSameText([...spellings, `${digits}/${year}`, `${month}/${year}`, `${year}-${digits}`], dates);
+}
+
+// ---------------------------------------------------------------------------
 // pickChoice
 // ---------------------------------------------------------------------------
 
+/**
+ * The option to choose for a kind of question, by its position in `options`.
+ * 'missing' when the profile has no answer for the kind; 'noOption' when no
+ * option, or more than one, says what the profile says.
+ */
 export const pickChoice: PickChoice = (kind, profile, options) => {
   switch (kind) {
     case 'workAuthorization':
-      return pickYesNo(profile.workAuthorization, options);
+      return pickEligibility(profile.workAuthorization, profile.country, options);
     case 'sponsorship':
-      return pickYesNo(profile.sponsorship, options);
+      return pickEligibility(profile.sponsorship, profile.country, options);
     case 'gender':
       return pickWorded(GENDER, profile.gender, options);
     case 'race':
@@ -248,6 +400,21 @@ export const pickChoice: PickChoice = (kind, profile, options) => {
       return pickWorded(VETERAN, profile.veteran, options);
     case 'disability':
       return pickDisability(profile.disability, options);
+    case 'state':
+      return pickState(profile.state, profile.country, options);
+    case 'country':
+      return pickPlace(profile.country, countryCode, options);
+    case 'school':
+      return pickTyped(profile.school, options);
+    case 'degree':
+      return pickTyped(profile.degree, options);
+    case 'major':
+      return pickTyped(profile.major, options);
+    case 'graduationYear':
+      return pickGraduation(profile.graduationDate, 'year', options);
+    case 'graduationDate':
+      return pickGraduation(profile.graduationDate, 'month and year', options);
+    // Every other kind is typed, attached or left alone; none is chosen from a list.
     default:
       return NO_OPTION;
   }

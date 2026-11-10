@@ -177,9 +177,19 @@ describe('classifyWorkEligibility', () => {
       '"unauthorized" is not authorization',
       "To ensure a fair and accurate assessment of each candidate's unique capabilities, Waymo prohibits the use of unauthorized outside assistance during the interview process. This includes, but is not limited to, artificial intelligen",
     ],
-    // Not real labels: a negated wording turns the meaning of "yes" around.
-    ['negated need', 'Please confirm that you do not require visa sponsorship.'],
-    ['negated authorization', "Tick this if you aren't authorized to work in the United States."],
+    // Not real labels: wordings that turn the meaning of "yes" around, or hang the question on another answer.
+    ['negated need', 'Can you confirm that you do not require visa sponsorship?'],
+    ['negated authorization', "Is it right that you aren't authorized to work in the United States?"],
+    ['negated authorization, typographic apostrophe', 'Is it right that you aren’t authorized to work in the United States?'],
+    ['negated need', 'Are you able to work in the United States with no need for sponsorship?'],
+    ['follow-up to another answer', 'If you answered yes above, will you require sponsorship to transfer your visa?'],
+    ['having and needing in one question', 'Do you currently have or need work authorization?'],
+    ['having and needing in one question', 'Are you authorized to work in the United States, or do you require authorization?'],
+    // Not real labels: the words of the real traps above, in a sentence that would otherwise pass.
+    ['security clearance, not work', 'Are you eligible to work on programs under a U.S. security clearance?'],
+    ['export control, not work', 'Are you authorized to work with export-controlled technology?'],
+    ['"U.S. Person" is an export-control term', 'As a U.S. Person, are you authorized to work with controlled technical data?'],
+    ['authorization that rests on a visa', 'Are you authorized to work in the United States on a visa?'],
     ['empty', ''],
     // Not a real label: two real questions joined, as a page that puts both in one legend would.
     ['both questions in one label', 'Are you authorized to work in the United States? Will you now or in the future require Visa Sponsorship?'],
@@ -189,10 +199,114 @@ describe('classifyWorkEligibility', () => {
     expect(classifyWorkEligibility(label)).toBeNull();
   });
 
-  it('drops a note in brackets even when the label was cut off before the closing bracket', () => {
-    // The real label, cut the way a length cap would cut it.
-    const label = 'Are you currently legally authorized to work in the country in which this job is based (e.g. you are a citizen, you have a visa';
-    expect(classifyWorkEligibility(label)).toBe('workAuthorization');
+  // Not real labels: the real questions above with one word more. Each asks for more than
+  // "may you work here?", or turns the meaning of "yes" around.
+  const oneWordMore: [why: string, label: string][] = [
+    // the design review names "unrestricted" beside "permanent"; the real label with that word says "right to work"
+    ['"unrestricted" asks for more than authorization', 'Do you have unrestricted work authorization in the United States?'],
+    ['"unrestricted" asks for more than authorization', 'Are you authorized to work in the United States on an unrestricted basis?'],
+    ['"yes" would mean "with restrictions"', 'Are you authorized to work in the U.S. with restrictions?'],
+    ['"indefinitely" asks for more, as "permanent" does', 'Are you authorized to work in the United States indefinitely?'],
+    ['"temporary" asks which kind of authorization', 'Do you have temporary work authorization (e.g. OPT or CPT)?'],
+    ['"never" negates the need', 'Can you confirm that you will never require visa sponsorship?'],
+    ['consent is never given for the user', 'Do you consent to verification that you are legally authorized to work in the United States?'],
+    ['agreement is never given for the user', 'Do you agree to provide proof that you are legally eligible to work in the US?'],
+  ];
+
+  it.each(oneWordMore)('null (%s): %s', (_why, label) => {
+    expect(classifyWorkEligibility(label)).toBeNull();
+  });
+
+  // Not real labels: the authorization question with a time in it, as forms for interns and
+  // new graduates word it. Somebody on a student or work visa may work today and still has to
+  // answer "no" here, so the saved "yes" must not be used.
+  const forHowLong: [why: string, label: string][] = [
+    ['a number of months', 'Are you authorized to work in the United States beyond 12 months?'],
+    ['"beyond"', 'Are you authorized to work in the United States beyond the end of your studies?'],
+    ['"year"', 'Are you authorized to work in the United States for more than one year?'],
+    ['"years"', 'Are you authorized to work in the U.S. for at least two years?'],
+    ['"month"', 'Are you eligible to work in the US for longer than a month?'],
+    ['"months"', 'Are you authorized to work in the US for the next twelve months?'],
+    ['a date', 'Are you authorized to work in the United States through December 2027?'],
+    ['"after"', 'Will you be authorized to work in the United States after graduation?'],
+    ['"until"', 'Are you authorized to work in the United States until the end of the program?'],
+    ['"duration"', 'Are you authorized to work in the US for the duration of this internship?'],
+    ['"long-term"', 'Are you authorized to work in the United States long-term?'],
+    ['"long term"', 'Are you authorized to work in the United States on a long term basis?'],
+    ['a time in a note', 'Do you currently have legal US work authorization (valid for at least a year)?'],
+    ['a visa type by its number', 'Are you authorized to work in the United States on an H-1B?'],
+  ];
+
+  it.each(forHowLong)('null (%s): %s', (_why, label) => {
+    expect(classifyWorkEligibility(label)).toBeNull();
+  });
+
+  it('still reads a sponsorship question that names visa types or a time', () => {
+    // "now or in the future" is the very question the saved answer is for
+    expect(classifyWorkEligibility('Will you require H-1B sponsorship now or after your OPT ends?')).toBe('sponsorship');
+  });
+
+  // Not real labels: a real question with its condition put in brackets. A note in brackets can
+  // be an example ("e.g. you are a citizen, you have a visa") or the very thing that makes the
+  // question a different one, so the words that rule a question out count inside brackets too.
+  const conditionInBrackets: [why: string, label: string][] = [
+    ['"without"', 'Are you legally authorized to work in the United States (without the need for sponsorship)?'],
+    ['"WITHOUT", in capitals', 'Are you legally authorized to work in the U.S. (WITHOUT sponsorship)?'],
+    ['"without", in the second note', 'Are you authorized to work in the location(s) you selected (without sponsorship)?'],
+    ['"not"', 'Are you authorized to work in the U.S. (i.e. you will not need sponsorship)?'],
+    ['"n\'t"', "Are you authorized to work in the US (and don't need a visa)?"],
+    ['"permanent"', 'Do you have work authorization (permanent) in the United States?'],
+    ['"any employer"', 'Are you authorized to work in the United States (for any employer)?'],
+    ['needing, with no other word that rules it out', 'Are you authorized to work in the United States (or do you require sponsorship)?'],
+    ['a note after the question', 'Are you authorized to work in the United States? (Answer "No" if you will ever need sponsorship.)'],
+    ['a negated need', 'Will you now or in the future require visa sponsorship (answer yes if you are not a citizen)?'],
+  ];
+
+  it.each(conditionInBrackets)('null (in brackets: %s): %s', (_why, label) => {
+    expect(classifyWorkEligibility(label)).toBeNull();
+  });
+
+  // Long labels arrive cut off. What the cut hid is unknown ("…without sponsorship?"), so a
+  // question is only judged when it can be read up to its question mark.
+  const cutOff: [why: string, label: string][] = [
+    // real labels, cut the way a length cap would cut them
+    [
+      'cut inside a note in brackets',
+      'Are you currently legally authorized to work in the country in which this job is based (e.g. you are a citizen, you have a visa',
+    ],
+    ['cut in mid-sentence', 'Are you currently legally authorized to work in the country in which this'],
+    ['cut in mid-sentence', 'Will you now or in the future require sponsorship for employment visa status in the country in which'],
+    // not a real label: the only question mark stands inside the note that was cut
+    ['cut inside a note that holds a question mark', 'Are you legally authorized to work in the United States (are you a citizen? do you hold a visa'],
+    // not real labels: statements. Real forms ask; a statement without a question mark may be the rest of a cut question.
+    ['a statement, not a question', 'I am legally authorized to work in the United States'],
+    ['a statement, not a question', 'I will require visa sponsorship'],
+  ];
+
+  it.each(cutOff)('null (%s): %s', (_why, label) => {
+    expect(classifyWorkEligibility(label)).toBeNull();
+  });
+
+  it('judges a question that is complete even when the note after it was cut off', () => {
+    // A real label of 230 characters, cut at 200.
+    const label =
+      'Will you now or in the future require Flexport to commence ("sponsor") an immigration case in order to employ you (for example, H-1B or other employment-based immigration case)? This is sometimes cal';
+    expect(classifyWorkEligibility(label)).toBe('sponsorship');
+  });
+
+  // Not real labels: plain wordings of the same two questions that the real ones above do not cover.
+  const otherWordings: [label: string, want: 'workAuthorization' | 'sponsorship'][] = [
+    ['Do you need a visa to work in the United Kingdom?', 'sponsorship'],
+    ['Will you require a work permit to work in Canada?', 'sponsorship'],
+    // "U.S." in mid-sentence is not the end of the question
+    ['Are you legally authorized to work in the U.S. on a full-time basis?', 'workAuthorization'],
+    // a note after the question is not part of the question
+    ['Are you legally authorized to work in the United States? Please note that we are unable to sponsor visas for this role.', 'workAuthorization'],
+    ['Will you now or in the future require sponsorship? Only candidates authorized to work in the United States can be considered.', 'sponsorship'],
+  ];
+
+  it.each(otherWordings)('%s → %s', (label, want) => {
+    expect(classifyWorkEligibility(label)).toBe(want);
   });
 });
 
@@ -304,7 +418,8 @@ describe('classifyField: field names on text boxes', () => {
     expect(classifyField(field({ label }))).toBe(want);
   });
 
-  // What label clean-up on the page may leave behind.
+  // What label clean-up on the page may leave behind. The first two are the raw
+  // texts of real labels; the rest are real labels with such leftovers added.
   const leftovers: [label: string, want: FieldKind][] = [
     ['First Name*', 'firstName'], // Greenhouse: <label>First Name<span aria-hidden="true">*</span></label>
     ['Full name✱', 'fullName'], // Lever: <div class="application-label">Full name<span class="required">✱</span></div>
@@ -314,6 +429,9 @@ describe('classifyField: field names on text boxes', () => {
     ['LinkedIn Profile (optional)', 'linkedin'],
     ['Last Name:', 'lastName'],
     ['Postal Code.', 'postalCode'],
+    // Not from the research. Accents are dropped before matching; otherwise "phone" would be found
+    // inside "Téléphone" as a word of its own and the label taken for one that mentions a phone in passing.
+    ['Téléphone', 'phone'],
   ];
 
   it.each(leftovers)('"%s" → %s', (label, want) => {
@@ -323,22 +441,124 @@ describe('classifyField: field names on text boxes', () => {
   // A label naming several things is the one box for all of them, or nothing.
   // A "last name" rule would type only the surname into Ashby's single name box.
   const composites: [label: string, want: FieldKind | null][] = [
-    ['Legal First and Last Name', 'fullName'], // Ashby's main name field at some employers
-    ['First and Last Name', 'fullName'],
+    ['Legal First and Last Name', 'fullName'], // real: Ashby's main name field at some employers
+    ['First and Last Name', 'fullName'], // the next six are not from the research: the same idea, other spellings
     ['First & Last Name', 'fullName'],
     ['City and State', 'location'],
     ['City, State', 'location'],
     ['City & State', 'location'],
     ['City/State', 'location'],
-    ['Street address, City, and Zip code, if an offer is extended:', null], // Lever
-    ['If located in the US, in what city and state do you reside?', null],
-    ['Please confirm your city, timezone and province', null],
+    ['Street address, City, and Zip code, if an offer is extended:', null], // real: Lever
+    ['If located in the US, in what city and state do you reside?', null], // real
+    ['Please confirm your city, timezone and province', null], // real
     ['City, State, Zip', null], // not a real label: three things, and no kind holds all three
     ['Name and Email', null], // not a real label
   ];
 
   it.each(composites)('%s → %s', (label, want) => {
     expect(classifyField(field({ label }))).toBe(want);
+  });
+
+  // A qualified label is not the plain field: one saved answer must not land
+  // in every box that carries its word. Real labels, except the two marked.
+  const qualified: [label: string, want: FieldKind | null][] = [
+    ['GPA', 'gpa'],
+    ['GPA (Doctorate)', null], // three dropdowns on one form
+    ['GPA (Graduate)', null],
+    ['GPA (Undergraduate)', null],
+    ['Undergraduate GPA', null],
+    ['Portfolio URL', 'portfolio'], // Lever, beside…
+    ['Other website', null], // …this one, on 30 of 42 sampled pages
+    ['Other Website', null], // Greenhouse
+    ['Email', 'email'],
+    ['Alternate Email', null],
+    ['Legal Name', 'fullName'],
+    ['Legal Name (if different than above)', null],
+    ['First Name', 'firstName'],
+    ['Preferred First Name', null], // 159 of 376 Greenhouse forms
+    ['Preferred Last Name', null],
+    ['Preferred Name', null],
+    ['Preferred First & Last Name', null], // Ashby's main name field at some employers
+    ['[Optional] Preferred Full Name (The name that you would like to be referred to as. Please input your legal name in the first and last name fields above.)', null],
+    ['Preferred Name | What would you like us to call you?', null], // Lever
+    ['Chosen Name', null],
+    ['LinkedIn Profile', 'linkedin'],
+    ['LinkedIn Profile (linkedin.com/in/<YOUR_ID>)', null], // the note asks for a particular form of it
+    ['Current Title', 'currentTitle'],
+    ['Title', null], // a Greenhouse employment row; elsewhere Mr / Ms / Dr
+    ['Country', 'country'],
+    ['Country code', null], // not a real label: the dial code of a phone
+    ['Phone country', null], // not a real label: the same thing, the other way round
+  ];
+
+  it.each(qualified)('%s → %s', (label, want) => {
+    expect(classifyField(field({ label }))).toBe(want);
+  });
+
+  // A field name inside a longer label is not that field: every pattern must
+  // match the label from its first word to its last. These labels are not
+  // from the research; each puts a real field name behind or before other
+  // words that no list of "other subjects" could be expected to know.
+  const embedded: [label: string][] = [
+    ["Mother's first name"],
+    ['First name in Katakana'],
+    ['Family name in Katakana'],
+    ['Surname in Katakana'],
+    ["Guardian's first and last name"],
+    ['First and last name of your guardian'],
+    ['Previous first and last name'],
+    ['First and last name in Katakana'],
+    ['Email domain'],
+    ['Old mobile number'],
+    ['Telephone extension'],
+    ['Office address line 1'],
+    ['Address line 1 of the office'],
+    ['State bar number'],
+    ['Province of origin'],
+    ['Office state/province'],
+    ['State/Province of the office'],
+    ['Office zip code'],
+    ['Office postcode'],
+    ['Office zip / postal code'],
+    ['Zip / postal code of the office'],
+    ['Office location'],
+    ['Office location (city)'],
+    ['Location (city) of the office'],
+    ['Office city, state'],
+    ['Company LinkedIn'],
+    ["Partner's current title"],
+    ['Current title of your mentor'],
+    ['University name on your diploma'],
+    ['Exchange college/university'],
+    ['College/University mascot'],
+    ['Graduate degree'],
+    ['Degree classification'],
+    ['High school graduation date'],
+    ['Graduation date of your class'],
+    ['High school graduation year'],
+    ['Graduation year of your class'],
+    ['High school year of graduation'],
+    ['Year of graduation from high school'],
+  ];
+
+  it.each(embedded)('null: %s', (label) => {
+    expect(classifyField(field({ label }))).toBeNull();
+  });
+
+  // The type of an input and its placeholder never recognise a field by themselves.
+  const noLabelNoIdentifier: [what: string, descriptor: Partial<FieldDescriptor>][] = [
+    ['nothing at all', {}],
+    ['type=email', { inputType: 'email' }],
+    ['type=tel', { inputType: 'tel' }],
+    ['type=url', { inputType: 'url' }],
+    ['a placeholder that names a field', { placeholder: 'First name' }],
+    ['an e-mail placeholder on type=email', { inputType: 'email', placeholder: 'hello@example.com' }], // Ashby
+    ['a phone placeholder on type=tel', { inputType: 'tel', placeholder: '(415) 555-5555' }], // Ashby
+    ["Lever's signature placeholder", { placeholder: 'Enter your full name' }],
+  ];
+
+  it.each(noLabelNoIdentifier)('null: %s', (_what, descriptor) => {
+    expect(classifyField(field(descriptor))).toBeNull();
   });
 
   // Real text-box labels that merely mention a field word. Each comment says
@@ -452,6 +672,9 @@ describe('classifyField: the autocomplete attribute on an unlabelled text box', 
     ["someone else's details", 'section-emergency tel'],
     ["someone else's details", 'section-emergency email'],
     ["someone else's details", 'section-referrer name'],
+    // In the HTML standard "fax" and "pager" say whose number a "tel" is. Not seen on a job site.
+    ['a fax machine, not a phone', 'fax tel'],
+    ['a pager, not a phone', 'pager tel'],
     ['a word every JavaScript object knows', 'constructor'],
     ['empty', ''],
   ];
@@ -595,6 +818,7 @@ describe('classifyField: the label and the attributes together', () => {
     ],
     // Ashby marks one of its phone boxes "tel-national": that token says nothing, the label still does.
     ['Ashby phone', { label: 'Phone', inputType: 'tel', autocomplete: 'tel-national', placeholder: '(415) 555-5555' }, 'phone'],
+    // Not real controls: the autocomplete tokens of kinds that are never recognised without their label.
     ['a state box marked for browsers', { label: 'State', autocomplete: 'address-level1' }, 'state'],
     ['a country box marked for browsers', { label: 'Country', autocomplete: 'country' }, 'country'],
     ['a country box marked for browsers', { label: 'Country', autocomplete: 'country-name' }, 'country'],
@@ -627,33 +851,69 @@ describe('classifyField: the label and the attributes together', () => {
     expect(classifyField(field(descriptor))).toBeNull();
   });
 
-  // A label that says nothing we know (another language, a generic word)
-  // leaves the attributes to stand in, as they do when there is no label.
-  const standingIn: [label: string, descriptor: Partial<FieldDescriptor>, want: FieldKind][] = [
-    ['Nombre', { id: 'first_name' }, 'firstName'],
-    ['Correo electrónico', { autocomplete: 'email' }, 'email'],
-    ['Telefonnummer', { name: 'phone', autocomplete: 'tel' }, 'phone'],
-    ['Vorname', { name: 'firstName' }, 'firstName'],
-    // "téléphone" must not be read as a label that mentions "phone" for something else
-    ['Numéro de téléphone', { name: 'phone' }, 'phone'],
+  // Not real controls: a phone number split over several boxes under the one label "Phone".
+  // The token says that a box holds only a piece of the number, so the whole number does not
+  // belong in it. ("tel-national" is no piece: Ashby marks its whole phone box with it, above.)
+  const pieceOfAPhoneNumber: [autocomplete: string][] = [
+    ['tel-country-code'],
+    ['tel-area-code'],
+    ['tel-local'],
+    ['tel-local-prefix'],
+    ['tel-local-suffix'],
+    ['tel-extension'],
+    ['work tel-extension'], // the last token says what the box holds
   ];
 
-  it.each(standingIn)('label "%s", attributes stand in → %s', (label, descriptor, want) => {
-    expect(classifyField(field({ label, ...descriptor }))).toBe(want);
+  it.each(pieceOfAPhoneNumber)('null: label "Phone" on a box marked %s', (autocomplete) => {
+    expect(classifyField(field({ label: 'Phone', inputType: 'tel', autocomplete }))).toBeNull();
+  });
+
+  // What the user can read decides (project guide: attributes stand in "when
+  // there is no label"). A label we cannot read is still a label: the box may
+  // want anything, so nothing the user cannot see is allowed to claim it.
+  const labelsWeCannotRead: [label: string, descriptor: Partial<FieldDescriptor>][] = [
+    // The box from the security review, as it stands in tests/fixtures/hostile.html:
+    // <label for="promo-code">Promo code (optional)</label>
+    // <input type="text" id="promo-code" name="promo_code" autocomplete="tel" />
+    ['Promo code (optional)', { id: 'promo-code', name: 'promo_code', autocomplete: 'tel' }],
+    ['Promo code', { autocomplete: 'tel' }], // the same label after clean-up on the page
+    ['How did you hear about this job?', { name: 'name' }], // real Greenhouse label; the name is not
+    ['Fax', { autocomplete: 'tel' }], // not a real control
+    // Not real controls: labels in another language. To the classifier "Nombre" is as unknown as "Promo code".
+    ['Nombre', { id: 'first_name' }],
+    ['Correo electrónico', { autocomplete: 'email' }],
+    ['Telefonnummer', { name: 'phone', autocomplete: 'tel' }],
+    ['Vorname', { name: 'firstName' }],
+  ];
+
+  it.each(labelsWeCannotRead)('null: label "%s", whatever the attributes say', (label, descriptor) => {
+    expect(classifyField(field({ label, ...descriptor }))).toBeNull();
+  });
+
+  it('treats a label that is only a required marker as no label', () => {
+    expect(classifyField(field({ label: '*', id: 'first_name' }))).toBe('firstName');
   });
 
   // The label is about something else, so no attribute may claim the box.
   // The labels are real unless marked; most of the attributes are not: they
-  // show what would happen if the page carried them. One pair is fully real:
-  // Ashby gives every e-mail-typed question autocomplete="email".
+  // show what would happen if the page carried them. The Ashby row is the
+  // nearest to a real case: that question is rendered as <input type="email">,
+  // and Ashby's code puts autocomplete="email" on e-mail inputs.
+  // (Since attributes only stand in for a missing label, each of these rows
+  // holds whatever its label says. The words that mark someone or something
+  // else are tested one by one where they still decide: on group labels and
+  // on the self-identification questions, further down.)
   const aboutSomethingElse: [why: string, label: string, descriptor: Partial<FieldDescriptor>][] = [
     // a follow-up to another answer
     ['follow-up', 'If yes, please provide further explanation below.', { name: 'email' }],
     ['follow-up', 'If located in Canada, in what city do you reside?', { name: 'city' }],
     ['follow-up', 'Legal Name (if different than above)', { autocomplete: 'name' }],
+    ['follow-up (label not real)', 'If applicable, the best number to reach you', { autocomplete: 'tel' }],
+    ['follow-up (label not real)', 'Do you go by another one? If so, enter it here', { autocomplete: 'name' }],
+    ['follow-up (label not real)', 'Known as (if different)', { autocomplete: 'name' }],
     // someone else
     [
-      'someone else (Ashby, fully real)',
+      'someone else (Ashby)',
       'Has someone at Cursor or Graphite referred you for this role? If so, please include their email here',
       { inputType: 'email', autocomplete: 'email' },
     ],
@@ -666,9 +926,10 @@ describe('classifyField: the label and the attributes together', () => {
     ['someone else (label not real)', 'Spouse', { autocomplete: 'name' }],
     ['someone else (label not real)', 'A relative we may reach', { autocomplete: 'tel' }],
     ['someone else (label not real)', 'Family member', { autocomplete: 'name' }],
-    ['someone else (label not real)', 'How may we reach them? (their mobile)', { autocomplete: 'tel' }],
+    ['someone else (label not real)', 'How may we reach them? (their number)', { autocomplete: 'tel' }],
     ['someone else (label not real)', 'References', { name: 'name' }],
     ['someone else (label not real)', "The employee's details", { name: 'name' }],
+    ['someone else (label not real), typographic apostrophe', 'The employee’s details', { name: 'name' }],
     // another subject
     ['pronouns', 'Pronouns', { name: 'name' }],
     ['pronouns', 'What are your pronouns?', { name: 'name' }],
@@ -701,9 +962,12 @@ describe('classifyField: the label and the attributes together', () => {
     ['mentions an e-mail (label not real)', 'School email address', { inputType: 'email', autocomplete: 'email' }],
     ['mentions a postal code', 'Zip Code / Postal Code (Non-U.S. based candidates, please enter "00000")', { autocomplete: 'postal-code' }],
     // made to catch programs
-    ['a honeypot (Workday, real)', "Enter website. This input is for robots only, do not enter if you're human.", { name: 'portfolio' }],
+    // Workday's sign-in honeypot as it is on the page: <input data-automation-id="beecatcher" name="website">
+    ['a honeypot (Workday, fully real)', "Enter website. This input is for robots only, do not enter if you're human.", { name: 'website', hints: 'beecatcher' }],
+    ['a honeypot (Workday, real label)', "Enter website. This input is for robots only, do not enter if you're human.", { name: 'portfolio' }],
     ['a honeypot (label not real)', 'For robots only', { name: 'email' }],
     ['a honeypot (label not real)', 'Leave this field blank', { name: 'email' }],
+    ['a honeypot (label not real)', 'Please leave this empty', { name: 'email' }],
     ['a honeypot (label not real)', 'Are you human?', { name: 'name' }],
   ];
 
@@ -711,13 +975,16 @@ describe('classifyField: the label and the attributes together', () => {
     expect(classifyField(field({ label, ...descriptor }))).toBeNull();
   });
 
-  // One row per field word: a label that uses the word for something else.
+  // One row for each word that field names are made of: a label that uses the
+  // word for something else, on a box whose attributes name one of our fields.
   // Labels marked "real" are from live forms; the rest are plausible.
   const fieldWords: [word: string, label: string, descriptor: Partial<FieldDescriptor>][] = [
     ['name', 'Chosen Name', { name: 'name' }], // real
+    ['surname', 'Previous surname', { autocomplete: 'family-name' }],
     ['email', 'Work email', { autocomplete: 'email' }],
     ['e-mail', 'Work e-mail', { autocomplete: 'email' }],
     ['phone', 'Work phone', { autocomplete: 'tel' }],
+    ['telephone', 'Work telephone', { autocomplete: 'tel' }],
     ['mobile', 'Mobile carrier', { autocomplete: 'tel' }],
     ['address', 'Address Line 2', { autocomplete: 'street-address' }],
     ['city', 'City you would like to work in', { name: 'city' }],
@@ -741,6 +1008,7 @@ describe('classifyField: the label and the attributes together', () => {
     ['college', 'College sports', { name: 'school' }],
     ['degree', 'Degree classification', { name: 'major' }],
     ['major', 'Intended major', { name: 'major' }],
+    ['discipline', 'Discipline you would like to move into', { name: 'major' }],
     ['gpa', 'Undergraduate GPA', { name: 'major' }], // real
     ['graduation', 'Have you graduated', { name: 'graduation_year' }],
   ];
@@ -830,6 +1098,22 @@ describe('classifyField: signing and attesting are left to the user', () => {
   it.each(signing)('null: %s', (_what, descriptor) => {
     expect(classifyField(field(descriptor))).toBeNull();
   });
+
+  // Not real labels: the questions answered by choosing, worded as something to certify or
+  // attest to. A "yes" from the profile would sign the statement for the user.
+  const statementsToSign: [what: string, label: string][] = [
+    ['an eligibility question to certify', 'Do you certify that you are legally authorized to work in the United States?'],
+    ['a sponsorship question to attest to', 'Do you attest that you will now or in the future require visa sponsorship?'],
+    ['a veteran statement to attest to', 'I attest that I am a protected veteran'],
+    ['a self-declared gender', 'I declare my gender as:'],
+    ['a disability status to acknowledge', 'Please acknowledge your disability status'],
+    ['a race given under a signature', 'Race (your selection counts as your signature)'],
+  ];
+
+  it.each(statementsToSign)('null: %s', (_what, label) => {
+    const dropdown = field({ control: 'select', inputType: '', label, options: options('Select...', 'Yes', 'No') });
+    expect(classifyField(dropdown)).toBeNull();
+  });
 });
 
 describe('classifyField: voluntary self-identification questions', () => {
@@ -908,13 +1192,31 @@ describe('classifyField: voluntary self-identification questions', () => {
     ['a yes/no question the profile has no answer for', 'Are you Hispanic/Latino?'], // Greenhouse EEOC block
     ['a second ethnicity (Lever)', 'Do you identify with a secondary or more specific ethnicity? ...'],
     ['a third ethnicity (Lever)', 'Do you identify with a third ethnicity? ...'],
+    // Not real labels: the other words for "one more of the same", on the question Lever asks three times.
+    ['a second ethnicity', 'Do you identify with a second ethnicity?'],
+    ['an additional ethnicity', 'Do you identify with an additional ethnicity?'],
+    ['an alternate ethnicity', 'Alternate ethnicity'],
+    ['an alternative ethnicity', 'Alternative ethnicity'],
+    ['another ethnicity', 'Other ethnicity'],
     ['several ethnicities', 'Please select up to 2 ethnicities that you most closely identify with.'],
     ['a follow-up', 'If you are based in the US, what is your veteran status?'],
     ['inclusion, not disability', 'It is important to us to create an accessible and inclusive interview experience. Please let us know if there are any adjustments we can make to assist you during the hiring and interview process.'],
     // Not real labels. A profile "yes" or "no" would answer a different question here.
     ['accommodation, not disability status', 'Do you require any accommodations for a disability during the interview process?'],
     ['accommodation, not disability status', 'Do you need any adjustments because you have a disability?'],
+    ['accommodation, not disability status', 'Do you have a disability we should accommodate?'],
+    ['adjustments, not disability status', 'Do you have a disability for which we should make adjustments?'],
+    ['what it requires, not disability status', 'Do you have a disability that requires special arrangements?'],
+    ['what you need, not disability status', 'Do you have a disability and need support at the interview?'],
     ['ability to do the job, not disability status', 'Do you have a disability that would prevent you from performing the essential functions of this job?'],
+    ['ability to do the job, not disability status', 'Do you have a disability that would prevent you from doing this job?'],
+    ['ability to do the job, not disability status', 'Can you perform this job although you have a disability?'],
+    ['whether to answer at all, not disability status', 'Do you wish to disclose your disability status?'],
+    ['whether to answer at all, not disability status', 'Would you like to tell us your disability status?'],
+    ['whether to answer at all, not disability status', 'Are you willing to share your disability status?'],
+    ['whether to answer at all, not disability status', 'Do you want to state your disability status?'],
+    ["someone else's disability", 'Do any of your dependents have a disability?'],
+    ["someone else's disability", 'Does your child live with a disability?'],
     ['insurance, not disability status', 'Would you like to enrol in disability insurance?'],
     ['someone else', 'Are you the spouse of a veteran?'],
     ['veterans in general, not this applicant', "Do you receive veterans' benefits?"],
@@ -924,6 +1226,76 @@ describe('classifyField: voluntary self-identification questions', () => {
 
   it.each(otherQuestions)('null (%s): %s', (_why, label) => {
     expect(classifyField(question(label))).toBeNull();
+  });
+
+  // Real controls: the label names the question; the identifier neither helps nor hurts.
+  const realControls: [what: string, descriptor: Partial<FieldDescriptor>, want: FieldKind | null][] = [
+    ['Greenhouse gender', { control: 'combobox', autocomplete: 'off', label: 'Gender', id: 'gender' }, 'gender'],
+    ['Greenhouse veteran status', { control: 'combobox', autocomplete: 'off', label: 'Veteran Status', id: 'veteran_status' }, 'veteran'],
+    ['Greenhouse Hispanic/Latino', { control: 'combobox', autocomplete: 'off', label: 'Are you Hispanic/Latino?', id: 'hispanic_ethnicity' }, null],
+    [
+      'Lever gender',
+      {
+        control: 'select',
+        inputType: '',
+        label: 'Gender',
+        name: 'eeo[gender]',
+        options: options('Select ...', 'Male', 'Female', 'Decline to self-identify'),
+      },
+      'gender',
+    ],
+    [
+      'Lever race',
+      {
+        control: 'radio',
+        inputType: 'radio',
+        label: 'Race',
+        name: 'eeo[race]',
+        options: options('Hispanic or Latino', 'White (Not Hispanic or Latino)', 'Decline to self-identify'),
+      },
+      'race',
+    ],
+    [
+      'Lever veteran status (the dropdown is real, the wording of its label is assumed)',
+      {
+        control: 'select',
+        inputType: '',
+        label: 'Veteran status',
+        name: 'eeo[veteran]',
+        options: options(
+          'Select ...',
+          'I identify as one or more of the classifications of protected veteran listed above',
+          'I am not a protected veteran',
+          'I decline to self-identify for protected veteran status',
+        ),
+      },
+      'veteran',
+    ],
+  ];
+
+  it.each(realControls)('%s → %s', (_what, descriptor, want) => {
+    expect(classifyField(field(descriptor))).toBe(want);
+  });
+
+  // A sensitive question is answered only when the question itself can be
+  // read: without a label, no name or id is taken for one.
+  const identifiersAlone: [what: string, descriptor: Partial<FieldDescriptor>][] = [
+    ['Greenhouse id gender', { id: 'gender' }],
+    ['Greenhouse id veteran_status', { id: 'veteran_status' }],
+    ['an id disability_status', { id: 'disability_status' }],
+    ['an id race', { id: 'race' }],
+    ['Lever name eeo[gender]', { name: 'eeo[gender]' }],
+    ['Lever name eeo[race]', { name: 'eeo[race]' }],
+    ['Lever name eeo[veteran]', { name: 'eeo[veteran]' }],
+    ['Lever name eeo[disability]', { name: 'eeo[disability]' }],
+    ['a box named work_authorization', { name: 'work_authorization' }],
+    ['a box named sponsorship', { name: 'sponsorship' }],
+    ['a box named requires_sponsorship', { name: 'requires_sponsorship' }],
+  ];
+
+  it.each(identifiersAlone)('null without a label: %s', (_what, descriptor) => {
+    const unlabelled = field({ control: 'select', inputType: '', options: options('Select...', 'Yes', 'No'), ...descriptor });
+    expect(classifyField(unlabelled)).toBeNull();
   });
 });
 
@@ -1056,6 +1428,8 @@ describe('which controls a kind is recognised on', () => {
     ['race', 'Race', ['select', 'radio', 'combobox'], ['Asian', 'White', 'Decline To Self Identify']],
     ['veteran', 'Veteran Status', ['select', 'radio', 'combobox'], ['I am not a protected veteran', "I don't wish to answer"]],
     ['disability', 'Disability Status', ['select', 'radio', 'combobox'], ['Yes, I have a disability', "No, I don't have a disability"]],
+    // a file, and the only kind a file input can be
+    ['resume', 'Resume/CV', ['file'], []],
   ];
 
   const allControls: ControlType[] = ['text', 'textarea', 'select', 'radio', 'combobox', 'file'];
@@ -1092,10 +1466,11 @@ describe('classifyField: what a dropdown offers can rule its label out', () => {
   const wrongLists: [label: string, offered: string[]][] = [
     ['State', ['Yes', 'No']],
     ['State', ['Select...', 'Yes', 'No']],
-    ['State', ['Yes ', 'No']], // real lists carry trailing spaces
+    ['State', ['Yes ', 'No ']], // real lists carry trailing spaces
+    ['State', [' Yes', ' No']],
     ['State', ['YES', 'NO']],
-    ['State', ['Yes, I live here', 'Yes, I plan to relocate', 'No']],
-    ['State', ['Yes - NYC', 'Yes - SF', 'No']],
+    ['State', ['Yes, I live here', 'No, I plan to relocate']],
+    ['State', ['Yes - NYC', 'Yes - SF', 'No - elsewhere']],
     ['Country', ['Yes', 'No']],
     ['School', ['Yes', 'No']],
     ['Degree', ['Yes', 'No']],
@@ -1148,7 +1523,7 @@ describe('classifyField: the group a control sits in can rule it out', () => {
   });
 
   it('recognises a country dropdown that stands on its own (Greenhouse custom question)', () => {
-    expect(classifyField(field({ control: 'combobox', autocomplete: 'off', label: 'Country', id: 'question_1' }))).toBe('country');
+    expect(classifyField(field({ control: 'combobox', autocomplete: 'off', label: 'Country' }))).toBe('country');
   });
 
   // Not real controls: plain labels inside a group about someone or something else.
@@ -1165,13 +1540,112 @@ describe('classifyField: the group a control sits in can rule it out', () => {
     ['If you answered yes above', 'City'],
     ['Signature', 'Name'],
     ['Declaration', 'Full name'],
+    // someone else, in the words forms outside the US use for a reference and for an applicant's family
+    ['Referees', 'Name'],
+    ['Referee 1', 'Email'],
+    ['Parent or carer', 'Phone'],
+    ['Parents', 'Email'],
+    ['Legal guardian', 'Name'],
+    ['Guardians', 'Phone'],
+    ['Next of kin', 'Name'],
   ];
 
   it.each(ruledOut)('null: group "%s", label "%s"', (groupLabel, label) => {
     expect(classifyField(field({ label, groupLabel }))).toBeNull();
   });
 
-  // An ordinary section heading rules nothing out, even when it names fields itself.
+  // One row for every other word that marks a text as being about someone or something else.
+  // Not real controls. In a label these words only decide beside a self-identification word
+  // (any other label we cannot read is left alone anyway); as the heading of a group each of
+  // them decides on its own, so this is where they are tested.
+  const ruledOutByWord: [word: string, groupLabel: string, label: string][] = [
+    // a follow-up to another answer
+    ['if yes', 'Have you lived abroad? If yes:', 'Country'],
+    ['if no', 'Is this your permanent address? If no:', 'City'],
+    ['if not', 'Same as above? If not:', 'Address'],
+    ['if so', 'Do you go by another name? If so:', 'Name'],
+    ['(if', 'Term-time address (if different)', 'City'],
+    // someone else
+    ['their', 'Their details', 'Name'],
+    ['referral', 'Referral', 'Email'],
+    ['referred', 'Referred by', 'Name'],
+    ['recruiter', 'Your recruiter', 'Email'],
+    ['supervisor', 'Supervisor', 'Phone'],
+    ['relative', 'A relative we may reach', 'Phone'],
+    ['relatives', 'Relatives working here', 'Name'],
+    ['spouse', 'Spouse', 'Name'],
+    ['family', 'Family member', 'Name'],
+    ["employee's", "The employee's details", 'Name'],
+    ["employee's, typographic apostrophe", 'The employee’s details', 'Name'],
+    // another subject
+    ['password', 'Password hint', 'Email'],
+    ['pronoun', 'Pronouns', 'Name'],
+    ['citizen', 'Citizenship', 'Country'],
+    ['nationality', 'Nationality', 'Country'],
+    ['consent', 'Consent', 'Full name'],
+    ['agree', 'Agreement', 'Full name'],
+    ['employee id', 'Employee ID', 'Email'],
+    // the wording of honeypots
+    ['robots', 'For robots only', 'Email'],
+    ['robot', 'Robot check', 'Email'],
+    ['human', 'Are you human?', 'Name'],
+    ['leave … blank', 'Leave this field blank', 'Email'],
+    ['leave … empty', 'Please leave this empty', 'Email'],
+  ];
+
+  it.each(ruledOutByWord)('null ("%s"): group "%s", label "%s"', (_word, groupLabel, label) => {
+    expect(classifyField(field({ label, groupLabel }))).toBeNull();
+  });
+
+  it('rules out an unlabelled box inside such a group too, whatever its attributes say', () => {
+    expect(classifyField(field({ groupLabel: 'Emergency contact', autocomplete: 'tel' }))).toBeNull();
+    expect(classifyField(field({ groupLabel: 'Contact details', autocomplete: 'tel' }))).toBe('phone');
+  });
+
+  // Not real controls. Greenhouse's "Phone" group above is the real case of a group that is
+  // itself one field; these are the same thing for other fields. What stands inside belongs to
+  // the group's subject: the "Name" under "Current employer" is the employer's, not the applicant's.
+  const underAnotherField: [groupLabel: string, label: string][] = [
+    ['Current employer', 'Name'],
+    ['Employer', 'Phone'],
+    ['Company', 'Address'],
+    ['School', 'City'],
+    ['University', 'State'],
+    // the line to sign on a disability form, when nothing but its section says so
+    ['Disability status', 'Name'],
+    ['Voluntary Self-Identification of Disability', 'Name'],
+    ['Veteran status', 'Full name'],
+  ];
+
+  it.each(underAnotherField)('null: group "%s" is a field of its own, label "%s"', (groupLabel, label) => {
+    expect(classifyField(field({ label, groupLabel }))).toBeNull();
+  });
+
+  it('rules out an unlabelled box inside a group that is a field of its own, too', () => {
+    expect(classifyField(field({ groupLabel: 'Current employer', name: 'name' }))).toBeNull();
+  });
+
+  // …but a group named after a field may hold that field, and "Name", "Address" and "Location"
+  // stand over the pieces of a name and of an address. Not real controls (the project's own
+  // tests/fixtures/generic.html has such an "Address" group).
+  const piecesOfTheGroup: [groupLabel: string, label: string, want: FieldKind][] = [
+    ['Address', 'Street address', 'addressLine1'],
+    ['Address', 'State', 'state'],
+    ['Address', 'Zip Code', 'postalCode'],
+    ['Address', 'City, State', 'location'],
+    ['Legal name', 'Last Name', 'lastName'],
+    ['Current location', 'City', 'city'],
+    ['Location', 'Address', 'addressLine1'],
+    ['Current employer', 'Company name', 'currentCompany'],
+    ['Email', 'Confirm Email', 'email'],
+  ];
+
+  it.each(piecesOfTheGroup)('group "%s", label "%s" → %s', (groupLabel, label, want) => {
+    expect(classifyField(field({ label, groupLabel }))).toBe(want);
+  });
+
+  // An ordinary section heading rules nothing out, and one that names a field stands over that
+  // field and its pieces. Not real controls either.
   const untouched: [groupLabel: string, label: string, want: FieldKind][] = [
     ['Address', 'City', 'city'],
     ['Address', 'Country', 'country'],
@@ -1205,5 +1679,104 @@ describe('classifyField: the group a control sits in can rule it out', () => {
       options: options('Select...', 'Male', 'Female', 'Decline to self-identify'),
     });
     expect(classifyField(gender)).toBe('gender');
+  });
+});
+
+describe('classifyField: the résumé', () => {
+  const fileInput = (overrides: Partial<FieldDescriptor>) => field({ control: 'file', inputType: 'file', ...overrides });
+  const accept = '.pdf,.doc,.docx,.txt,.rtf';
+
+  const resumes: [what: string, descriptor: Partial<FieldDescriptor>][] = [
+    // Greenhouse: both file inputs are labelled "Attach"; the id and the group label tell them apart
+    ['Greenhouse', { label: 'Attach', groupLabel: 'Resume/CV', id: 'resume', accept }],
+    ['Greenhouse, group label used as the label', { label: 'Resume/CV', groupLabel: 'Resume/CV', id: 'resume', accept }],
+    ['Greenhouse, group label not found', { label: 'Attach', id: 'resume', accept }],
+    ['Lever', { label: 'Resume/CV', id: 'resume-upload-input', name: 'resume', hints: 'input-resume' }],
+    [
+      'Lever, with the whole upload widget read as the label',
+      {
+        label: "Resume/CV ✱ATTACH RESUME/CVCouldn't auto-read resume.Analyzing resume...Success!",
+        id: 'resume-upload-input',
+        name: 'resume',
+        hints: 'input-resume',
+      },
+    ],
+    ['Ashby', { label: 'Resume', id: '_systemfield_resume', required: true }],
+    // the label alone is enough when it starts with the word
+    ['label "Resume"', { label: 'Resume' }],
+    ['label "RESUME"', { label: 'RESUME' }],
+    ['label "Résumé"', { label: 'Résumé' }],
+    ['label "Résumé/CV"', { label: 'Résumé/CV' }],
+    ['label "CV"', { label: 'CV' }],
+    ['label "CV / Resume"', { label: 'CV / Resume' }],
+    ['label "Resume (PDF only)"', { label: 'Resume (PDF only)' }],
+    ['group label alone', { label: 'Upload', groupLabel: 'Résumé' }],
+    // …and so is one of the known ids or names
+    ['id resume', { id: 'resume' }],
+    ['name resume', { name: 'resume' }],
+    ['id cv', { id: 'cv' }],
+    ['name cv', { name: 'cv' }],
+    ['id resume-upload-input', { id: 'resume-upload-input' }],
+    ['id _systemfield_resume', { id: '_systemfield_resume' }],
+  ];
+
+  it.each(resumes)('%s → resume', (_what, descriptor) => {
+    expect(classifyField(fileInput(descriptor))).toBe('resume');
+  });
+
+  const otherUploads: [what: string, descriptor: Partial<FieldDescriptor>][] = [
+    // real controls
+    ['Greenhouse cover letter', { label: 'Attach', groupLabel: 'Cover Letter', id: 'cover_letter', accept }],
+    ['Greenhouse cover letter, group label not found', { label: 'Attach', id: 'cover_letter', accept }],
+    ['Greenhouse "Portfolio or Cover Letter"', { label: 'Portfolio or Cover Letter' }],
+    [
+      'Greenhouse transcript',
+      { label: 'Please upload your academic record document (e.g. University Transcript, Transcript of Records, Marksheet, or Statement of Marks).' },
+    ],
+    ['Greenhouse visa copy', { label: 'If you currently hold a work or study visa, please upload a copy of this here:' }],
+    // Ashby's "Autofill from resume" box: unlabelled, first in the page, and it re-renders the whole form
+    ['Ashby autofill box, unlabelled', {}],
+    ['Ashby autofill box, heading as label', { label: 'Autofill from resume' }],
+    ['Ashby autofill box, all nearby text as label', { label: 'Autofill from resume Upload your resume here to autofill key application fields.' }],
+    // no explicit signal
+    ['a bare "Attach"', { label: 'Attach' }],
+    ['"Upload your resume": the label does not start with the word', { label: 'Upload your resume' }],
+    ['"Please attach your CV"', { label: 'Please attach your CV' }],
+    ['a word that only starts like CV', { label: 'CVS Health badge' }],
+    ['a word that only starts like resume', { label: 'Resumes of your team' }],
+    ['an id that only contains the word', { id: 'resume_text' }],
+    ['an id that only contains the word', { id: 'old-resume-2' }],
+    ['the data hint alone', { hints: 'input-resume' }],
+    // Not real labels: a résumé signal together with another document or an import feature
+    ['résumé and cover letter in one', { label: 'Resume and Cover Letter' }],
+    ['transcript', { label: 'CV or transcript' }],
+    ['portfolio', { label: 'Resume / Portfolio' }],
+    ['visa', { label: 'CV and visa copy' }],
+    ['license', { label: "CV and driver's license" }],
+    ['licence', { label: 'CV and driving licence' }],
+    ['autofill', { label: 'Resume (autofill your application)' }],
+    ['autofill in the group', { label: 'Resume', groupLabel: 'Autofill from resume' }],
+    ['autofill in a hint', { id: 'resume', hints: 'autofill-input' }],
+    ['parse', { label: 'Resume - we parse it for you' }],
+    ['import', { label: 'Resume import' }],
+    ['prefill', { label: 'Resume to prefill the form' }],
+    ['cover letter by id', { label: 'Resume', id: 'cover_letter' }],
+    ['cover letter by name', { id: 'resume', name: 'cover_letter_upload' }],
+    ['a signature', { label: 'Resume', name: 'signature_file' }],
+  ];
+
+  it.each(otherUploads)('null: %s', (_what, descriptor) => {
+    expect(classifyField(fileInput(descriptor))).toBeNull();
+  });
+
+  // A résumé is a file. A box to paste it into, or a link to it, is not recognised.
+  const notFiles: [what: string, descriptor: Partial<FieldDescriptor>][] = [
+    ['a text box labelled Resume', { control: 'text', label: 'Resume' }],
+    ['a text box with the résumé id', { control: 'text', id: 'resume' }],
+    ['a textarea to paste it into', { control: 'textarea', inputType: '', label: 'Resume', id: 'resume_text' }],
+  ];
+
+  it.each(notFiles)('null: %s', (_what, descriptor) => {
+    expect(classifyField(field(descriptor))).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import type { IsShown, PageEnv } from '../types';
-import { closestAcrossShadow, matchesSelector, ownLabels, ownWrappers, shadowHostOf } from './collect';
+import { closestAcrossShadow, matchesSelector, ownLabels, ownWrappers, shadowHostOf, uploadWidgetOf } from './collect';
 
 type FormControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
@@ -8,19 +8,18 @@ const HIDING_MARKUP = '[hidden], [inert], [aria-hidden="true" i]';
 
 const CLOSED_DETAILS = 'details:not([open])';
 
-/** How far up a hidden radio may look for the styled wrapper the user sees instead of it. */
-const RADIO_WRAPPER_LEVELS = 3;
-
-/** How far up the upload widget around a hidden file input may reach (Greenhouse needs four levels). */
-const FILE_WIDGET_LEVELS = 4;
+/** How far up a hidden radio or combobox input may look for the styled box the user sees instead of it. */
+const STYLED_BOX_LEVELS = 3;
 
 /** What a person clicks to open the file picker when the input itself is hidden. */
 const CLICKABLE = 'label, button, [role="button" i], input[type="button" i]';
 
 /**
  * Product rule 4: never fill a field the user cannot see. A text box, textarea or dropdown must be
- * visible itself. A radio may be hidden behind its label or styled wrapper, but only when that is
- * visible. Disabled and read-only controls are never shown: they are not the user's to change.
+ * visible itself. A radio or a file input may be hidden behind a styled control (a label, a wrapper,
+ * an "Attach" button), but only when that control is visible. So may the input of a custom dropdown,
+ * which is only ever reported, never written. What the markup itself hides stays hidden whatever
+ * stands beside it. Disabled and read-only controls are never shown: they are not the user's to change.
  */
 export const isShown: IsShown = (control, env) => {
   if (control.control === 'radio') {
@@ -33,6 +32,7 @@ export const isShown: IsShown = (control, env) => {
 
   if (isDisabled(control.el) || isReadOnly(control.el)) return false;
   if (control.control === 'file') return isFileInputSeen(control.el, env);
+  if (control.control === 'combobox') return isComboboxSeen(control.el, env);
   return isSeen(control.el, env);
 };
 
@@ -79,7 +79,23 @@ function isRadioSeen(radio: HTMLInputElement, env: PageEnv): boolean {
 
   const labels = ownLabels(radio);
   if (labels.length > 0) return labels.some((label) => isSeen(label, env));
-  return ownWrappers([radio], RADIO_WRAPPER_LEVELS).some((wrapper) => isSeen(wrapper, env));
+  return isStyledBoxSeen(radio, env);
+}
+
+/**
+ * The input of a custom dropdown is often next to nothing. React-Select, which draws every dropdown
+ * on Greenhouse, keeps it a few pixels wide while empty and makes it transparent once an option is
+ * chosen; what a person sees is the styled box around it. Such an input is seen when that box is.
+ * A combobox is never written to, so this only decides whether it is reported.
+ */
+function isComboboxSeen(input: HTMLInputElement, env: PageEnv): boolean {
+  if (isHiddenByMarkup(input)) return false;
+  return env.isRendered(input) || isStyledBoxSeen(input, env);
+}
+
+/** True when a wrapper that holds this control and no other field, at most three levels up, is seen. */
+function isStyledBoxSeen(el: HTMLInputElement, env: PageEnv): boolean {
+  return ownWrappers([el], STYLED_BOX_LEVELS).some((wrapper) => isSeen(wrapper, env));
 }
 
 /**
@@ -93,9 +109,8 @@ function isFileInputSeen(input: HTMLInputElement, env: PageEnv): boolean {
   if (env.isRendered(input)) return true;
 
   const standIns: Element[] = ownLabels(input);
-  const wrappers = ownWrappers([input], FILE_WIDGET_LEVELS);
-  const widget = wrappers[wrappers.length - 1];
-  if (widget !== undefined) standIns.push(...widget.querySelectorAll(CLICKABLE));
+  const widget = uploadWidgetOf(input);
+  if (widget !== null) standIns.push(...widget.querySelectorAll(CLICKABLE));
   return standIns.some((standIn) => isSeen(standIn, env));
 }
 

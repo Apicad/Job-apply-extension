@@ -3,7 +3,7 @@
 // lib/regions.ts is data and lookups: no DOM. Running without one makes a
 // stray `document` fail here.
 import { describe, expect, it } from 'vitest';
-import { COUNTRIES, US_STATES, countryCode, findCountries, findCountry, stateCode, words } from '../../lib/regions';
+import { COUNTRIES, SEVERAL_COUNTRIES, US_STATES, countryCode, findCountries, findCountry, stateCode, words } from '../../lib/regions';
 
 describe('words', () => {
   const table: [why: string, text: string, want: string[]][] = [
@@ -26,6 +26,11 @@ describe('words', () => {
     ['straight quotes around a word are dropped', "'Yes'", ['yes']],
     ['an empty text has no words', '', []],
     ['dashes alone are no words', '--', []],
+    // Only the accents of Latin letters are optional. In Hindi the marks are
+    // the vowels: without them "कला" (art) and "किला" (fort) are one word.
+    ['a Hindi vowel sign is part of the word', 'कला', ['कला']],
+    ['another vowel sign makes another word', 'किला', ['किला']],
+    ['a mark with no letter to sit on is no word', '❤\ufe0f', []],
   ];
 
   it.each(table)('%s', (_why, text, want) => {
@@ -110,6 +115,28 @@ describe('US_STATES', () => {
     expect(US_STATES.map(([code]) => code).sort()).toEqual(USPS.split(' '));
   });
 
+  // Typed a second time, by hand: the codes that are easy to swap are the
+  // ones that start alike (MI, MN, MS, MO, MT; NE, NV, NH, NJ, NM, NY, NC, ND).
+  const names: [code: string, name: string][] = [
+    ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'], ['CA', 'California'],
+    ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'], ['DC', 'District of Columbia'], ['FL', 'Florida'],
+    ['GA', 'Georgia'], ['HI', 'Hawaii'], ['ID', 'Idaho'], ['IL', 'Illinois'], ['IN', 'Indiana'],
+    ['IA', 'Iowa'], ['KS', 'Kansas'], ['KY', 'Kentucky'], ['LA', 'Louisiana'], ['ME', 'Maine'],
+    ['MD', 'Maryland'], ['MA', 'Massachusetts'], ['MI', 'Michigan'], ['MN', 'Minnesota'], ['MS', 'Mississippi'],
+    ['MO', 'Missouri'], ['MT', 'Montana'], ['NE', 'Nebraska'], ['NV', 'Nevada'], ['NH', 'New Hampshire'],
+    ['NJ', 'New Jersey'], ['NM', 'New Mexico'], ['NY', 'New York'], ['NC', 'North Carolina'], ['ND', 'North Dakota'],
+    ['OH', 'Ohio'], ['OK', 'Oklahoma'], ['OR', 'Oregon'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'],
+    ['SC', 'South Carolina'], ['SD', 'South Dakota'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['UT', 'Utah'],
+    ['VT', 'Vermont'], ['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'], ['WI', 'Wisconsin'],
+    ['WY', 'Wyoming'], ['AS', 'American Samoa'], ['GU', 'Guam'], ['MP', 'Northern Mariana Islands'], ['PR', 'Puerto Rico'],
+    ['VI', 'U.S. Virgin Islands'],
+  ];
+
+  it.each(names)('%s is %s', (code, name) => {
+    expect(stateCode(name)).toBe(code);
+    expect(stateCode(`${code} - ${name}`)).toBe(code);
+  });
+
   // Two rows sharing a name would make one of them unreachable.
   it.each(US_STATES.map(([code, ...names]) => [code, names] as const))('%s is found under each of its names', (code, names) => {
     expect(stateCode(code)).toBe(code);
@@ -186,8 +213,10 @@ describe('countryCode', () => {
     ['South Sudan', 'SS'],
     ['Samoa', 'WS'],
     ['American Samoa', 'AS'],
-    ['Congo', 'CG'],
     ['Democratic Republic of the Congo', 'CD'],
+    ['Republic of the Congo', 'CG'],
+    ['Congo (Brazzaville)', 'CG'],
+    ['Congo, The Democratic Republic of the', 'CD'],
     ['United States Minor Outlying Islands', 'UM'],
     ['Puerto Rico', 'PR'],
     ['Kosovo', 'XK'],
@@ -195,6 +224,8 @@ describe('countryCode', () => {
     ['Congo - Kinshasa', 'CD'],
     ['Heard & McDonald Islands', 'HM'],
     ['U.S. Outlying Islands', 'UM'],
+    // The country list of a live Lever form (November 2026) still uses the old ISO name.
+    ['Macedonia, the Former Yugoslav Republic of', 'MK'],
   ];
 
   it.each(known)('%s is %s', (value, want) => {
@@ -218,6 +249,8 @@ describe('countryCode', () => {
     ['two countries with a slash', 'Canada / United States'],
     ['two countries with a comma', 'Georgia, US'],
     ['a name two countries share', 'Virgin Islands'],
+    // Somebody from Kinshasa who types "Congo" must not be given Brazzaville.
+    ['"Congo" alone, which is two countries', 'Congo'],
     ['a country and something else in brackets', 'Ireland (Northern)'],
     ['a region that is not a country (it is on the real Greenhouse list)', 'Crimea'],
     ['"Other"', 'Other'],
@@ -230,39 +263,49 @@ describe('countryCode', () => {
   });
 
   // The options of "Please choose the country in which you are located." on a
-  // live Greenhouse form (GitLab, November 2026), in the form's own spelling.
-  const GREENHOUSE_LIST = [
-    'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia',
-    'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium',
-    'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria',
-    'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Central African Republic', 'Chad',
-    'Chile', 'China', 'Colombia', 'Comoros', 'Crimea', 'Democratic Republic of the Congo', 'Republic of the Congo',
-    'Costa Rica', "Cote d'Ivoire", 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica',
-    'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini',
-    'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada',
-    'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia',
-    'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati',
-    'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein',
-    'Lithuania', 'Luxembourg', 'Macedonia', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta',
-    'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia',
-    'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand',
-    'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama',
-    'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia',
-    'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino',
-    'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore',
-    'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain',
-    'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania',
-    'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu',
-    'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States of America', 'Uruguay',
-    'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe',
-  ];
+  // live Greenhouse form (GitLab, November 2026), in the form's own spelling and
+  // order. The codes come from the operating system's tables and the browser's
+  // region names, not from the module under test; ten spellings those tables do
+  // not use (Cabo Verde, Macedonia, Kosovo...) were given their code by hand.
+  const GREENHOUSE_LIST = `
+    Afghanistan:AF; Albania:AL; Algeria:DZ; Andorra:AD; Angola:AO; Antigua and Barbuda:AG; Argentina:AR; Armenia:AM;
+    Australia:AU; Austria:AT; Azerbaijan:AZ; Bahamas:BS; Bahrain:BH; Bangladesh:BD; Barbados:BB; Belarus:BY;
+    Belgium:BE; Belize:BZ; Benin:BJ; Bhutan:BT; Bolivia:BO; Bosnia and Herzegovina:BA; Botswana:BW; Brazil:BR;
+    Brunei:BN; Bulgaria:BG; Burkina Faso:BF; Burundi:BI; Cabo Verde:CV; Cambodia:KH; Cameroon:CM; Canada:CA;
+    Central African Republic:CF; Chad:TD; Chile:CL; China:CN; Colombia:CO; Comoros:KM;
+    Democratic Republic of the Congo:CD; Republic of the Congo:CG; Costa Rica:CR; Cote d'Ivoire:CI; Croatia:HR;
+    Cuba:CU; Cyprus:CY; Czech Republic:CZ; Denmark:DK; Djibouti:DJ; Dominica:DM; Dominican Republic:DO; Ecuador:EC;
+    Egypt:EG; El Salvador:SV; Equatorial Guinea:GQ; Eritrea:ER; Estonia:EE; Eswatini:SZ; Ethiopia:ET; Fiji:FJ;
+    Finland:FI; France:FR; Gabon:GA; Gambia:GM; Georgia:GE; Germany:DE; Ghana:GH; Greece:GR; Grenada:GD;
+    Guatemala:GT; Guinea:GN; Guinea-Bissau:GW; Guyana:GY; Haiti:HT; Honduras:HN; Hungary:HU; Iceland:IS; India:IN;
+    Indonesia:ID; Iran:IR; Iraq:IQ; Ireland:IE; Israel:IL; Italy:IT; Jamaica:JM; Japan:JP; Jordan:JO; Kazakhstan:KZ;
+    Kenya:KE; Kiribati:KI; Kosovo:XK; Kuwait:KW; Kyrgyzstan:KG; Laos:LA; Latvia:LV; Lebanon:LB; Lesotho:LS;
+    Liberia:LR; Libya:LY; Liechtenstein:LI; Lithuania:LT; Luxembourg:LU; Macedonia:MK; Madagascar:MG; Malawi:MW;
+    Malaysia:MY; Maldives:MV; Mali:ML; Malta:MT; Marshall Islands:MH; Mauritania:MR; Mauritius:MU; Mexico:MX;
+    Micronesia:FM; Moldova:MD; Monaco:MC; Mongolia:MN; Montenegro:ME; Morocco:MA; Mozambique:MZ; Myanmar:MM;
+    Namibia:NA; Nauru:NR; Nepal:NP; Netherlands:NL; New Zealand:NZ; Nicaragua:NI; Niger:NE; Nigeria:NG;
+    North Korea:KP; Norway:NO; Oman:OM; Pakistan:PK; Palau:PW; Palestine:PS; Panama:PA; Papua New Guinea:PG;
+    Paraguay:PY; Peru:PE; Philippines:PH; Poland:PL; Portugal:PT; Qatar:QA; Romania:RO; Russia:RU; Rwanda:RW;
+    Saint Kitts and Nevis:KN; Saint Lucia:LC; Saint Vincent and the Grenadines:VC; Samoa:WS; San Marino:SM;
+    Sao Tome and Principe:ST; Saudi Arabia:SA; Senegal:SN; Serbia:RS; Seychelles:SC; Sierra Leone:SL; Singapore:SG;
+    Slovakia:SK; Slovenia:SI; Solomon Islands:SB; Somalia:SO; South Africa:ZA; South Korea:KR; South Sudan:SS;
+    Spain:ES; Sri Lanka:LK; Sudan:SD; Suriname:SR; Sweden:SE; Switzerland:CH; Syria:SY; Taiwan:TW; Tajikistan:TJ;
+    Tanzania:TZ; Thailand:TH; Timor-Leste:TL; Togo:TG; Tonga:TO; Trinidad and Tobago:TT; Tunisia:TN; Turkey:TR;
+    Turkmenistan:TM; Tuvalu:TV; Uganda:UG; Ukraine:UA; United Arab Emirates:AE; United Kingdom:GB;
+    United States of America:US; Uruguay:UY; Uzbekistan:UZ; Vanuatu:VU; Vatican City:VA; Venezuela:VE; Vietnam:VN;
+    Yemen:YE; Zambia:ZM; Zimbabwe:ZW`;
 
-  it('knows every country on a real Greenhouse list, each under a code of its own', () => {
-    const countries = GREENHOUSE_LIST.filter((name) => name !== 'Crimea');
-    const codes = countries.map(countryCode);
-    expect(countries.filter((_name, i) => codes[i] === null)).toEqual([]);
-    // 197 countries, 197 different codes: no two names fall on the same country.
-    expect(new Set(codes).size).toBe(197);
+  const greenhouse = GREENHOUSE_LIST.trim()
+    .split(/;\s*/)
+    .map((pair) => pair.split(':') as [name: string, code: string]);
+
+  it.each(greenhouse)('a real Greenhouse list: %s is %s', (name, code) => {
+    expect(countryCode(name)).toBe(code);
+  });
+
+  it('a real Greenhouse list has 197 countries, and Crimea, which is none', () => {
+    expect(greenhouse).toHaveLength(197);
+    expect(countryCode('Crimea')).toBe(null);
   });
 });
 
@@ -331,6 +374,8 @@ describe('findCountry', () => {
     ['Are you authorized to work in South Korea?', 'KR'],
     ['Are you authorized to work in the Democratic Republic of the Congo?', 'CD'],
     ['Are you authorized to work in the Republic of the Congo?', 'CG'],
+    // Which Congo is not known, but it is a country, and not the reader's unless they live there.
+    ['Are you authorized to work in Congo?', 'CG'],
     ['Are you authorized to work in the U.S. Virgin Islands?', 'VI'],
     ['Are you authorized to work in New South Wales?', 'AU'],
     // A US state names the United States, never the country inside its name.
@@ -353,6 +398,13 @@ describe('findCountry', () => {
     ['Are you authorized to work in Türkiye?', 'TR'],
     // Shouting does not hide the country.
     ['ARE YOU AUTHORIZED TO WORK IN THE US?', 'US'],
+    // Nor does typing in a hurry. Of the abbreviations only "us" is also an
+    // ordinary word (see "about us" below); "uk" and "usa" are nothing else.
+    ['Do you have the right to work in the uk?', 'GB'],
+    ['Are you eligible to work in the Uk?', 'GB'],
+    ['Are you authorized to work in the usa?', 'US'],
+    ['Are you authorized to work in the Usa?', 'US'],
+    ['Are you authorized to work in the uae?', 'AE'],
   ];
 
   it.each(named)('%s → %s', (text, want) => {
@@ -381,11 +433,18 @@ describe('findCountry', () => {
     ['codes are not names: "can"', 'CAN you start in June?'],
     ['a continent', 'Are you authorized to work in North America?'],
     ['"Latin America"', 'Do you have experience selling in Latin America?'],
+    ['"South America"', 'Are you willing to travel to South America?'],
+    ['"Central America"', 'Have you worked in Central America?'],
     // Several countries: the question is not about one of them.
     ['two countries', 'Are you authorized to work in the United States or Canada?'],
     ['two countries, abbreviated', 'Are you authorized to work in the U.K. or the U.S.?'],
     ['a state and another country', 'Are you authorized to work in Canada? Our head office is in New York.'],
     ['Georgia and another country', 'Are you authorized to work in Georgia or Armenia?'],
+    // A union of countries is several countries, never one.
+    ['the European Union', 'Are you legally authorized to work in the European Union?'],
+    ['"the EU"', 'Are you legally authorized to work in the EU?'],
+    ['Europe', 'Do you have the right to work in Europe?'],
+    ['a country and a union of countries', 'Are you authorized to work in the UK or EU?'],
   ];
 
   it.each(unnamed)('gives null for %s', (_why, text) => {
@@ -406,5 +465,65 @@ describe('findCountries', () => {
 
   it.each(table)('%s → %j', (text, want) => {
     expect(findCountries(text)).toEqual(want);
+  });
+
+  // A continent or a union of countries is a place too. Listed as nothing, the
+  // question would read like "…in the country where the job is located?" and
+  // be given the answer the user saved for their own country.
+  const regions: [text: string, want: string[]][] = [
+    ['Are you authorized to work in North America?', [SEVERAL_COUNTRIES]],
+    ['Will you require sponsorship to work in Latin America?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work anywhere in the Americas?', [SEVERAL_COUNTRIES]],
+    ['Are you legally authorized to work in the European Union?', [SEVERAL_COUNTRIES]],
+    ['Are you legally authorized to work in the EU?', [SEVERAL_COUNTRIES]],
+    ['Are you legally authorized to work in the E.U.?', [SEVERAL_COUNTRIES]],
+    ['Do you have the right to work in Europe?', [SEVERAL_COUNTRIES]],
+    ['Do you hold a European work permit?', [SEVERAL_COUNTRIES]],
+    ['Are you eligible to work in the EEA?', [SEVERAL_COUNTRIES]],
+    ['Are you eligible to work in the European Economic Area?', [SEVERAL_COUNTRIES]],
+    ['Are you eligible to work in the Schengen Area?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in the Middle East?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in Asia?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in Africa?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in the Caribbean?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in Oceania?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in the APAC region?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in EMEA?', [SEVERAL_COUNTRIES]],
+    ['Are you authorized to work in LATAM?', [SEVERAL_COUNTRIES]],
+    // Two regions are still "several", once.
+    ['Are you authorized to work in Europe or Asia?', [SEVERAL_COUNTRIES]],
+    // Next to a country: the question is about more than that country.
+    ['Are you authorized to work in the UK or EU?', ['GB', SEVERAL_COUNTRIES]],
+    ['Do you have the right to work in the UK/EU?', ['GB', SEVERAL_COUNTRIES]],
+    // An option of a real sponsorship question.
+    ['Yes, EU Blue Card', [SEVERAL_COUNTRIES]],
+    // Countries whose names hold the name of a region stay countries.
+    ['Are you authorized to work in South Africa?', ['ZA']],
+    ['Are you authorized to work in the Central African Republic?', ['CF']],
+    ['Are you authorized to work in America?', ['US']],
+    ['Are you authorized to work in American Samoa?', ['AS']],
+    // Words that only look like a region.
+    ['Do you identify as Asian or African American?', []],
+    ['Have you worked in a museum or for a neutral body?', []],
+    // An abbreviation in small letters is still the place...
+    ['are you authorised to work in the eu?', [SEVERAL_COUNTRIES]],
+    ['Are you authorised to work in the uk or the eu?', ['GB', SEVERAL_COUNTRIES]],
+    // ...but not at the end of a web or an e-mail address.
+    ['See www.example.co.uk for details', []],
+    ['Questions? Write to jobs@example.co.uk', []],
+    ['See www.example.eu for details', []],
+    // "us" is the one abbreviation that needs its capitals.
+    ['Why do you want to work with us in the UK?', ['GB']],
+    ['Tell us why you want to work in the US', ['US']],
+  ];
+
+  it.each(regions)('%s → %j', (text, want) => {
+    expect(findCountries(text)).toEqual(want);
+  });
+
+  it('marks a region with something that is no country and no state', () => {
+    expect(COUNTRIES.map(([code]) => code)).not.toContain(SEVERAL_COUNTRIES);
+    expect(countryCode(SEVERAL_COUNTRIES)).toBe(null);
+    expect(stateCode(SEVERAL_COUNTRIES)).toBe(null);
   });
 });

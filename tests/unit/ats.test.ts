@@ -3,12 +3,33 @@
 // lib/ats.ts is imported by wxt.config.ts, which WXT loads in plain Node.
 // These tests therefore run without a DOM: a stray `document` in the module
 // fails here instead of failing the build.
+import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { ATS_DOMAINS, ATS_NAMES, EMBED_HOST_PERMISSIONS, detectAts } from '../../lib/ats';
 import type { AtsId } from '../../lib/types';
 
 it('runs without a DOM, the way wxt.config.ts loads the module', () => {
   expect(typeof document).toBe('undefined');
+});
+
+it('loads in plain Node, with no bundler to resolve an alias or a missing file extension', () => {
+  // Vitest itself resolves "@/…" and "./types" without ".ts", so an import that
+  // only a bundler understands would pass every other test here. A fresh Node
+  // process has nothing but Node.
+  const moduleUrl = new URL('../../lib/ats.ts', import.meta.url).href;
+  const script = `
+    const ats = await import(${JSON.stringify(moduleUrl)});
+    console.log(ats.detectAts('https://jobs.lever.co/palantir'), ats.EMBED_HOST_PERMISSIONS.length);
+  `;
+
+  // Node 22 reads TypeScript files only with this flag; later versions need none.
+  const flags = process.versions.node.startsWith('22.') ? ['--experimental-strip-types'] : [];
+  const output = execFileSync(process.execPath, [...flags, '--input-type=module', '--eval', script], {
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
+
+  expect(output.trim()).toBe('lever 3');
 });
 
 describe('detectAts', () => {
@@ -38,6 +59,8 @@ describe('detectAts', () => {
     ['HTTPS://JOBS.LEVER.CO/palantir', 'lever'],
     // A port does not change whose host it is.
     ['https://jobs.ashbyhq.com:8443/ashby', 'ashby'],
+    // An origin, as a scan lists the frames a page embeds: no path, no final slash.
+    ['https://job-boards.greenhouse.io', 'greenhouse'],
   ];
 
   it.each(known)('%s is %s', (url, want) => {
@@ -67,6 +90,7 @@ describe('detectAts', () => {
     ['a blob created by a job site', 'blob:https://jobs.lever.co/0b5d1f6e-7b1c-4c56-a7f4-2f8a1c3d9e10'],
     ['a data: URL that mentions a job site', 'data:text/html,<a href="https://jobs.lever.co/">jobs</a>'],
     ['about:blank', 'about:blank'],
+    ['the origin of a sandboxed frame, which is the word "null"', 'null'],
     ['a company page that embeds a Greenhouse form', 'https://instacart.careers/job/?gh_jid=8250324'],
     ['an ordinary site', 'https://www.example.com/careers'],
     ['a local test page', 'http://localhost:3000/greenhouse.io.html'],

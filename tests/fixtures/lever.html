@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The title has the shape of a Lever job page: "(company) - (job)". -->
+    <title>Jacquard Loomworks - Weaving Automation Engineer</title>
+    <script>
+      // Test hook, identical on every fixture page. Tests read window.__fixture to prove what the
+      // extension did and did not touch: events holds every input, change, focus, blur, focusin,
+      // focusout, click and keydown event that reaches the document, messages every window message.
+      window.__fixture = { events: [], messages: [] };
+      (function () {
+        var fixture = window.__fixture;
+        var entries = new WeakMap();
+        function attribute(node, name) {
+          // through the prototype: a form answers form.id and form.name with its own controls
+          try {
+            return Element.prototype.getAttribute.call(node, name) || '';
+          } catch (error) {
+            return '';
+          }
+        }
+        function record(event) {
+          var path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+          var target = path.length > 0 ? path[0] : event.target;
+          var entry = entries.get(event);
+          if (entry === undefined) {
+            entry = { type: event.type, id: '', name: '', trusted: event.isTrusted };
+            entries.set(event, entry);
+            fixture.events.push(entry);
+          }
+          entry.id = attribute(target, 'id');
+          entry.name = attribute(target, 'name');
+        }
+        function watch(root) {
+          ['input', 'change', 'focus', 'blur', 'focusin', 'focusout', 'click', 'keydown'].forEach(function (type) {
+            root.addEventListener(type, record, true);
+          });
+        }
+        watch(document);
+        // Not enumerable, so the object still reads { events, messages }. Pages with shadow roots call
+        // it for each root: a change event does not leave a shadow tree, so the document never sees it.
+        Object.defineProperty(fixture, 'watch', { value: watch });
+        window.addEventListener('message', function (event) {
+          fixture.messages.push(event.data);
+        });
+      })();
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font: 16px/1.5 system-ui, sans-serif;
+        color: #23282d;
+        background: #fff;
+      }
+      .page-centered {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 0 1rem;
+      }
+      .main-header {
+        border-bottom: 1px solid #dfe2e6;
+      }
+      .main-header-logo {
+        display: inline-block;
+        padding: 1rem 0;
+        font-weight: 700;
+        color: inherit;
+        text-decoration: none;
+      }
+      .accent-section {
+        padding: 1.5rem 0;
+        background: #f4f5f7;
+      }
+      .posting-header h2 {
+        margin: 0;
+      }
+      .posting-categories {
+        display: flex;
+        gap: 0.5rem;
+        color: #5c6670;
+      }
+      .application-form {
+        padding-top: 1.5rem;
+        padding-bottom: 0.5rem;
+      }
+      .application-form h4 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .application-form ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .application-question {
+        position: relative;
+        margin-bottom: 1rem;
+      }
+      /* A standard field: label text on the left, the control on the right, all inside one <label>. */
+      .application-question > label {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+      }
+      .application-label {
+        flex: 0 0 11rem;
+        padding-top: 0.4rem;
+        font-weight: 600;
+      }
+      .application-label.full-width {
+        flex: none;
+        padding: 0 0 0.4rem;
+      }
+      .application-field {
+        position: relative;
+        flex: 1;
+      }
+      .required {
+        margin-left: 4px;
+        color: #c0392b;
+      }
+      .application-field input[type='text'],
+      .application-field input[type='email'],
+      .application-field select,
+      .application-additional textarea,
+      textarea.card-field-input {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #b7bec6;
+        border-radius: 3px;
+        background: #fff;
+        font: inherit;
+      }
+      textarea {
+        min-height: 6rem;
+      }
+      .application-field ul[data-qa] li {
+        margin-bottom: 0.35rem;
+      }
+      .application-answer-alternative {
+        margin-left: 0.5rem;
+      }
+      .postings-btn {
+        display: inline-flex;
+        gap: 0.5rem;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        border: 1px solid #23282d;
+        border-radius: 3px;
+        background: #fff;
+        color: inherit;
+        font: inherit;
+        font-size: 0.875rem;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .template-btn-submit {
+        padding: 0.75rem 2rem;
+        background: #23282d;
+        color: #fff;
+        text-transform: uppercase;
+      }
+
+      /* Résumé upload, as the live site styles it: the real file input lies over the visible link,
+         as large as the link and fully transparent. */
+      .application .application-question .visible-resume-upload,
+      .application .application-question input.invisible-resume-upload {
+        width: 230px;
+        height: 40px;
+      }
+      .application .application-question .visible-resume-upload {
+        position: relative;
+      }
+      .application .application-question .visible-resume-upload.has-file {
+        background: #e3e6ea;
+      }
+      .application .application-question input.invisible-resume-upload {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .resume-upload-failure,
+      .resume-upload-working,
+      .resume-upload-success {
+        position: absolute;
+        top: 0;
+        left: 260px;
+        display: none;
+        cursor: default;
+      }
+      .resume-upload-label {
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 2.6;
+        white-space: nowrap;
+      }
+      .resume-upload-oversize {
+        display: none;
+      }
+
+      /* Location typeahead: the list of suggestions, hidden until the box gets an input event. */
+      .application .application-question .dropdown-container {
+        position: absolute;
+        z-index: 1;
+        display: none;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        border-radius: 3px;
+        background: #2d3339;
+        color: #e8eaed;
+        font-size: 14px;
+      }
+      .dropdown-results {
+        width: 100%;
+        cursor: pointer;
+      }
+      .dropdown-location,
+      .dropdown-no-results,
+      .dropdown-loading-results {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0.25rem 0.5rem;
+      }
+      .dropdown-location-active,
+      .dropdown-location:hover {
+        background: #47515b;
+      }
+      .dropdown-no-results,
+      .dropdown-loading-results {
+        display: none;
+      }
+
+      .eeo-section hr,
+      .application-form > hr {
+        margin: 1.5rem 0;
+        border: 0;
+        border-top: 1px solid #dfe2e6;
+      }
+      .eeo-light-text {
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
+        color: #5c6670;
+      }
+      .eeo-more-info-button {
+        margin-left: 0.35rem;
+        color: #5c6670;
+      }
+      .eeo-expandable-description {
+        margin-top: 0.75rem !important;
+        font-size: 0.875rem;
+      }
+      .eeo-expandable-description > li {
+        margin-bottom: 10px;
+      }
+      .eeo-option-description {
+        color: #5c6670;
+      }
+      .hidden {
+        display: none;
+      }
+      .last-section-apply {
+        padding-bottom: 4rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body class="application header-compact">
+    <div class="page application">
+      <div class="main-header page-full-width section-wrapper">
+        <div class="main-header-content page-centered narrow-section page-full-width">
+          <a href="#" class="main-header-logo">Jacquard Loomworks</a>
+        </div>
+      </div>
+      <div class="content-wrapper application-page">
+        <div class="content">
+          <div class="section-wrapper accent-section small-accent page-full-width">
+            <div class="section page-centered posting-header">
+              <h2>Weaving Automation Engineer</h2>
+              <div class="posting-categories">
+                <div class="posting-category location">Lyon, France /</div>
+                <div class="posting-category department">Engineering /</div>
+                <div class="posting-category commitment">Full-time</div>
+              </div>
+            </div>
+          </div>
+          <div class="section-wrapper page-full-width">
+            <!-- A Lever application: one server-rendered form whose controls are found by their
+                 name attribute. No aria-label anywhere, and no label[for] either, except on the
+                 "Additional information" textarea near the end. Because one input is named
+                 "name", form.name is that input and not the form's name. -->
+            <form id="application-form" enctype="multipart/form-data" method="POST" action="/lever.html">
+              <div class="section page-centered application-form">
+                <h4>Submit your application</h4>
+                <ul>
+                  <!-- Résumé, as recorded. The file input is an opacity:0 overlay (tabindex -1) on the
+                       link the user sees. The <label> around the field holds far more than a label:
+                       the required star, the caption of the link, and three status messages that are
+                       display:none until an upload runs. Its text content reads
+                       "Resume/CV✱ATTACH RESUME/CV…" with nothing between the parts. -->
+                  <li class="application-question resume">
+                    <label>
+                      <div class="application-label">Resume/CV<span class="required">✱</span></div>
+                      <div class="application-field">
+                        <a href="#" class="postings-btn template-btn-utility visible-resume-upload">
+                          <svg class="icon icon-paperclip" width="16" height="16" viewBox="0 0 16 16"><path d="M5 8l4-4a2 2 0 013 3l-5 5a3 3 0 01-4-4l5-5" fill="none" stroke="currentColor" /></svg>
+                          <span class="filename"></span>
+                          <span class="default-label">ATTACH RESUME/CV</span>
+                          <input class="application-file-input invisible-resume-upload" data-qa="input-resume" id="resume-upload-input" name="resume" tabindex="-1" type="file" />
+                        </a>
+                        <span class="resume-upload-failure">
+                          <div class="resume-upload-label">We could not read this résumé.</div>
+                        </span>
+                        <span class="resume-upload-working">
+                          <div class="loading-indicator"></div>
+                          <div class="resume-upload-label">Reading your résumé…</div>
+                        </span>
+                        <span class="resume-upload-success">
+                          <div class="loading-indicator completed"></div>
+                          <div class="resume-upload-label">Done!</div>
+                        </span>
+                      </div>
+                    </label>
+                    <span class="resume-upload-oversize">
+                      <p class="error-message">That file is larger than <b>100MB</b>. Please choose a smaller one.</p>
+                    </span>
+                  </li>
+
+                  <!-- Standard fields: the control sits inside a bare <label>, beside a div with the
+                       text and the required star (✱) in a span. One box for the whole name. -->
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">Full name<span class="required">✱</span></div>
+                      <div class="application-field">
+                        <input type="text" data-qa="name-input" name="name" required />
+                      </div>
+                    </label>
+                  </li>
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">Email<span class="required">✱</span></div>
+                      <div class="application-field">
+                        <input name="email" data-qa="email-input" type="email" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" required />
+                      </div>
+                    </label>
+                  </li>
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">Phone</div>
+                      <div class="application-field">
+                        <input type="text" data-qa="phone-input" name="phone" />
+                      </div>
+                    </label>
+                  </li>
+
+                  <!-- "Current location" looks like a plain text box: no role, no aria attribute.
+                       It is a typeahead. A hidden input beside it holds the place that was picked,
+                       and the list of suggestions lives inside the same <label>, after the box.
+                       Recorded behaviour, reproduced by the script at the end of this page:
+                       an input event opens the (empty) list without searching; a search only
+                       starts on a key press; and when the box loses focus while the list is open,
+                       both the box and the hidden input are emptied. -->
+                  <li class="application-question" data-qa="structured-contact-location-question">
+                    <label>
+                      <div class="application-label">Current location<span class="required" data-qa="SCL-question-required-asterisk">✱</span></div>
+                      <div class="application-field">
+                        <input class="location-input" data-qa="location-input" id="location-input" type="text" maxlength="100" name="location" required />
+                        <input id="selected-location" type="hidden" name="selectedLocation" />
+                        <div class="dropdown-container">
+                          <div class="dropdown-results"></div>
+                          <div class="dropdown-no-results">No place found. Try another spelling.</div>
+                          <div class="dropdown-loading-results">
+                            <div><span>Loading</span></div>
+                          </div>
+                        </div>
+                      </div>
+                    </label>
+                  </li>
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">Current company</div>
+                      <div class="application-field">
+                        <input type="text" data-qa="org-input" name="org" />
+                      </div>
+                    </label>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Links. "Portfolio URL" and "Other website" stand side by side on most Lever forms;
+                   one saved link must not be written into both. -->
+              <div class="section page-centered application-form">
+                <h4>Links</h4>
+                <ul>
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">LinkedIn URL</div>
+                      <div class="application-field"><input type="text" name="urls[LinkedIn]" /></div>
+                    </label>
+                  </li>
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">GitHub URL</div>
+                      <div class="application-field"><input type="text" name="urls[GitHub]" /></div>
+                    </label>
+                  </li>
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">Portfolio URL</div>
+                      <div class="application-field"><input type="text" name="urls[Portfolio]" /></div>
+                    </label>
+                  </li>
+                  <li class="application-question">
+                    <label>
+                      <div class="application-label">Other website</div>
+                      <div class="application-field"><input type="text" name="urls[Other]" /></div>
+                    </label>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- The employer's own questions ("cards"). These controls have NO label at all: no
+                   <label> for the question, no aria-label, no aria-labelledby, and a name that is a
+                   card id plus a field number. The question is plain text in a sibling div. A hidden
+                   input per card carries the question definitions as JSON. -->
+              <div class="section page-centered application-form" data-qa="additional-cards">
+                <h4 data-qa="card-name">Work eligibility</h4>
+                <input type="hidden" value="{&quot;text&quot;:&quot;Work eligibility&quot;,&quot;type&quot;:&quot;posting&quot;,&quot;fields&quot;:[{&quot;type&quot;:&quot;multiple-choice&quot;,&quot;text&quot;:&quot;Are you legally authorized to work in the United States?&quot;,&quot;required&quot;:true},{&quot;type&quot;:&quot;dropdown&quot;,&quot;text&quot;:&quot;Do you now, or will you in the future, require sponsorship for employment visa status to work in the United States?&quot;,&quot;required&quot;:true}]}" name="cards[1d2c3b4a-0001-4000-8000-00000000e11a][baseTemplate]" />
+                <ul>
+                  <!-- An eligibility pair: two native radios, each inside its own label, values
+                       "Yes" and "No". The label of a radio is its option, never the question. -->
+                  <li class="application-question custom-question">
+                    <div>
+                      <div class="application-label full-width multiple-choice">
+                        <div class="text">Are you legally authorized to work in the United States?<span class="required">✱</span></div>
+                      </div>
+                      <div class="application-field full-width required-field">
+                        <ul data-qa="multiple-choice">
+                          <li>
+                            <label>
+                              <input type="radio" name="cards[1d2c3b4a-0001-4000-8000-00000000e11a][field0]" value="Yes" required="required" />
+                              <span class="application-answer-alternative">Yes</span>
+                            </label>
+                          </li>
+                          <li>
+                            <label>
+                              <input type="radio" name="cards[1d2c3b4a-0001-4000-8000-00000000e11a][field0]" value="No" required="required" />
+                              <span class="application-answer-alternative">No</span>
+                            </label>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </li>
+                  <!-- A sponsorship pair, as a native select: "Select..." (value ""), Yes, No. -->
+                  <li class="application-question custom-question">
+                    <div>
+                      <div class="application-label full-width dropdown">
+                        <div class="text">Do you now, or will you in the future, require sponsorship for employment visa status to work in the United States?<span class="required">✱</span></div>
+                      </div>
+                      <div class="application-field full-width required-field">
+                        <div class="application-dropdown">
+                          <select name="cards[1d2c3b4a-0001-4000-8000-00000000e11a][field1]" required>
+                            <option value="">Select...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="section page-centered application-form" data-qa="additional-cards">
+                <h4 data-qa="card-name">A few more questions</h4>
+                <input type="hidden" value="{&quot;text&quot;:&quot;A few more questions&quot;,&quot;type&quot;:&quot;posting&quot;,&quot;fields&quot;:[{&quot;type&quot;:&quot;dropdown&quot;,&quot;text&quot;:&quot;How did you first hear about this opening?&quot;,&quot;required&quot;:true},{&quot;type&quot;:&quot;textarea&quot;,&quot;text&quot;:&quot;What would you like to build at Jacquard Loomworks?&quot;,&quot;required&quot;:false}]}" name="cards[1d2c3b4a-0002-4000-8000-00000000e11b][baseTemplate]" />
+                <ul>
+                  <!-- A required select the profile has no answer for. -->
+                  <li class="application-question custom-question">
+                    <div>
+                      <div class="application-label full-width dropdown">
+                        <div class="text">How did you first hear about this opening?<span class="required">✱</span></div>
+                      </div>
+                      <div class="application-field full-width required-field">
+                        <div class="application-dropdown">
+                          <select name="cards[1d2c3b4a-0002-4000-8000-00000000e11b][field0]" required>
+                            <option value="">Select...</option>
+                            <option value="A job board">A job board</option>
+                            <option value="The company website">The company website</option>
+                            <option value="Someone who works here">Someone who works here</option>
+                            <option value="A university or college event">A university or college event</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="application-question custom-question">
+                    <div>
+                      <div class="application-label full-width textarea">
+                        <div class="text">What would you like to build at Jacquard Loomworks?</div>
+                      </div>
+                      <div class="application-field full-width">
+                        <textarea class="card-field-input" name="cards[1d2c3b4a-0002-4000-8000-00000000e11b][field1]"></textarea>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- A consent pair. It is required, and its options start with "Yes" and "No" like the
+                   eligibility pair above, but saying yes here gives consent. Never answered for the user. -->
+              <div class="section page-centered application-form" data-qa="additional-cards">
+                <h4 data-qa="card-name">Interview notes</h4>
+                <input type="hidden" value="{&quot;text&quot;:&quot;Interview notes&quot;,&quot;type&quot;:&quot;posting&quot;,&quot;fields&quot;:[{&quot;type&quot;:&quot;multiple-choice&quot;,&quot;text&quot;:&quot;Interview notes&quot;,&quot;required&quot;:true}]}" name="cards[1d2c3b4a-0003-4000-8000-00000000e11c][baseTemplate]" />
+                <ul>
+                  <li class="application-question custom-question">
+                    <div>
+                      <div class="application-label full-width multiple-choice">
+                        <div class="text">Some of our interviews are written down by a note-taking tool, so that the people you talk to can listen instead of typing. Whether you opt in or out has no effect on your application.<span class="required">✱</span></div>
+                      </div>
+                      <div class="application-field full-width required-field">
+                        <ul data-qa="multiple-choice">
+                          <li>
+                            <label>
+                              <input type="radio" name="cards[1d2c3b4a-0003-4000-8000-00000000e11c][field0]" value="Yes, I consent" required="required" />
+                              <span class="application-answer-alternative">Yes, I consent</span>
+                            </label>
+                          </li>
+                          <li>
+                            <label>
+                              <input type="radio" name="cards[1d2c3b4a-0003-4000-8000-00000000e11c][field0]" value="No, I do not consent" required="required" />
+                              <span class="application-answer-alternative">No, I do not consent</span>
+                            </label>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="section page-centered application-form">
+                <label for="additional-information"><h4>Additional information</h4></label>
+                <div class="application-additional">
+                  <textarea placeholder="Add a cover letter or anything else you would like us to know." name="comments" id="additional-information"></textarea>
+                </div>
+              </div>
+
+              <!-- Voluntary self-identification. Native selects inside wrapping labels; the label
+                   around the race select also wraps a list that explains every option, so its text
+                   content runs on for a paragraph and names every group. -->
+              <div class="section eeo-section page-centered application-form" id="eeoSurvey_1d2c3b4a-0004-4000-8000-00000000e11d" data-qa="eeo-section">
+                <hr />
+                <h4>U.S. Equal Employment Opportunity information <span class="eeo-light-text">(Answering is voluntary and has no effect on your application)</span></h4>
+                <p>
+                  Jacquard Loomworks reports how many people of which groups apply for its jobs. If you
+                  choose to answer, your answers are stored apart from your application.
+                </p>
+                <!-- Gender, in the live order: Male comes before Female, and "male" is inside "Female". -->
+                <div class="application-question">
+                  <label>
+                    <div class="application-label">Gender</div>
+                    <div class="application-field">
+                      <div class="application-dropdown">
+                        <select name="eeo[gender]">
+                          <option value="">Select ...</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Decline to self-identify">Decline to self-identify</option>
+                        </select>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                <!-- Race, with the live option texts: six of the eight end in "(Not Hispanic or Latino)". -->
+                <div class="application-question">
+                  <label>
+                    <div class="application-label multiple-choice">
+                      Race
+                      <a class="eeo-more-info-button" title="Show what each option means" aria-controls="eeoRaceExpandableSection" href="#eeoRaceExpandableSection">
+                        <svg class="icon icon-info" width="16px" height="16px" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" /><path d="M8 7v5M8 4v1" stroke="currentColor" /></svg>
+                      </a>
+                    </div>
+                    <div class="application-field">
+                      <div class="application-dropdown">
+                        <select name="eeo[race]">
+                          <option value="">Select ...</option>
+                          <option value="Hispanic or Latino">Hispanic or Latino</option>
+                          <option value="White (Not Hispanic or Latino)">White (Not Hispanic or Latino)</option>
+                          <option value="Black or African American (Not Hispanic or Latino)">Black or African American (Not Hispanic or Latino)</option>
+                          <option value="Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)">Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)</option>
+                          <option value="Asian (Not Hispanic or Latino)">Asian (Not Hispanic or Latino)</option>
+                          <option value="American Indian or Alaska Native (Not Hispanic or Latino)">American Indian or Alaska Native (Not Hispanic or Latino)</option>
+                          <option value="Two or More Races (Not Hispanic or Latino)">Two or More Races (Not Hispanic or Latino)</option>
+                          <option value="Decline to self-identify">Decline to self-identify</option>
+                        </select>
+                      </div>
+                      <ul id="eeoRaceExpandableSection" class="eeo-expandable-description">
+                        <li>
+                          <div>Hispanic or Latino</div>
+                          <div class="eeo-option-description">Of Cuban, Mexican, Puerto Rican, South or Central American or other Spanish culture or origin, whatever the race.</div>
+                        </li>
+                        <li>
+                          <div>White (Not Hispanic or Latino)</div>
+                          <div class="eeo-option-description">With origins in Europe, the Middle East or North Africa.</div>
+                        </li>
+                        <li>
+                          <div>Black or African American (Not Hispanic or Latino)</div>
+                          <div class="eeo-option-description">With origins in any of the black racial groups of Africa.</div>
+                        </li>
+                        <li>
+                          <div>Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)</div>
+                          <div class="eeo-option-description">With origins in Hawaii, Guam, Samoa or other Pacific islands.</div>
+                        </li>
+                        <li>
+                          <div>Asian (Not Hispanic or Latino)</div>
+                          <div class="eeo-option-description">With origins in the Far East, Southeast Asia or the Indian subcontinent.</div>
+                        </li>
+                        <li>
+                          <div>American Indian or Alaska Native (Not Hispanic or Latino)</div>
+                          <div class="eeo-option-description">With origins in the original peoples of North, Central or South America, and a tie to a tribe or community.</div>
+                        </li>
+                        <li>
+                          <div>Two or More Races (Not Hispanic or Latino)</div>
+                          <div class="eeo-option-description">Anyone who identifies with more than one of the five races above.</div>
+                        </li>
+                      </ul>
+                    </div>
+                  </label>
+                </div>
+
+                <hr />
+                <h4>Self-identification of veteran status <span class="eeo-light-text">(Answering is voluntary and has no effect on your application)</span></h4>
+                <p>Some veterans are protected by law against discrimination at work. The list of who counts is long; ask us if you are unsure.</p>
+                <!-- Veteran status, with the live option texts: all three contain "protected veteran",
+                     and each option's value differs from the text the user reads. -->
+                <div class="application-question">
+                  <label>
+                    <div class="application-label">Veteran status</div>
+                    <div class="application-field">
+                      <div class="application-dropdown">
+                        <select name="eeo[veteran]">
+                          <option value="">Select ...</option>
+                          <option value="I am a Protected Veteran">I identify as one or more of the classifications of protected veteran listed above</option>
+                          <option value="I am not a Protected Veteran">I am not a protected veteran</option>
+                          <option value="Decline to self-identify">I decline to self-identify for protected veteran status</option>
+                        </select>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <hr />
+                <h4>Voluntary self-identification of disability</h4>
+                <p>We are asked to count how many applicants have a disability, so that we can check that we treat everyone fairly. Answering is your choice.</p>
+                <!-- Disability status: a yes, a no, and a way to decline whose value ends in a space. -->
+                <div class="application-question">
+                  <label>
+                    <div class="application-label">Disability status</div>
+                    <div class="application-field">
+                      <div class="application-dropdown">
+                        <select id="disabilitySelectElement" name="eeo[disability]">
+                          <option value="">Select ...</option>
+                          <option value="Yes, I have a disability, or have had one in the past">Yes, I have a disability, or have had one in the past</option>
+                          <option value="No, I do not have a disability and have not had one in the past">No, I do not have a disability and have not had one in the past</option>
+                          <option value="I do not want to answer ">I do not want to answer</option>
+                        </select>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- The signature block of the disability form. Its first box is labelled just "Name"
+                     and wants the applicant to SIGN: it must never be filled for them. Recorded
+                     behaviour, reproduced by the script below: the block is hidden while the
+                     disability select has no value; when the select changes it slides open over
+                     about 600 ms and both boxes become required. So these two boxes do not exist for
+                     a scan made before the fill, and are there, required and empty, right after it. -->
+                <div id="disabilitySignatureSection">
+                  <div class="application-question">
+                    <label>
+                      <div class="application-label">Name</div>
+                      <div class="application-field">
+                        <input type="text" name="eeo[disabilitySignature]" placeholder="Enter your full name" />
+                      </div>
+                    </label>
+                  </div>
+                  <div class="application-question">
+                    <label>
+                      <div class="application-label">Date</div>
+                      <div class="application-field">
+                        <input type="text" name="eeo[disabilitySignatureDate]" placeholder="MM/DD/YYYY" />
+                      </div>
+                    </label>
+                  </div>
+                  <p>Note: name and date are only needed if you answered the disability question.</p>
+                </div>
+              </div>
+
+              <!-- Bookkeeping the site keeps in hidden inputs. Never ours. -->
+              <input type="hidden" name="accountId" value="1d2c3b4a-0005-4000-8000-00000000e11e" />
+              <input type="hidden" name="linkedInData" />
+              <input type="hidden" name="origin" />
+              <input type="hidden" name="referer" />
+              <input type="hidden" name="timezone" id="applicant-timezone" value="" />
+              <input type="hidden" name="socialReferralKey" />
+              <input type="hidden" name="socialSource" />
+              <input type="hidden" name="resumeStorageId" value="" />
+              <input id="hcaptchaResponseInput" type="hidden" name="h-captcha-response" value="" />
+              <button id="hcaptchaSubmitBtn" type="submit" class="hidden"></button>
+              <input type="hidden" name="source" />
+
+              <!-- Marketing consent: a hidden input that sends "0" and a checkbox of the same name
+                   that sends "1". Checkboxes are never ticked for the user. -->
+              <div class="section page-centered application-form" data-qa="consent-section">
+                <hr />
+                <ul>
+                  <li class="application-question">
+                    <div class="application-field full-width">
+                      <p data-qa="legitimate-interest-copy">By applying you accept that Jacquard Loomworks keeps your application as described in its privacy notice.</p>
+                      <ul>
+                        <li>
+                          <label>
+                            <span class="">Jacquard Loomworks may write to me about future openings.</span>
+                            <input type="hidden" name="consent[marketing]" value="0" />
+                            <input type="checkbox" name="consent[marketing]" value="1" />
+                          </label>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div id="h-captcha" class="h-captcha"></div>
+
+              <!-- The visible button is type="button"; on the live site a script answers the press.
+                   The extension must never press it. A press sets window.__fixture.submitted = true. -->
+              <div class="section page-centered application-form last-section-apply">
+                <button id="btn-submit" type="button" class="postings-btn template-btn-submit" data-qa="btn-submit">Submit application</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var fixture = window.__fixture;
+        var form = document.getElementById('application-form');
+
+        // The control with this name. Never form[name]: on this form, form.name is the name box.
+        function field(name) {
+          return document.querySelector('#application-form [name="' + name + '"]');
+        }
+
+        // ---- Submitting: nothing is ever sent, a press only leaves a mark for the tests ----------
+        form.addEventListener('submit', function (event) {
+          event.preventDefault();
+          fixture.submitted = true;
+        });
+        document.getElementById('btn-submit').addEventListener('click', function () {
+          fixture.submitted = true;
+        });
+
+        // ---- Current location: the typeahead ---------------------------------------------------
+        var locationInput = document.getElementById('location-input');
+        var selectedLocation = document.getElementById('selected-location');
+        var dropdown = document.querySelector('.dropdown-container');
+        var dropdownResults = dropdown.querySelector('.dropdown-results');
+        var dropdownEmpty = dropdown.querySelector('.dropdown-no-results');
+        var dropdownLoading = dropdown.querySelector('.dropdown-loading-results');
+        // The live site asks its server; the fixture knows four made-up answers.
+        var PLACES = [
+          { id: 'fixture-place-1', name: 'London, England, United Kingdom' },
+          { id: 'fixture-place-2', name: 'London, Ontario, Canada' },
+          { id: 'fixture-place-3', name: 'Londonderry, New Hampshire, United States' },
+          { id: 'fixture-place-4', name: 'San Francisco, California, United States' },
+        ];
+        var SEARCH_DELAY = 500;
+        var matches = null;
+        var searchTimer = 0;
+
+        function display(element, on) {
+          element.style.display = on ? 'flex' : 'none';
+        }
+        function dropdownIsOpen() {
+          return window.getComputedStyle(dropdown).display !== 'none';
+        }
+        function emptyDropdown() {
+          dropdownResults.textContent = '';
+          display(dropdownEmpty, false);
+          display(dropdownLoading, false);
+          matches = null;
+        }
+        function options() {
+          return Array.prototype.slice.call(dropdownResults.querySelectorAll('.dropdown-location'));
+        }
+        function search() {
+          emptyDropdown();
+          var typed = locationInput.value.trim().toLowerCase();
+          if (typed === '') return;
+          matches = PLACES.filter(function (place) {
+            return place.name.toLowerCase().indexOf(typed) === 0;
+          });
+          matches.forEach(function (place, index) {
+            var option = document.createElement('div');
+            option.className = 'dropdown-location';
+            option.id = 'location-' + index;
+            option.textContent = place.name;
+            dropdownResults.appendChild(option);
+          });
+          if (matches.length === 0) display(dropdownEmpty, true);
+        }
+        function choose(option) {
+          var place = matches ? matches[Number(option.id.split('-')[1])] : undefined;
+          display(dropdown, false);
+          locationInput.value = option.textContent;
+          selectedLocation.value = place ? JSON.stringify(place) : '';
+          emptyDropdown();
+        }
+        function moveActive(step) {
+          var all = options();
+          if (all.length === 0) return;
+          var current = all.findIndex(function (option) {
+            return option.classList.contains('dropdown-location-active');
+          });
+          if (current !== -1) all[current].classList.remove('dropdown-location-active');
+          var next = current === -1 ? (step > 0 ? 0 : all.length - 1) : (current + step + all.length) % all.length;
+          all[next].classList.add('dropdown-location-active');
+        }
+
+        // An input event only opens the list. Nothing is searched: that happens on key presses.
+        locationInput.addEventListener('input', function () {
+          display(dropdown, true);
+        });
+        locationInput.addEventListener('keydown', function (event) {
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') return;
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            moveActive(event.key === 'ArrowDown' ? 1 : -1);
+          } else if (event.key === 'Enter') {
+            // Enter takes the highlighted suggestion. With none highlighted it still closes the
+            // list and swaps the typed text for that missing suggestion's text: nothing.
+            event.preventDefault();
+            var active = dropdownResults.querySelector('.dropdown-location-active');
+            display(dropdown, false);
+            locationInput.value = active ? active.textContent : '';
+            if (!matches || !active) return;
+            selectedLocation.value = JSON.stringify(matches[Number(active.id.split('-')[1])]);
+            emptyDropdown();
+          } else {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(search, SEARCH_DELAY);
+          }
+        });
+        // Losing focus while the list is open throws the typed text away.
+        locationInput.addEventListener('blur', function () {
+          if (!dropdownIsOpen()) return;
+          display(dropdown, false);
+          emptyDropdown();
+          locationInput.value = '';
+          selectedLocation.value = '';
+        });
+        // A suggestion is taken on mousedown, which comes before the box loses focus.
+        document.addEventListener('mousedown', function (event) {
+          var option = event.target instanceof Element ? event.target.closest('.dropdown-location') : null;
+          if (option) choose(option);
+        });
+
+        // ---- Résumé: the site reads the file and fills the form from it -------------------------
+        // Recorded behaviour: a field counts as touched by the user once a change (or paste) event
+        // has fired on it and it is not empty. About 800 ms after a file is attached, every field
+        // of the list below that is NOT touched is overwritten with what the reader found, or
+        // with '' when it found nothing. A fill that sets values without a change event is undone.
+        var resumeInput = document.getElementById('resume-upload-input');
+        var uploadLink = document.querySelector('.visible-resume-upload');
+        var statusWorking = document.querySelector('.resume-upload-working');
+        var statusSuccess = document.querySelector('.resume-upload-success');
+        var statusFailure = document.querySelector('.resume-upload-failure');
+        var PARSE_DELAY = 800;
+        // What the pretend reader "found" in the file. Deliberately not Ada's saved answers.
+        var READ_FROM_FILE = {
+          org: '',
+          phone: '555-0199',
+          name: 'Name Read From File',
+          email: 'read-from-file@example.com',
+          location: '',
+          selectedLocation: '',
+          'urls[LinkedIn]': '',
+          'urls[GitHub]': '',
+          'urls[Other]': '',
+          resumeStorageId: 'fixture-resume-1',
+        };
+        var WATCHED = ['org', 'phone', 'name', 'email', 'location', 'urls[LinkedIn]', 'urls[GitHub]', 'urls[Other]'];
+        var touched = new Map();
+        var parseTimer = 0;
+
+        // For tests: state is 'idle', then 'working' from the attach until 'done' 800 ms later;
+        // overwritten lists the names the reader wrote into.
+        fixture.resumeParse = { state: 'idle', file: '', overwritten: [] };
+
+        WATCHED.forEach(function (name) {
+          var input = field(name);
+          ['change', 'paste'].forEach(function (type) {
+            input.addEventListener(type, function () {
+              touched.set(input, true);
+            });
+          });
+        });
+        function writeUnlessTouched(name) {
+          var input = field(name);
+          if (touched.get(input) === true && input.value !== '') return;
+          touched.set(input, false);
+          input.value = READ_FROM_FILE[name] || '';
+          fixture.resumeParse.overwritten.push(name);
+        }
+
+        uploadLink.addEventListener('click', function (event) {
+          // the link itself goes nowhere; a click on the input inside it opens the file picker
+          if (event.target !== resumeInput) event.preventDefault();
+        });
+        // The link shows the name of the chosen file in place of its caption and is marked
+        // "has-file"; with no file it goes back to the caption.
+        resumeInput.addEventListener('change', function () {
+          var chosen = resumeInput.files && resumeInput.files[0] ? resumeInput.files[0].name : '';
+          var shownName = uploadLink.querySelector('.filename');
+          var caption = uploadLink.querySelector('.default-label');
+          shownName.textContent = chosen;
+          shownName.style.display = chosen === '' ? 'none' : '';
+          caption.style.display = chosen === '' ? '' : 'none';
+          uploadLink.classList.toggle('has-file', chosen !== '');
+        });
+        resumeInput.addEventListener('change', function () {
+          statusFailure.style.display = 'none';
+          statusSuccess.style.display = 'none';
+          statusWorking.style.display = 'none';
+          var file = resumeInput.files ? resumeInput.files[0] : undefined;
+          if (!file || file.size === 0) return;
+
+          statusWorking.style.display = 'block';
+          fixture.resumeParse = { state: 'working', file: file.name, overwritten: [] };
+
+          window.clearTimeout(parseTimer);
+          parseTimer = window.setTimeout(function () {
+            statusWorking.style.display = 'none';
+            statusSuccess.style.display = 'block';
+            Object.keys(READ_FROM_FILE).forEach(writeUnlessTouched);
+            fixture.resumeParse.state = 'done';
+          }, PARSE_DELAY);
+        });
+
+        // ---- Race: the list that explains the options opens and closes on the info icon ----------
+        var raceInfo = document.getElementById('eeoRaceExpandableSection');
+        var raceInfoButton = document.querySelector('.eeo-more-info-button');
+        raceInfo.style.display = 'none';
+        raceInfoButton.setAttribute('aria-expanded', 'false');
+        raceInfoButton.addEventListener('click', function (event) {
+          event.preventDefault();
+          var open = raceInfo.style.display === 'none';
+          raceInfo.style.display = open ? '' : 'none';
+          raceInfoButton.setAttribute('aria-expanded', String(open));
+        });
+
+        // ---- Disability: the signature block ----------------------------------------------------
+        var disabilitySelect = document.getElementById('disabilitySelectElement');
+        var signature = document.getElementById('disabilitySignatureSection');
+        var SLIDE = 600;
+        var slideTimer = 0;
+
+        function signatureIsShown() {
+          return window.getComputedStyle(signature).display !== 'none';
+        }
+        function slide(open) {
+          window.clearTimeout(slideTimer);
+          signature.style.transition = 'none';
+          signature.style.overflow = 'hidden';
+          if (open) signature.style.display = 'block';
+          var full = signature.scrollHeight;
+          signature.style.height = (open ? 0 : full) + 'px';
+          signature.getBoundingClientRect(); // lay it out at the starting height before it moves
+          signature.style.transition = 'height ' + SLIDE + 'ms ease';
+          signature.style.height = (open ? full : 0) + 'px';
+          slideTimer = window.setTimeout(function () {
+            signature.style.transition = '';
+            signature.style.height = '';
+            signature.style.overflow = '';
+            if (!open) signature.style.display = 'none';
+          }, SLIDE);
+        }
+
+        if (disabilitySelect.value === '') signature.style.display = 'none';
+        disabilitySelect.addEventListener('change', function () {
+          var answered = disabilitySelect.value !== '';
+          if (answered !== signatureIsShown()) slide(answered);
+          Array.prototype.forEach.call(signature.querySelectorAll('input'), function (input) {
+            input.required = answered;
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

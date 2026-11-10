@@ -49,21 +49,30 @@ describe('resumeToFile', () => {
     expect(String.fromCharCode(...bytes.slice(0, 4))).toBe('%PDF');
   });
 
-  it('decodes in place, without asking the network layer for the data URL', () => {
+  it('decodes by hand: no request for the data URL, and no Buffer, which Chrome does not have', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('no network in tests'));
     const xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open').mockImplementation(() => undefined);
+    // Buffer exists here only because the tests run in Node.
+    const bufferSpy = vi.spyOn(Buffer, 'from');
 
     resumeToFile(storedPdf());
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(xhrSpy).not.toHaveBeenCalled();
+    const base64Decodes = bufferSpy.mock.calls.filter((args) => args.includes('base64'));
+    expect(base64Decodes).toEqual([]);
   });
 
   it.each<[string, StoredResume]>([
     ['a web address where the data should be', { ...storedPdf(), dataUrl: 'https://collector.example/r.pdf' }],
-    ['a file of a type that is not a résumé', { ...storedPdf(), type: 'text/html', dataUrl: 'data:text/html;base64,PHNjcmlwdD4=' }],
-    ['data of another type than it claims', { ...storedPdf(), dataUrl: 'data:text/html;base64,PHNjcmlwdD4=' }],
+    // "PHNjcmlwdD4=" is the 8 bytes of "<script>"; the size says so too, so that nothing but the type is wrong.
+    ['a file of a type that is not a résumé', { ...storedPdf(), type: 'text/html', size: 8, dataUrl: 'data:text/html;base64,PHNjcmlwdD4=' }],
+    ['data of another type than it claims', { ...storedPdf(), size: 8, dataUrl: 'data:text/html;base64,PHNjcmlwdD4=' }],
     ['base64 that is damaged', { ...storedPdf(), dataUrl: 'data:application/pdf;base64,JVBERi0xLjcKJeLjz9M' }],
+    // Sound base64, but only the first 9 of the 15 bytes ("%PDF-1.7" and a line break): what a
+    // file looks like that was cut short on its way into storage.
+    ['fewer bytes than the file is on record as having', { ...storedPdf(), dataUrl: 'data:application/pdf;base64,JVBERi0xLjcK' }],
+    ['more bytes than the file is on record as having', { ...storedPdf(), size: 9 }],
   ])('refuses %s instead of building a file from it', (_name, resume) => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('no network in tests'));
 
@@ -77,14 +86,13 @@ describe('isStoredResume', () => {
 
   it.each<[string, unknown]>([
     ['a stored PDF', storedPdf()],
-    ['a Word .doc', { ...storedPdf(), name: 'Ada.doc', type: 'application/msword', dataUrl: 'data:application/msword;base64,JVBERg==' }],
-    ['a Word .docx', { ...storedPdf(), name: 'Ada.docx', type: DOCX, dataUrl: `data:${DOCX};base64,JVBERg==` }],
-    ['an RTF file', { ...storedPdf(), name: 'Ada.rtf', type: 'application/rtf', dataUrl: 'data:application/rtf;base64,e1xydGYxIEFkYX0=' }],
-    ['an RTF file typed text/rtf', { ...storedPdf(), name: 'Ada.rtf', type: 'text/rtf', dataUrl: 'data:text/rtf;base64,e1xydGYxIEFkYX0=' }],
-    ['a plain-text file', { ...storedPdf(), name: 'Ada.txt', type: 'text/plain', dataUrl: 'data:text/plain;base64,QWRhIExvdmVsYWNlCg==' }],
+    ['a Word .doc', { ...storedPdf(), name: 'Ada.doc', type: 'application/msword', size: 4, dataUrl: 'data:application/msword;base64,JVBERg==' }],
+    ['a Word .docx', { ...storedPdf(), name: 'Ada.docx', type: DOCX, size: 4, dataUrl: `data:${DOCX};base64,JVBERg==` }],
+    ['an RTF file', { ...storedPdf(), name: 'Ada.rtf', type: 'application/rtf', size: 11, dataUrl: 'data:application/rtf;base64,e1xydGYxIEFkYX0=' }],
+    ['an RTF file typed text/rtf', { ...storedPdf(), name: 'Ada.rtf', type: 'text/rtf', size: 11, dataUrl: 'data:text/rtf;base64,e1xydGYxIEFkYX0=' }],
+    ['a plain-text file', { ...storedPdf(), name: 'Ada.txt', type: 'text/plain', size: 13, dataUrl: 'data:text/plain;base64,QWRhIExvdmVsYWNlCg==' }],
     ['base64 that ends in one "="', { ...storedPdf(), size: 5, dataUrl: 'data:application/pdf;base64,JVBERi0=' }],
     ['base64 that ends in "=="', { ...storedPdf(), size: 4, dataUrl: 'data:application/pdf;base64,JVBERg==' }],
-    ['a size of exactly 4 MiB', { ...storedPdf(), size: 4_194_304 }],
     // 5,592,406 characters and "==" decode to 4,194,304 bytes: exactly 4 MiB.
     ['data that decodes to exactly 4 MiB', { ...storedPdf(), size: 4_194_304, dataUrl: `data:application/pdf;base64,${'A'.repeat(5_592_406)}==` }],
     ['a file name of 255 characters', { ...storedPdf(), name: `${'a'.repeat(251)}.pdf` }],
@@ -135,6 +143,7 @@ describe('isStoredResume', () => {
 
     // 4 MiB is the limit, both for the size on record and for the bytes really stored.
     ['a size one byte over 4 MiB', { ...storedPdf(), size: 4_194_305 }],
+    ['a size of zero', { ...storedPdf(), size: 0 }],
     ['a negative size', { ...storedPdf(), size: -15 }],
     ['a fractional size', { ...storedPdf(), size: 14.5 }],
     ['a size that is not a number', { ...storedPdf(), size: '15' }],
@@ -362,11 +371,13 @@ describe('fileToStoredResume', () => {
     expect(stored.name).toBe(wanted);
   });
 
-  it('explains in plain words when the file cannot be read', async () => {
-    // Stands in for a file that vanished or lost its permissions after it was chosen.
-    const unreadable = { name: 'Ada-Lovelace-Resume.pdf', type: 'application/pdf', size: 15 } as File;
+  it('explains in plain words when the browser fails to read the file', async () => {
+    // What happens when a file is moved or deleted after it was chosen: the reader reports an error.
+    vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function (this: FileReader) {
+      queueMicrotask(() => this.dispatchEvent(new ProgressEvent('error')));
+    });
 
-    const saving = fileToStoredResume(unreadable, NOW);
+    const saving = fileToStoredResume(fileNamed('Ada-Lovelace-Resume.pdf', 'application/pdf'), NOW);
 
     await expect(saving).rejects.toBeInstanceOf(Error);
     await expect(saving).rejects.toThrow('could not be read');

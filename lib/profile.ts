@@ -104,22 +104,52 @@ export const DISABILITY_OPTIONS = optionsFrom<Disability>({
 });
 
 // ---------------------------------------------------------------------------
+// The graduation date
+// ---------------------------------------------------------------------------
+
+export const MONTH_NAMES: readonly string[] = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/**
+ * The year and the month (1 to 12) of a stored graduation date. The profile
+ * keeps 'YYYY-MM', which is what <input type="month"> holds; anything else is
+ * no date, and nothing is read out of it. Year 0000 is no year: given
+ * "0000-05", <input type="month"> empties itself.
+ */
+export function yearAndMonth(stored: string): { year: string; month: number } | null {
+  const parts = /^(?!0000)(\d{4})-(0[1-9]|1[0-2])$/.exec(stored);
+  const year = parts?.[1];
+  const month = parts?.[2];
+  return year === undefined || month === undefined ? null : { year, month: Number(month) };
+}
+
+// ---------------------------------------------------------------------------
 // A profile from anything
 // ---------------------------------------------------------------------------
 
 /** Longer than any real name, address or link; a longer value is a mistake or an attack on the storage quota. */
 const MAX_TEXT_LENGTH = 300;
 
-/** 'YYYY-MM' with a real month: what <input type="month"> holds. */
-const YEAR_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
-
 /** A text field: kept as typed, or '' when it is not text or is too long. Never cut short: half an address is a wrong answer. */
 function text(value: unknown): string {
   return typeof value === 'string' && value.length <= MAX_TEXT_LENGTH ? value : '';
 }
 
+/** A graduation date: 'YYYY-MM' or nothing. */
 function yearMonth(value: unknown): string {
-  return typeof value === 'string' && YEAR_MONTH.test(value) ? value : '';
+  return typeof value === 'string' && yearAndMonth(value) !== null ? value : '';
 }
 
 /** One of the listed answers, or '' ("not answered") for anything else: "Yes", true and "maybe" are not answers. */
@@ -177,21 +207,6 @@ export const normalizeProfile: NormalizeProfile = (input) => {
 // The text to type for a field
 // ---------------------------------------------------------------------------
 
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
 /** A plain decimal: what <input type="number"> keeps. Given "3.9/4.0" the browser empties the box. */
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
 
@@ -206,10 +221,11 @@ function link(typed: string): string {
 
 /** "May 2027" for a stored "2027-05"; "2027-05" itself for <input type="month">. '' when the stored value is not a month. */
 function graduationDate(stored: string, inputType: string): string {
-  if (!YEAR_MONTH.test(stored)) return '';
+  const date = yearAndMonth(stored);
+  if (date === null) return '';
   if (inputType === 'month') return stored;
-  const month = MONTH_NAMES[Number(stored.slice(5)) - 1];
-  return month === undefined ? '' : `${month} ${stored.slice(0, 4)}`;
+  const month = MONTH_NAMES[date.month - 1];
+  return month === undefined ? '' : `${month} ${date.year}`;
 }
 
 /** The answer for a kind as text, before asking whether the field can hold it. */
@@ -244,7 +260,7 @@ function answer(kind: FieldKind, profile: Profile, inputType: string): string {
     case 'graduationDate':
       return graduationDate(profile.graduationDate, inputType);
     case 'graduationYear':
-      return YEAR_MONTH.test(profile.graduationDate) ? profile.graduationDate.slice(0, 4) : '';
+      return yearAndMonth(profile.graduationDate)?.year ?? '';
     // Answered by choosing an option, never by typing: the stored value is a
     // token such as "notVeteran", which means nothing on a form.
     case 'workAuthorization':
@@ -258,11 +274,11 @@ function answer(kind: FieldKind, profile: Profile, inputType: string): string {
     // A file, not text.
     case 'resume':
       return '';
-    default: {
-      // The compiler stops here when a new FieldKind has no case above.
-      const unhandled: never = kind;
-      return unhandled;
-    }
+    default:
+      // The compiler stops here when a new FieldKind has no case above. A kind
+      // that arrives at run time anyway is not an answer: nothing is typed.
+      kind satisfies never;
+      return '';
   }
 }
 
@@ -281,7 +297,7 @@ function fits(text: string, inputType: string): boolean {
     case 'number':
       return PLAIN_NUMBER.test(text);
     case 'month':
-      return YEAR_MONTH.test(text);
+      return yearAndMonth(text) !== null;
     // date wants a full YYYY-MM-DD, which a profile never holds. The rest
     // (password, hidden, time, range...) is never ours to fill.
     default:

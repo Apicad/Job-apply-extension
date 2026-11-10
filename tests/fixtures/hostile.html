@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Apply: Analyst's Assistant | Babbage &amp; Clement</title>
+    <script>
+      // Test hook, identical on every fixture page. Tests read window.__fixture to prove what the
+      // extension did and did not touch: events holds every input, change, focus, blur, focusin,
+      // focusout, click and keydown event that reaches the document, messages every window message.
+      window.__fixture = { events: [], messages: [] };
+      (function () {
+        var fixture = window.__fixture;
+        var entries = new WeakMap();
+        function attribute(node, name) {
+          // through the prototype: a form answers form.id and form.name with its own controls
+          try {
+            return Element.prototype.getAttribute.call(node, name) || '';
+          } catch (error) {
+            return '';
+          }
+        }
+        function record(event) {
+          var path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+          var target = path.length > 0 ? path[0] : event.target;
+          var entry = entries.get(event);
+          if (entry === undefined) {
+            entry = { type: event.type, id: '', name: '', trusted: event.isTrusted };
+            entries.set(event, entry);
+            fixture.events.push(entry);
+          }
+          entry.id = attribute(target, 'id');
+          entry.name = attribute(target, 'name');
+        }
+        function watch(root) {
+          ['input', 'change', 'focus', 'blur', 'focusin', 'focusout', 'click', 'keydown'].forEach(function (type) {
+            root.addEventListener(type, record, true);
+          });
+        }
+        watch(document);
+        // Not enumerable, so the object still reads { events, messages }. Pages with shadow roots call
+        // it for each root: a change event does not leave a shadow tree, so the document never sees it.
+        Object.defineProperty(fixture, 'watch', { value: watch });
+        window.addEventListener('message', function (event) {
+          fixture.messages.push(event.data);
+        });
+      })();
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font: 16px/1.5 system-ui, sans-serif;
+        color: #20262e;
+        background: #fff;
+      }
+      main {
+        max-width: 38rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 4rem;
+      }
+      form {
+        position: relative;
+      }
+      .row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        margin-bottom: 0.9rem;
+      }
+      label {
+        font-weight: 600;
+      }
+      input {
+        box-sizing: border-box;
+        padding: 0.5rem 0.65rem;
+        border: 1px solid #aeb6c1;
+        border-radius: 4px;
+        background: #fff;
+        font: inherit;
+      }
+      .row input {
+        width: 100%;
+      }
+      details {
+        margin-bottom: 0.9rem;
+      }
+      .spacer {
+        min-height: 330vh;
+        color: #6a7480;
+      }
+      button {
+        padding: 0.5rem 1.1rem;
+        border: 1px solid #20262e;
+        border-radius: 4px;
+        background: #20262e;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      /* The concealment techniques. The class names say nothing on purpose: a page that wants to
+         catch a bot does not label its traps. Each rule is explained beside the case that uses it. */
+      .k1 {
+        display: none;
+      }
+      .k2 {
+        visibility: hidden;
+      }
+      .k3 {
+        opacity: 0;
+      }
+      .k4 {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+      }
+      .k5 {
+        position: absolute;
+        left: -9999px;
+      }
+      .k6 {
+        position: fixed;
+        top: 120px;
+        left: 100000px;
+        width: 20rem;
+      }
+      .k7 {
+        height: 0;
+        overflow: hidden;
+      }
+      .k8 {
+        position: relative;
+        z-index: -1;
+        margin-top: -22px;
+        transform: scaleY(0.01);
+      }
+      .row input.k9 {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        border: 0;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Analyst's Assistant</h1>
+      <p>
+        Babbage &amp; Clement is hiring. This page is a test fixture built to catch careless form
+        fillers: three of its fields are ordinary and must be filled, and every other one is a trap.
+        The company, the job and every person here are made up.
+      </p>
+
+      <!-- Everything below is ONE form, as on a real page: a trap that sat in a form of its own
+           would be skipped for the wrong reason. Each case is wrapped in an element with a
+           data-case attribute. Every trap has a label, a name and (where one exists) an
+           autocomplete token that match a saved answer, and no two cases ask for the same answer,
+           so filling one never excuses skipping another. -->
+      <form id="application" action="/hostile.html" method="post">
+        <!-- Control group, 1 of 3: an ordinary visible field. Must be filled. -->
+        <div class="row" data-case="control-name">
+          <label for="full-name">Full name</label>
+          <input type="text" id="full-name" name="full_name" autocomplete="name" />
+        </div>
+        <!-- Control group, 2 of 3: an ordinary visible field. Must be filled. -->
+        <div class="row" data-case="control-email">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="email" />
+        </div>
+
+        <!-- display:none on the wrapper. The classic honeypot. -->
+        <div class="row k1" data-case="display-none">
+          <label for="first-name">First name</label>
+          <input type="text" id="first-name" name="first_name" autocomplete="given-name" />
+        </div>
+
+        <!-- visibility:hidden on the wrapper: the field keeps its box and its place in the layout. -->
+        <div class="row k2" data-case="visibility-hidden">
+          <label for="last-name">Last name</label>
+          <input type="text" id="last-name" name="last_name" autocomplete="family-name" />
+        </div>
+
+        <!-- opacity:0 on the wrapper. The input's own opacity is still 1, it has a full-size box
+             and it can be clicked; checkVisibility() without options calls it visible. -->
+        <div class="row k3" data-case="opacity-0">
+          <label for="street-address">Street address</label>
+          <input type="text" id="street-address" name="street_address" autocomplete="address-line1" />
+        </div>
+
+        <!-- A 1px clipped box: the "visually hidden" rule sites use for screen-reader text, here
+             on a text input and on its label (the same rule that legitimately hides Greenhouse's
+             file input). The box is not zero-sized, so a width/height === 0 test passes it. -->
+        <div class="row" data-case="clip-1px">
+          <label class="k4" for="city">City</label>
+          <input class="k4" type="text" id="city" name="city" autocomplete="address-level2" />
+        </div>
+
+        <!-- Parked far off the left edge of the page with left:-9999px. No scrolling reaches it. -->
+        <div class="row k5" data-case="off-left">
+          <label for="zip">ZIP code</label>
+          <input type="text" id="zip" name="zip" autocomplete="postal-code" />
+        </div>
+
+        <!-- Parked far off the RIGHT edge. It is position:fixed, so it adds nothing to the page's
+             scrollable area and can never be scrolled into view. A check that only looks at the
+             top and left edges of the page lets it through. -->
+        <div class="row k6" data-case="off-right">
+          <label for="state">State</label>
+          <input type="text" id="state" name="state" autocomplete="address-level1" />
+        </div>
+
+        <!-- A parent with height:0 and overflow:hidden. The input inside has a normal box and
+             normal styles; what hides it is that its parent cuts all of it off. -->
+        <div class="k7" data-case="zero-height-parent">
+          <div class="row">
+            <label for="linkedin">LinkedIn</label>
+            <input type="text" id="linkedin" name="linkedin" />
+          </div>
+        </div>
+
+        <!-- aria-hidden="true" on the wrapper. Nothing else hides it: on screen it looks like any
+             other field. Markup that takes a control away from assistive technology takes it away
+             from the extension as well. -->
+        <div class="row" data-case="aria-hidden" aria-hidden="true">
+          <label for="github">GitHub</label>
+          <input type="text" id="github" name="github" />
+        </div>
+
+        <!-- The inert attribute on the wrapper: drawn as usual, but it cannot be focused, clicked
+             or typed into by a person. -->
+        <div class="row" data-case="inert" inert>
+          <label for="school">School</label>
+          <input type="text" id="school" name="school" />
+        </div>
+
+        <!-- The hidden attribute on the wrapper. (The wrapper has no class of its own: a page
+             rule such as "display: flex" would beat the attribute and show the field after all.) -->
+        <div data-case="hidden-attribute" hidden>
+          <div class="row">
+            <label for="degree">Degree</label>
+            <input type="text" id="degree" name="degree" />
+          </div>
+        </div>
+
+        <!-- Inside a <details> element that is closed: only its summary is drawn. -->
+        <details data-case="closed-details">
+          <summary>More about your studies</summary>
+          <div class="row">
+            <label for="gpa">GPA</label>
+            <input type="text" id="gpa" name="gpa" />
+          </div>
+        </details>
+
+        <!-- Squashed to nothing by a transform: the shape of the honeypot on Workday's sign-in
+             page (name="website", data-automation-id="beecatcher"; transform: scaleY(.01),
+             z-index:-1, margin-top:-22px). display, visibility and opacity are all untouched and
+             its layout box is full-size: only the box as it is finally drawn is a sliver.
+             Workday's own label says the box is for robots; this one reads like a real field, so
+             that nothing but the missing visibility protects it. -->
+        <div class="row k8" data-case="transform-squash">
+          <label for="website">Website</label>
+          <input type="text" id="website" name="website" data-automation-id="beecatcher" />
+        </div>
+
+        <!-- A label that is plain to see, for an input that is display:none. A check that calls a
+             control visible because its label is visible fills this one. That shortcut is only
+             ever right for radios and file inputs. -->
+        <div class="row" data-case="label-only-visible">
+          <label for="country">Country</label>
+          <input class="k1" type="text" id="country" name="country" autocomplete="country-name" />
+        </div>
+
+        <!-- A bare, concealed file input called "resume": 1px, transparent, with no label and no
+             button near it, only a line of text. Real upload widgets also hide their file input,
+             but they show something to press. Here there is nothing, so the page would get the
+             file without the user ever seeing where it went. -->
+        <div class="row" data-case="bare-file">
+          <p>Thank you for taking the time to apply.</p>
+          <input class="k9" type="file" id="resume" name="resume" />
+        </div>
+
+        <!-- Perfectly visible, and labelled "Promo code (optional)", but its autocomplete
+             attribute claims it is a telephone number. What the user can read decides; an
+             attribute nobody sees must not send the phone number into a promo-code box. -->
+        <div class="row" data-case="promo-autocomplete">
+          <label for="promo-code">Promo code (optional)</label>
+          <input type="text" id="promo-code" name="promo_code" autocomplete="tel" />
+        </div>
+
+        <div class="spacer">
+          <p>The rest of this form is a long way down: more than three screens. Keep scrolling.</p>
+        </div>
+
+        <!-- Control group, 3 of 3: an ordinary visible field, three screens below the fold.
+             Outside the window is not hidden: the user reaches it by scrolling. Must be filled. -->
+        <div class="row" data-case="control-below-fold">
+          <label for="current-company">Current company</label>
+          <input type="text" id="current-company" name="current_company" autocomplete="organization" />
+        </div>
+
+        <button type="submit">Send application</button>
+      </form>
+    </main>
+
+    <script>
+      // Nothing is ever sent anywhere: a submit only leaves a mark for the tests.
+      document.addEventListener('submit', function (event) {
+        event.preventDefault();
+        window.__fixture.submitted = true;
+      });
+    </script>
+  </body>
+</html>

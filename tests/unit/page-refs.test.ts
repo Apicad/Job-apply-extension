@@ -1,5 +1,9 @@
 import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
+import { createElement, useState } from 'react';
+import type { ChangeEvent, ReactElement } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Control } from '../../lib/types';
 import { recallControl, rememberControls } from '../../lib/page/refs';
@@ -27,11 +31,31 @@ const LEVER_WORK_AUTHORIZATION = `
     </ul>
   </div>`;
 
+// The "LinkedIn Profile" box of a Greenhouse form: told apart from its neighbours by its id alone.
+const GREENHOUSE_LINKEDIN =
+  '<input id="question_61000001" class="input input__single-line" aria-label="LinkedIn Profile" aria-invalid="false" type="text" maxLength="255">';
+
+// A "State" dropdown as a form offers it while the country chosen above it is the United States.
+const US_STATES = `
+  <select name="state">
+    <option value="">Select...</option>
+    <option value="CA">California</option>
+    <option value="CO">Colorado</option>
+  </select>`;
+
 // Taken before any test has run, so that whatever this module adds to the world shows up as new.
 const GLOBALS_AT_START = new Set(Object.getOwnPropertyNames(globalThis));
 
 function globalsAddedSinceStart(): string[] {
   return Object.getOwnPropertyNames(globalThis).filter((name) => !GLOBALS_AT_START.has(name));
+}
+
+/** The name of the global the table is kept under, found by making sure there is a table and looking for it. */
+function nameOfTheTable(): string {
+  rememberControls([]);
+  const added = globalsAddedSinceStart();
+  if (added.length !== 1) throw new Error(`expected exactly one new global, found: ${added.join(', ')}`);
+  return first(added);
 }
 
 /** Lets the current task finish: until then the engine keeps every WeakRef target alive. */
@@ -124,6 +148,23 @@ describe('the handle table', () => {
     expect(dropped.deref()).toBeUndefined();
     expect(document.querySelectorAll('input[type=radio]')).toHaveLength(1);
   });
+
+  it('does not keep a dropped dropdown or its options alive', async () => {
+    // What a dropdown offered is remembered too; that must not mean holding on to its options.
+    const rememberThenDrop = (): WeakRef<Element>[] => {
+      const select = first(mount<HTMLSelectElement>(US_STATES));
+      rememberControls([{ control: 'select', el: select }]);
+      const option = first(Array.from(select.options));
+      select.remove();
+      return [new WeakRef(select), new WeakRef(option)];
+    };
+
+    const dropped = rememberThenDrop();
+    await aMomentLater();
+    collectGarbage();
+
+    expect(dropped.map((ref) => ref.deref())).toEqual([undefined, undefined]);
+  });
 });
 
 describe('recallControl', () => {
@@ -174,6 +215,216 @@ describe('recallControl', () => {
     radios[1]?.closest('li')?.remove();
 
     expect(recallControl(handle)).toBeNull();
+  });
+
+  // An action names an option by its position in the list too (FillAction in lib/types.ts), and
+  // the position was worked out from the options the scan saw. Once the list is a different one,
+  // the same position can stand for another answer than the one shown in the preview.
+  // [what the page has done, how]
+  it.each<[string, (select: HTMLSelectElement) => void]>([
+    [
+      // What a "State" dropdown does when the "Country" above it changes: position 2 was Colorado.
+      'filled the list with other options',
+      (select) => {
+        select.innerHTML =
+          '<option value="">Select...</option><option value="AB">Alberta</option><option value="BC">British Columbia</option>';
+      },
+    ],
+    ['put a new option in front of the others', (select) => select.prepend(new Option('Please choose', ''))],
+    ['taken the "Select..." option away', (select) => select.options[0]?.remove()],
+    ['added an option at the end', (select) => select.append(new Option('Connecticut', 'CT'))],
+    ['moved the first option to the end', (select) => select.append(first(Array.from(select.options)))],
+    // The same elements as before, saying something else: how a page built with React may swap a list.
+    [
+      'reworded an option where it stands',
+      (select) => {
+        first(Array.from(select.options).slice(2)).textContent = 'Connecticut';
+      },
+    ],
+    ['given an option another value', (select) => select.options[2]?.setAttribute('value', 'CT')],
+    ['given an option another label to show', (select) => select.options[2]?.setAttribute('label', 'Connecticut')],
+  ])('gives null for a dropdown once the page has %s', (_name, change) => {
+    const select = first(mount<HTMLSelectElement>(US_STATES));
+    const handle = first(rememberControls([{ control: 'select', el: select }]));
+
+    change(select);
+
+    expect(recallControl(handle)).toBeNull();
+  });
+
+  // [what has happened, how]
+  it.each<[string, (select: HTMLSelectElement) => void]>([
+    ['nothing has happened to it', () => undefined],
+    [
+      'the user has chosen an option',
+      (select) => {
+        select.selectedIndex = 2;
+      },
+    ],
+    // The same options in the same places: every position still means what it meant.
+    [
+      'the page has built the very same list again',
+      (select) => {
+        select.innerHTML =
+          '<option value="">Select...</option><option value="CA">California</option><option value="CO">Colorado</option>';
+      },
+    ],
+  ])('still finds a dropdown when %s', (_name, change) => {
+    const select = first(mount<HTMLSelectElement>(US_STATES));
+    const handle = first(rememberControls([{ control: 'select', el: select }]));
+
+    change(select);
+
+    const recalled = recallControl(handle);
+    expect(recalled?.control).toBe('select');
+    expect(recalled?.el).toBe(select);
+  });
+
+  // A page built with React may hand the element of one question to another. When a follow-up
+  // question appears above "LinkedIn Profile", the box that was LinkedIn's can become the box of
+  // the new question. It is the very same element, still on the page: only what the element says
+  // about itself gives the change away.
+  // [what the page has done to the text box, markup of the box, how]
+  it.each<[string, string, (input: HTMLInputElement) => void]>([
+    [
+      'given it another id',
+      GREENHOUSE_LINKEDIN,
+      (input) => {
+        input.id = 'question_61000007';
+      },
+    ],
+    ['taken its id away', GREENHOUSE_LINKEDIN, (input) => input.removeAttribute('id')],
+    [
+      'given it another name',
+      '<input type="text" name="urls[LinkedIn]">',
+      (input) => {
+        input.name = 'cards[4f1c][field2]';
+      },
+    ],
+    [
+      'made it another kind of input',
+      GREENHOUSE_LINKEDIN,
+      (input) => {
+        input.type = 'email';
+      },
+    ],
+    // Or the box has turned into a custom dropdown, which is never typed into (CLAUDE.md).
+    ['given it the role of a custom dropdown', GREENHOUSE_LINKEDIN, (input) => input.setAttribute('role', 'combobox')],
+    ['made it suggest its answers from a list', GREENHOUSE_LINKEDIN, (input) => input.setAttribute('aria-autocomplete', 'list')],
+    ['given it a popup to choose from', GREENHOUSE_LINKEDIN, (input) => input.setAttribute('aria-haspopup', 'listbox')],
+  ])('gives null for a text box once the page has %s', (_name, html, change) => {
+    const input = first(mount(html));
+    const handle = first(rememberControls([{ control: 'text', el: input }]));
+
+    change(input);
+
+    expect(recallControl(handle)).toBeNull();
+  });
+
+  // None of these makes it another question. (Whether it may still be written is the caller's to say.)
+  // [what has happened to the text box, how]
+  it.each<[string, (input: HTMLInputElement) => void]>([
+    [
+      'the user has typed into it',
+      (input) => {
+        input.value = 'https://www.linkedin.com/in/ada-lovelace';
+      },
+    ],
+    [
+      'the page has marked it as wrongly filled in',
+      (input) => {
+        input.className = 'input input__single-line input--error';
+        input.setAttribute('aria-invalid', 'true');
+      },
+    ],
+    [
+      'the page has switched it off',
+      (input) => {
+        input.disabled = true;
+      },
+    ],
+    ['the page has given it a hint', (input) => input.setAttribute('placeholder', 'linkedin.com/in/…')],
+  ])('still finds a text box when %s', (_name, change) => {
+    const input = first(mount(GREENHOUSE_LINKEDIN));
+    const handle = first(rememberControls([{ control: 'text', el: input }]));
+
+    change(input);
+
+    expect(recallControl(handle)?.el).toBe(input);
+  });
+
+  it('gives null for a radio group once one of its radios belongs to another question', () => {
+    const radios = mount(LEVER_WORK_AUTHORIZATION);
+    const handle = first(rememberControls([{ control: 'radio', el: first(radios), radios }]));
+
+    first(radios.slice(1)).name = 'cards[4f1c][field1]';
+
+    expect(recallControl(handle)).toBeNull();
+  });
+
+  it('still finds a radio group when one of its radios has been chosen', () => {
+    const radios = mount(LEVER_WORK_AUTHORIZATION);
+    const handle = first(rememberControls([{ control: 'radio', el: first(radios), radios }]));
+
+    first(radios).checked = true;
+
+    expect(recallControl(handle)?.el).toBe(radios[0]);
+  });
+
+  it('gives null for a dropdown once it carries the name of another question', () => {
+    const select = first(mount<HTMLSelectElement>(US_STATES));
+    const handle = first(rememberControls([{ control: 'select', el: select }]));
+
+    select.name = 'province';
+
+    expect(recallControl(handle)).toBeNull();
+  });
+
+  it('gives null for the box that a form made with React has handed to a new question', () => {
+    // A form drawn from a list of questions, each keyed by its place in the list. Answering "No"
+    // puts a follow-up question in second place, and React gives it the element that was third.
+    function Questions(): ReactElement {
+      const [authorized, setAuthorized] = useState('');
+      const names = ['authorized', ...(authorized === 'No' ? ['visa_details'] : []), 'linkedin'];
+      return createElement(
+        'form',
+        null,
+        names.map((name, place) =>
+          name === 'authorized'
+            ? createElement(
+                'select',
+                { key: place, name, value: authorized, onChange: (event: ChangeEvent<HTMLSelectElement>) => setAuthorized(event.target.value) },
+                createElement('option', { value: '' }, 'Select...'),
+                createElement('option', { value: 'Yes' }, 'Yes'),
+                createElement('option', { value: 'No' }, 'No'),
+              )
+            : createElement('input', { key: place, type: 'text', name }),
+        ),
+      );
+    }
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    flushSync(() => root.render(createElement(Questions)));
+    const select = first(Array.from(container.querySelectorAll('select')));
+    const linkedin = first(Array.from(container.querySelectorAll('input')));
+    const [selectHandle, linkedinHandle] = rememberControls([
+      { control: 'select', el: select },
+      { control: 'text', el: linkedin },
+    ]);
+    if (selectHandle === undefined || linkedinHandle === undefined) throw new Error('two controls were remembered');
+
+    // The first planned answer: "No". React draws the form again before the event is over.
+    select.selectedIndex = 2;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    const nameOfTheBoxNow = linkedin.name;
+    const recalledBox = recallControl(linkedinHandle);
+    const recalledDropdown = recallControl(selectHandle);
+    flushSync(() => root.unmount());
+
+    expect(nameOfTheBoxNow).toBe('visa_details');
+    expect(recalledBox).toBeNull();
+    expect(recalledDropdown?.el).toBe(select);
   });
 
   it('gives null once the element has been taken off the page', () => {
@@ -248,8 +499,20 @@ describe('recallControl', () => {
   });
 
   it('gives null when nothing has been remembered in this world yet', () => {
-    for (const name of globalsAddedSinceStart()) Reflect.deleteProperty(globalThis, name);
+    Reflect.deleteProperty(globalThis, nameOfTheTable());
 
+    expect(recallControl(0)).toBeNull();
+  });
+
+  it('gives null when the name of the table leads to an element of the page instead', () => {
+    // In a browser every element with an id is also reachable as a global of
+    // that name, so before the first scan a page can plant <form id="…"> under
+    // the very name this module uses. A form even answers form[0] with its
+    // first control, which is not a control anybody remembered.
+    const form = first(mount<HTMLFormElement>('<form><input id="first_name"></form>', 'form'));
+    Reflect.set(globalThis, nameOfTheTable(), form);
+
+    expect(form[0]).toBe(form.querySelector('input'));
     expect(recallControl(0)).toBeNull();
   });
 });

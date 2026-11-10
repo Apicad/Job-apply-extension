@@ -35,8 +35,12 @@ export const extractJob: ExtractJob = (doc, ats) => {
 // ---------------------------------------------------------------------------
 
 function fromJsonLd(doc: Document): JobInfo {
-  const scripts = [...doc.querySelectorAll('script[type="application/ld+json"]')];
-  const postings = scripts.flatMap((script) => thingsIn(parseJson(script.textContent ?? ''))).filter(isJobPosting);
+  const postings: Record<string, unknown>[] = [];
+  for (const script of doc.querySelectorAll('script[type="application/ld+json"]')) {
+    for (const thing of thingsIn(parseJson(script.textContent ?? ''))) {
+      if (isJobPosting(thing)) postings.push(thing);
+    }
+  }
   // Exactly one. With two postings on a page nobody can tell which one this form is for.
   const [posting, another] = postings;
   if (posting === undefined || another !== undefined) return NOTHING;
@@ -56,10 +60,15 @@ function parseJson(text: string): unknown {
   }
 }
 
-/** The things one JSON-LD script describes: one thing, a list, or a list under "@graph". */
+/** The things one JSON-LD script describes: one thing or a list, possibly wrapped in { "@graph": … }. */
 function thingsIn(data: unknown): unknown[] {
-  const top = Array.isArray(data) ? data : [data];
-  return top.flatMap((thing) => (isRecord(thing) && Array.isArray(thing['@graph']) ? [thing, ...thing['@graph']] : [thing]));
+  const top: unknown[] = Array.isArray(data) ? data : [data];
+  return top.flatMap((thing) => {
+    // A thing with "@graph" is only a wrapper: what it describes is inside.
+    // flatMap() spreads a list and keeps a single thing as it is.
+    const graph = isRecord(thing) ? thing['@graph'] : undefined;
+    return graph === undefined ? [thing] : graph;
+  });
 }
 
 function isJobPosting(thing: unknown): thing is Record<string, unknown> {

@@ -236,6 +236,43 @@ describe('isShown: a text box, textarea or dropdown must itself be visible', () 
   });
 });
 
+describe('isShown: the input of a custom dropdown may be next to invisible inside its styled box', () => {
+  // Verbatim from a live Greenhouse form (React-Select; <style> blocks and the SVG icon left out).
+  // React-Select keeps this input a few pixels wide while it is empty and gives it opacity:0 once
+  // an option is chosen, so the input itself is marked as not rendered here. The box a person
+  // sees is the div.select__control around it.
+  const greenhouseSelect = (shellAttributes = ''): string => `
+    <div class="field-wrapper"><div class="select"><div class="select__container"><label id="question_37369961002-label" for="question_37369961002" class="label select__label">Will you now or in the future require sponsorship for a visa to remain in your current location?<span aria-hidden="true">*</span></label><div class="select-shell remix-css-b62m3t-container" ${shellAttributes}><span id="react-select-question_37369961002-live-region" class="remix-css-7pg0cj-a11yText"></span><span aria-live="polite" aria-atomic="false" aria-relevant="additions text" role="log" class="remix-css-7pg0cj-a11yText"></span><div><div class="select__control remix-css-13cymwt-control"><div class="select__value-container remix-css-hlgwow"><div class="select__placeholder remix-css-1jqq78o-placeholder" id="react-select-question_37369961002-placeholder">Select...</div><div class="select__input-container remix-css-19bb58m" data-value=""><input class="select__input" style="label:input;color:inherit;background:0;opacity:1;width:100%;grid-area:1 / 2;font:inherit;min-width:2px;border:0;margin:0;outline:0;padding:0" autoCapitalize="none" autoComplete="off" autoCorrect="off" id="question_37369961002" spellcheck="false" tabindex="0" type="text" aria-autocomplete="list" aria-expanded="false" aria-haspopup="true" aria-errormessage="question_37369961002-error" aria-invalid="false" aria-labelledby="question_37369961002-label" aria-required="true" role="combobox" aria-activedescendant="" aria-describedby="react-select-question_37369961002-placeholder" enterKeyHint="done" value="" data-test-hidden/></div></div><div class="select__indicators remix-css-1wy0on6"><button type="button" class="icon-button icon-button--sm" aria-label="Toggle flyout" tabindex="-1"></button></div></div></div><input required="" tabindex="-1" aria-hidden="true" class="remix-css-1a0ro4n-requiredInput" value=""/></div></div></div></div>`;
+
+  const cases: [name: string, html: string, want: boolean][] = [
+    ['Greenhouse React-Select: a tiny input inside a visible box', greenhouseSelect(), true],
+    ['the same dropdown with its whole box not rendered', greenhouseSelect('data-test-hidden'), false],
+    ['the same dropdown in a hidden block', `<div hidden>${greenhouseSelect()}</div>`, false],
+    ['the same dropdown marked aria-hidden', greenhouseSelect('aria-hidden="true"'), false],
+    [
+      'an invisible combobox input in a wrapper shared with another field',
+      '<div class="row"><input role="combobox" data-test-hidden><input name="email" type="email"></div>',
+      false,
+    ],
+    ['an invisible combobox input directly inside the form', '<form><input role="combobox" data-test-hidden></form>', false],
+    ['a disabled combobox', '<div class="select"><input role="combobox" disabled></div>', false],
+    ['a combobox input with the hidden attribute inside a visible box', '<div class="select"><input role="combobox" hidden></div>', false],
+  ];
+  it.each(cases)('%s', (_name, html, want) => {
+    expect(shown(html, 'input[role="combobox"]')).toBe(want);
+  });
+
+  it('gives no such allowance to a text box: it may be written to, so it must be visible itself', () => {
+    expect(shown('<div class="field"><div class="styled-box"><input id="target" name="email" data-test-hidden></div></div>')).toBe(false);
+  });
+
+  it('is never shown just because there is no layout to ask', () => {
+    mount(greenhouseSelect());
+
+    expect(isShown(controlAt('input[role="combobox"]'), noLayout)).toBe(false);
+  });
+});
+
 describe('isShown: a radio group may hide its inputs behind labels or styled wrappers that are visible', () => {
   // Verbatim from a live Lever form: native radios, each inside its own label.
   const LEVER_RADIOS = `
@@ -272,6 +309,16 @@ describe('isShown: a radio group may hide its inputs behind labels or styled wra
       '<div class="choice"><span data-test-hidden><input type="radio" name="q" value="Yes"></span><span>Yes</span></div><div class="choice"><span data-test-hidden><input type="radio" name="q" value="No"></span><span>No</span></div>',
       true,
     ],
+    [
+      'a visible wrapper three levels up still vouches for a label-less radio',
+      '<div class="choice"><span data-test-hidden><i data-test-hidden><input type="radio" name="q" value="Yes"></i></span><span>Yes</span></div><div class="choice"><span data-test-hidden><i data-test-hidden><input type="radio" name="q" value="No"></i></span><span>No</span></div>',
+      true,
+    ],
+    [
+      'a visible wrapper four levels up is too far away',
+      '<div class="choice"><span data-test-hidden><b data-test-hidden><i data-test-hidden><input type="radio" name="q" value="Yes"></i></b></span><span>Yes</span></div><div class="choice"><span data-test-hidden><b data-test-hidden><i data-test-hidden><input type="radio" name="q" value="No"></i></b></span><span>No</span></div>',
+      false,
+    ],
     // Nothing visible stands in for the radios.
     ['invisible radios with nothing around them', '<input type="radio" name="q" value="1" data-test-hidden><input type="radio" name="q" value="2" data-test-hidden>', false],
     [
@@ -299,6 +346,13 @@ describe('isShown: a radio group may hide its inputs behind labels or styled wra
       '<label><div class="application-label">Race</div><ul><li><label data-test-hidden><input type="radio" name="q" value="A"><span>A</span></label></li><li><label data-test-hidden><input type="radio" name="q" value="B"><span>B</span></label></li></ul></label>',
       false,
     ],
+    [
+      'a visible question label around all radios does not vouch for the first option either',
+      '<label><div class="application-label">Race</div><ul><li><label data-test-hidden><input type="radio" name="q" value="A"><span>A</span></label></li><li><label><input type="radio" name="q" value="B"><span>B</span></label></li></ul></label>',
+      false,
+    ],
+    // What the markup itself hides stays hidden, whatever stands beside it.
+    ['radios with the hidden attribute beside visible labels', '<input type="radio" id="y" name="q" hidden><label for="y">Yes</label><input type="radio" id="n" name="q" hidden><label for="n">No</label>', false],
     // Every option that could be chosen has to be visible.
     [
       'one option hidden, the others visible',
@@ -364,6 +418,17 @@ describe('isShown: a file input may hide behind a label or button of its own upl
     ],
     ['a div with role=button as the visible control', '<div class="upload"><div role="button">Choose file</div><input type="file" data-test-hidden></div>', true],
     ['an <input type="button"> as the visible control', '<div class="upload"><input type="button" value="Browse…"><input type="file" data-test-hidden></div>', true],
+    ['a visible label inside the widget that is not tied to the input', '<div class="upload"><label class="btn">Choose file</label><input type="file" data-test-hidden></div>', true],
+    [
+      'a visible button four wrappers up is still inside the widget',
+      '<div class="upload"><button type="button">Attach</button><div><div><div><input type="file" data-test-hidden></div></div></div></div>',
+      true,
+    ],
+    [
+      'a visible button five wrappers up is outside the widget',
+      '<div class="upload"><button type="button">Attach</button><div><div><div><div><input type="file" data-test-hidden></div></div></div></div></div>',
+      false,
+    ],
     // The hostile shape: a concealed file input with nothing a person could click.
     ['a bare hidden file input', '<div>Thanks!<input type="file" name="resume" data-test-hidden></div>', false],
     ['a hidden file input with only text around it', '<div class="upload"><p>Resume/CV</p><span>Drop your file</span><input type="file" name="resume" data-test-hidden></div>', false],
@@ -382,6 +447,9 @@ describe('isShown: a file input may hide behind a label or button of its own upl
     ],
     ['hidden input, hidden label, hidden button', '<div class="upload"><button data-test-hidden>Attach</button><label for="resume" data-test-hidden>Attach</label><input id="resume" type="file" data-test-hidden></div>', false],
     ['a visible button directly inside the form is too far away to vouch for it', '<form><input type="file" name="resume" data-test-hidden><button type="submit">Continue</button></form>', false],
+    // What the markup itself hides stays hidden, whatever stands beside it.
+    ['a file input with the hidden attribute beside a visible button', '<div class="upload"><button type="button">Upload</button><input type="file" hidden></div>', false],
+    ['a file input in a closed <details> with a visible label elsewhere', '<details><summary>More</summary><input id="cv" type="file"></details><label for="cv">Upload CV</label>', false],
     ['a disabled file input', '<label>Resume <input id="resume" type="file" disabled></label>', false],
     ['a file input in a disabled fieldset', '<fieldset disabled><label>Resume <input id="resume" type="file"></label></fieldset>', false],
   ];
@@ -393,6 +461,22 @@ describe('isShown: a file input may hide behind a label or button of its own upl
     mount(greenhouseUpload());
 
     expect(isShown(controlAt('input[type="file"]'), noLayout)).toBe(false);
+  });
+
+  it('takes a field inside a web component for the neighbour it is: its wrapper is shared, the button may be the neighbour\'s', () => {
+    // the same shape as "a visible button in a wrapper shared with another field", with the e-mail
+    // box inside the shadow tree of a component
+    mount('<div class="row"><x-input></x-input><button type="button">Send</button><input type="file" name="resume" data-test-hidden></div>');
+    find('x-input').attachShadow({ mode: 'open' }).innerHTML = '<input name="email" type="email">';
+
+    expect(isShown(controlAt('input[type="file"]'), env)).toBe(false);
+  });
+
+  it('still lets the button stand in when the web component beside it holds no field', () => {
+    mount('<div class="row"><x-icon></x-icon><button type="button">Attach</button><input type="file" name="resume" data-test-hidden></div>');
+    find('x-icon').attachShadow({ mode: 'open' }).innerHTML = '<svg><title>Paperclip</title></svg>';
+
+    expect(isShown(controlAt('input[type="file"]'), env)).toBe(true);
   });
 });
 
@@ -525,21 +609,26 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
   }
 
   const root = document.documentElement;
-  const realScrollX = Object.getOwnPropertyDescriptor(window, 'scrollX');
-  const realScrollY = Object.getOwnPropertyDescriptor(window, 'scrollY');
+  const realWindow = (['scrollX', 'scrollY', 'innerWidth', 'innerHeight'] as const).map(
+    (name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const,
+  );
 
+  /** The page is 1000 by 3000 and not scrolled unless a scene says otherwise; the window shows 1000 by 800 of it. */
   function setPage(page: Scene['page'] = {}): void {
     Object.defineProperty(root, 'scrollWidth', { configurable: true, value: page.width ?? 1000 });
     Object.defineProperty(root, 'scrollHeight', { configurable: true, value: page.height ?? 3000 });
     Object.defineProperty(window, 'scrollX', { configurable: true, value: page.scrollX ?? 0 });
     Object.defineProperty(window, 'scrollY', { configurable: true, value: page.scrollY ?? 0 });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
   }
 
   afterEach(() => {
     Reflect.deleteProperty(root, 'scrollWidth');
     Reflect.deleteProperty(root, 'scrollHeight');
-    if (realScrollX !== undefined) Object.defineProperty(window, 'scrollX', realScrollX);
-    if (realScrollY !== undefined) Object.defineProperty(window, 'scrollY', realScrollY);
+    for (const [name, descriptor] of realWindow) {
+      if (descriptor !== undefined) Object.defineProperty(window, name, descriptor);
+    }
   });
 
   function rendered(scene: Scene): boolean {
@@ -569,6 +658,13 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
       page: { scrollY: 2500 },
       want: true,
     },
+    {
+      name: 'below the end of a page that is scrolled down',
+      html: FIELD,
+      boxes: { '#target': box(100, 600, 200, 30) },
+      page: { scrollY: 2500 },
+      want: false,
+    },
     { name: 'parked at left: -9999px', html: FIELD, boxes: { '#target': box(-9999, 100, 200, 30) }, want: false },
     { name: 'parked at top: -9999px', html: FIELD, boxes: { '#target': box(100, -9999, 200, 30) }, want: false },
     { name: 'parked beyond the right edge of the page', html: FIELD, boxes: { '#target': box(5000, 100, 200, 30) }, want: false },
@@ -596,6 +692,25 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
       html: FIELD,
       boxes: { '#target': box(100, 100, 200, 30, { unseen: 'content-visibility:auto, skipped' }) },
       want: false,
+    },
+    // Nearly transparent counts as invisible too; checkVisibility itself only notices exactly 0.
+    {
+      name: 'opacity: 0.05 on the field',
+      html: '<input id="target" name="email" style="opacity:0.05">',
+      boxes: { '#target': box(100, 100, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'opacity: 0.3 on a wrapper and 0.3 on the field (0.09 together)',
+      html: `<div style="opacity:0.3"><p><input id="target" name="email" style="opacity:0.3"></p></div>`,
+      boxes: { '#target': box(100, 100, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'opacity: 0.5 (a dimmed but readable field)',
+      html: `<div style="opacity:0.5">${FIELD}</div>`,
+      boxes: { '#target': box(100, 100, 200, 30) },
+      want: true,
     },
     // Ancestors that cut off what sticks out of them (overflow: hidden or clip).
     {
@@ -696,6 +811,12 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
       want: false,
     },
     {
+      name: 'far to the right inside a panel that scrolls sideways',
+      html: `<div id="panel" style="overflow:auto">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 0, 500, 100, { scrollWidth: 2000 }), '#target': box(1500, 10, 200, 30) },
+      want: true,
+    },
+    {
       name: 'an app shell: the page does not scroll, a panel inside an overflow:hidden frame does',
       html: `<div id="frame" style="overflow:hidden"><div id="panel" style="overflow:auto">${FIELD}</div></div>`,
       boxes: {
@@ -716,9 +837,128 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
       },
       want: false,
     },
+    // Fixed to the window (position: fixed): scrolling the page never moves it, so "further down the
+    // page" does not exist for it. Only what lies inside the window (1000 by 800 here) can be seen.
+    {
+      name: 'position:fixed inside the window (a dialog)',
+      html: `<div id="fixed" style="position:fixed">${FIELD}</div>`,
+      boxes: { '#fixed': box(100, 50, 600, 500), '#target': box(150, 100, 200, 30) },
+      page: { scrollY: 2000 },
+      want: true,
+    },
+    {
+      name: 'position:fixed, parked below the window of a long page (a closed bottom sheet)',
+      html: `<div id="fixed" style="position:fixed">${FIELD}</div>`,
+      boxes: { '#fixed': box(0, 900, 1000, 300), '#target': box(100, 950, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'position:fixed on the field itself at top: 120vh',
+      html: '<input id="target" name="email" style="position:fixed">',
+      boxes: { '#target': box(100, 960, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'position:fixed at top: -200px, after the page was scrolled down',
+      html: '<input id="target" name="email" style="position:fixed">',
+      boxes: { '#target': box(100, -200, 200, 30) },
+      page: { scrollY: 1000 },
+      want: false,
+    },
+    {
+      name: 'position:fixed, beyond the right edge of the window of a wide page',
+      html: '<input id="target" name="email" style="position:fixed">',
+      boxes: { '#target': box(1200, 100, 200, 30) },
+      page: { width: 4000 },
+      want: false,
+    },
+    {
+      name: 'position:fixed, left of the window after the page was scrolled sideways',
+      html: '<input id="target" name="email" style="position:fixed">',
+      boxes: { '#target': box(-250, 100, 200, 30) },
+      page: { width: 4000, scrollX: 500 },
+      want: false,
+    },
+    {
+      name: 'position:fixed, sticking 5px into the window from below',
+      html: '<input id="target" name="email" style="position:fixed">',
+      boxes: { '#target': box(100, 795, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'position:fixed, sticking 10px into the window from below',
+      html: '<input id="target" name="email" style="position:fixed">',
+      boxes: { '#target': box(100, 790, 200, 30) },
+      want: true,
+    },
+    {
+      name: 'below the fold of a fixed panel that scrolls (a long form in a dialog)',
+      html: `<div id="fixed" style="position:fixed;overflow:auto">${FIELD}</div>`,
+      boxes: { '#fixed': box(0, 0, 1000, 800, { scrollHeight: 4000 }), '#target': box(100, 2500, 200, 30) },
+      want: true,
+    },
+    // A panel that scrolls does not move what is fixed to the window, even when it is its ancestor.
+    {
+      name: 'a fixed dialog inside an app shell that scrolls',
+      html: `<div id="panel" style="overflow:auto"><div id="fixed" style="position:fixed">${FIELD}</div></div>`,
+      boxes: {
+        '#panel': box(0, 0, 1000, 800, { scrollHeight: 5000 }),
+        '#fixed': box(100, 50, 600, 500),
+        '#target': box(150, 100, 200, 30),
+      },
+      page: { height: 800 },
+      want: true,
+    },
+    {
+      name: 'a fixed sheet parked below the window, inside an app shell that scrolls',
+      html: `<div id="panel" style="overflow:auto"><div id="fixed" style="position:fixed">${FIELD}</div></div>`,
+      boxes: {
+        '#panel': box(0, 0, 1000, 800, { scrollHeight: 5000 }),
+        '#fixed': box(0, 900, 1000, 300),
+        '#target': box(100, 950, 200, 30),
+      },
+      page: { height: 800 },
+      want: false,
+    },
+    {
+      name: 'a fixed drawer parked beyond the right edge of the window, inside a panel that scrolls sideways',
+      html: `<div id="panel" style="overflow:auto"><div id="fixed" style="position:fixed">${FIELD}</div></div>`,
+      boxes: {
+        '#panel': box(0, 0, 1000, 800, { scrollWidth: 4000 }),
+        '#fixed': box(1100, 0, 400, 800),
+        '#target': box(1200, 100, 200, 30),
+      },
+      page: { height: 800 },
+      want: false,
+    },
+    {
+      name: 'position:sticky is part of the page: below the fold still counts',
+      html: `<div id="sticky" style="position:sticky">${FIELD}</div>`,
+      boxes: { '#sticky': box(0, 2400, 1000, 200), '#target': box(100, 2500, 200, 30) },
+      want: true,
+    },
   ];
   it.each(scenes)('$name', (scene) => {
     expect(rendered(scene)).toBe(scene.want);
+  });
+
+  it('does not count the scroll of the page twice when the root element itself is styled to scroll', () => {
+    // Many sites set html { overflow-y: scroll }. The root element is then the page's own scroller:
+    // its box moves up as the page scrolls and its scrollTop is the page's scroll position.
+    mount(FIELD);
+    setPage({ height: 3000, scrollY: 2500 });
+    Object.defineProperty(document, 'scrollingElement', { configurable: true, value: root });
+    root.style.overflowY = 'scroll';
+    layOut(root, box(0, -2500, 1000, 3000, { scrollHeight: 3000, scrollTop: 2500 }));
+    layOut(find('#target'), box(100, 400, 200, 30));
+
+    try {
+      expect(browserEnv.isRendered(find('#target'))).toBe(true);
+    } finally {
+      Reflect.deleteProperty(document, 'scrollingElement');
+      root.style.overflowY = '';
+      for (const name of ['checkVisibility', 'getBoundingClientRect', 'scrollLeft', 'scrollTop']) Reflect.deleteProperty(root, name);
+    }
   });
 
   it('follows a shadow tree out to its host when looking for clipping ancestors', () => {
@@ -732,6 +972,125 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
     layOut(find('#clip'), box(100, 100, 200, 0));
 
     expect(browserEnv.isRendered(inside)).toBe(false);
+  });
+
+  // clip and clip-path cut an element and everything inside it, whatever size its box has.
+  // In these scenes the wrapper spans 100..500 across and 100..300 down (400 by 200); the field
+  // spans 150..350 across and 150..180 down.
+  const clipped = (style: string): Pick<Scene, 'html' | 'boxes'> => ({
+    html: `<div id="clip" style="${style}">${FIELD}</div>`,
+    boxes: { '#clip': box(100, 100, 400, 200), '#target': box(150, 150, 200, 30) },
+  });
+  const clippedItself = (style: string): Pick<Scene, 'html' | 'boxes'> => ({
+    html: `<input id="target" name="email" style="${style}">`,
+    boxes: { '#target': box(150, 150, 200, 30) },
+  });
+
+  // Verbatim from chosen.css 1.8.7, a dropdown library still common on older career sites. The
+  // search box of a closed dropdown keeps its full size; the drop around it is clipped to nothing.
+  const CHOSEN_CSS = `
+    .chosen-container .chosen-drop { position: absolute; top: 100%; z-index: 1010; width: 100%; border: 1px solid #aaa; border-top: 0; background: #fff; clip: rect(0, 0, 0, 0); -webkit-clip-path: inset(100% 100%); clip-path: inset(100% 100%); }
+    .chosen-container.chosen-with-drop .chosen-drop { clip: auto; -webkit-clip-path: none; clip-path: none; }`;
+  const chosen = (containerClass: string): Pick<Scene, 'html' | 'boxes'> => ({
+    html: `<style>${CHOSEN_CSS}</style><select name="country" style="display: none;"><option value=""></option><option value="US">United States</option></select><div class="chosen-container chosen-container-single ${containerClass}" title="" style="width: 350px;"><a class="chosen-single chosen-default"><span>Country</span><div><b></b></div></a><div class="chosen-drop"><div class="chosen-search"><input id="target" class="chosen-search-input" type="text" autocomplete="off"></div><ul class="chosen-results"></ul></div></div>`,
+    boxes: { '.chosen-container': box(100, 100, 350, 30), '.chosen-drop': box(100, 130, 350, 60), '#target': box(104, 134, 342, 26) },
+  });
+
+  const clipScenes: Scene[] = [
+    { name: 'Chosen: the search box of a closed dropdown', ...chosen(''), want: false },
+    { name: 'Chosen: the search box of an open dropdown', ...chosen('chosen-with-drop chosen-container-active'), want: true },
+    // clip-path: inset(), the shape "visually hidden" recipes and reveal animations use.
+    { name: 'clip-path: inset(50%) on the field itself', ...clippedItself('clip-path:inset(50%)'), want: false },
+    { name: 'clip-path: inset(100%) on a wrapper', ...clipped('clip-path:inset(100%)'), want: false },
+    { name: 'clip-path: inset(0px), left behind by a reveal animation', ...clipped('clip-path:inset(0px)'), want: true },
+    { name: 'clip-path: inset(0px round 12px), a card with rounded corners', ...clipped('clip-path:inset(0px round 12px)'), want: true },
+    { name: 'clip-path: inset(10px 20px) leaves the field alone', ...clipped('clip-path:inset(10px 20px)'), want: true },
+    { name: 'clip-path: inset(0px 0px 100%), a panel rolled up from below', ...clipped('clip-path:inset(0px 0px 100%)'), want: false },
+    { name: 'cut from the top so that 20px of the field remain', ...clipped('clip-path:inset(60px 0px 0px)'), want: true },
+    { name: 'cut from the top so that 5px of the field remain', ...clipped('clip-path:inset(75px 0px 0px)'), want: false },
+    { name: 'cut from the right so that 5px of the field remain', ...clipped('clip-path:inset(0px 345px 0px 0px)'), want: false },
+    { name: 'cut from the bottom so that 5px of the field remain', ...clipped('clip-path:inset(0px 0px 145px)'), want: false },
+    { name: 'cut from the left so that 5px of the field remain', ...clipped('clip-path:inset(0px 0px 0px 245px)'), want: false },
+    { name: 'two values: the second cuts left and right alike', ...clipped('clip-path:inset(0px 245px)'), want: false },
+    {
+      // a tall, narrow wrapper (220 by 600): 107px from each side leaves 6px of its width
+      name: 'one value cuts left and right as well',
+      html: `<div id="clip" style="clip-path:inset(107px)">${FIELD}</div>`,
+      boxes: { '#clip': box(100, 100, 220, 600), '#target': box(110, 300, 200, 30) },
+      want: false,
+    },
+    {
+      // a wide, flat wrapper (600 by 100) with the field at its lower edge: 35px from below leaves 5px of it
+      name: 'one value cuts the bottom as well',
+      html: `<div id="clip" style="clip-path:inset(35px)">${FIELD}</div>`,
+      boxes: { '#clip': box(100, 100, 600, 100), '#target': box(300, 160, 200, 30) },
+      want: false,
+    },
+    // Percentages are of the wrapper's own size: of its height (200) from the top, of its width (400) from the left.
+    { name: '20% from the top is 40px, above the field', ...clipped('clip-path:inset(20% 0% 0%)'), want: true },
+    { name: '61% from the left is 244px, leaving 6px of the field', ...clipped('clip-path:inset(0% 0% 0% 61%)'), want: false },
+    { name: '87% from the right is 348px, leaving 2px of the field', ...clipped('clip-path:inset(0% 87% 0% 0%)'), want: false },
+    { name: '55% from the bottom is 110px, below the field', ...clipped('clip-path:inset(0% 0% 55%)'), want: true },
+    { name: 'percentages on all four sides that leave the field', ...clipped('clip-path:inset(5% 10% 15% 20%)'), want: true },
+    // Shapes that cannot be measured here count as cutting everything away.
+    { name: 'clip-path: circle(0px)', ...clipped('clip-path:circle(0px)'), want: false },
+    { name: 'clip-path: polygon(…), a slanted section', ...clipped('clip-path:polygon(0px 0px, 100% 0px, 100% 85%, 0px 100%)'), want: false },
+    { name: 'clip-path: url(…)', ...clipped('clip-path:url(#shape)'), want: false },
+    { name: 'clip-path: inset() with a calculated length', ...clipped('clip-path:inset(calc(100% - 4px))'), want: false },
+    // clip, the older property: it only works on absolutely positioned and fixed elements.
+    { name: 'clip: rect(0 0 0 0) on an absolutely positioned field', ...clippedItself('position:absolute;clip:rect(0px, 0px, 0px, 0px)'), want: false },
+    { name: 'clip: rect(0 0 0 0) on a fixed wrapper', ...clipped('position:fixed;clip:rect(0px, 0px, 0px, 0px)'), want: false },
+    { name: 'clip: rect(0 0 0 0) written without commas', ...clipped('position:absolute;clip:rect(0px 0px 0px 0px)'), want: false },
+    { name: 'clip on a field that is not absolutely positioned has no effect', ...clippedItself('clip:rect(0px, 0px, 0px, 0px)'), want: true },
+    { name: 'clip on a relatively positioned wrapper has no effect', ...clipped('position:relative;clip:rect(0px, 0px, 0px, 0px)'), want: true },
+    { name: 'clip: rect(auto, auto, auto, auto) cuts nothing', ...clipped('position:absolute;clip:rect(auto, auto, auto, auto)'), want: true },
+    { name: 'clip: a rectangle around the field', ...clipped('position:absolute;clip:rect(10px, 300px, 100px, 0px)'), want: true },
+    { name: 'clip: a rectangle around the field, written without commas', ...clipped('position:absolute;clip:rect(10px 300px 100px 0px)'), want: true },
+    { name: 'clip: its top edge leaves 5px of the field', ...clipped('position:absolute;clip:rect(75px, 400px, 200px, 0px)'), want: false },
+    { name: 'clip: its right edge leaves 5px of the field', ...clipped('position:absolute;clip:rect(0px, 55px, 200px, 0px)'), want: false },
+    { name: 'clip: its bottom edge leaves 5px of the field', ...clipped('position:absolute;clip:rect(0px, 400px, 55px, 0px)'), want: false },
+    { name: 'clip: its left edge leaves 5px of the field', ...clipped('position:absolute;clip:rect(0px, 400px, 200px, 245px)'), want: false },
+    // Both at once, as the "visually hidden" recipes write them: each one cuts.
+    { name: 'a clip that leaves the field and a clip-path that does not', ...clipped('position:absolute;clip:rect(auto, auto, auto, auto);clip-path:inset(50%)'), want: false },
+    { name: 'a clip-path that leaves the field and a clip that does not', ...clipped('position:absolute;clip:rect(0px, 0px, 0px, 0px);clip-path:inset(0px)'), want: false },
+    // An element without a box of its own (display: contents) clips nothing.
+    { name: 'clip-path on a display:contents wrapper has no effect', ...clipped('display:contents;clip-path:inset(50%)'), want: true },
+  ];
+  it.each(clipScenes)('$name', (scene) => {
+    expect(rendered(scene)).toBe(scene.want);
+  });
+
+  it('counts a shape it cannot measure as cutting everything away, also on the outermost element', () => {
+    mount(FIELD);
+    setPage();
+    layOut(find('#target'), box(100, 100, 200, 30));
+    root.style.clipPath = 'circle(40%)';
+
+    try {
+      expect(browserEnv.isRendered(find('#target'))).toBe(false);
+    } finally {
+      root.style.clipPath = '';
+    }
+  });
+
+  // A web component draws its children where its <slot> is. The body of an accordion component is
+  // such a slot inside a wrapper of the shadow tree; the field stays a child of the host element.
+  const slotted: [name: string, wrapperStyle: string, wrapperBox: FakeBox, want: boolean][] = [
+    ['a collapsed wrapper around the slot cuts the field away', 'overflow:hidden', box(100, 100, 200, 0), false],
+    ['an open wrapper around the slot leaves it visible', 'overflow:hidden', box(100, 100, 200, 300), true],
+    ['a nearly transparent wrapper around the slot hides it', 'opacity:0.05', box(100, 100, 200, 300), false],
+  ];
+  it.each(slotted)('follows a slotted field into the shadow tree that draws it: %s', (_name, wrapperStyle, wrapperBox, want) => {
+    mount(`<div id="host">${FIELD}</div>`);
+    setPage();
+    const shadowRoot = find('#host').attachShadow({ mode: 'open' });
+    shadowRoot.innerHTML = `<div id="wrapper" style="${wrapperStyle}"><slot></slot></div>`;
+    const wrapper = shadowRoot.getElementById('wrapper');
+    if (wrapper === null) throw new Error('the fixture has no #wrapper');
+    layOut(wrapper, wrapperBox);
+    layOut(find('#target'), box(100, 100, 200, 30));
+
+    expect(browserEnv.isRendered(find('#target'))).toBe(want);
   });
 
   it('gives up when the chain of ancestors never ends', () => {

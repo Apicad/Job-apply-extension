@@ -13,6 +13,7 @@ import {
   isProfileEmpty,
   normalizeProfile,
   textValueFor,
+  yearAndMonth,
 } from '../../lib/profile';
 import type { FieldDescriptor, FieldKind, Profile } from '../../lib/types';
 
@@ -232,7 +233,8 @@ describe('normalizeProfile', () => {
     expect(normalizeProfile({ graduationDate: value }).graduationDate).toBe(value);
   });
 
-  const notDates: unknown[] = ['2027-5', '2027-13', '2027-00', 'May 2027', '2027', '2027-05-15', '05/2027', ' 2027-05', '2027-05\n', 202705, null];
+  // "0000-05": browsers know no year 0, and <input type="month"> empties itself when given one.
+  const notDates: unknown[] = ['2027-5', '2027-13', '2027-00', '0000-05', 'May 2027', '2027', '2027-05-15', '05/2027', ' 2027-05', '2027-05\n', 202705, null];
 
   it.each(notDates)('drops the graduation date %j', (value) => {
     expect(normalizeProfile({ ...ADA, graduationDate: value }).graduationDate).toBe('');
@@ -377,6 +379,13 @@ describe('textValueFor', () => {
     expect(textValueFor(kind, ADA, field({ control: 'combobox' }))).toBe('');
   });
 
+  // The compiler knows every kind, but at run time a kind is just a string. One
+  // this module does not know must not be typed into a form as if it were the answer.
+  it('gives nothing for a kind it does not know', () => {
+    expect(textValueFor('salary' as FieldKind, ADA, field())).toBe('');
+    expect(textValueFor('constructor' as FieldKind, ADA, field())).toBe('');
+  });
+
   describe('fullName', () => {
     const table: [why: string, first: string, last: string, want: string][] = [
       ['both names', 'Ada', 'Lovelace', 'Ada Lovelace'],
@@ -422,7 +431,7 @@ describe('textValueFor', () => {
     });
 
     // A stored value that is not YYYY-MM cannot be turned into a date.
-    it.each(['2027-13', '2027-00', 'May 2027', '2027', '27-05'])('a stored "%s" gives nothing', (graduationDate) => {
+    it.each(['2027-13', '2027-00', '0000-05', 'May 2027', '2027', '27-05'])('a stored "%s" gives nothing', (graduationDate) => {
       const profile = { ...ADA, graduationDate };
       expect(textValueFor('graduationDate', profile, field())).toBe('');
       expect(textValueFor('graduationDate', profile, field({ inputType: 'month' }))).toBe('');
@@ -515,5 +524,24 @@ describe('textValueFor', () => {
     it.each(shown)('still gives the answer for a %s', (control, inputType) => {
       expect(textValueFor('state', ADA, field({ control, inputType }))).toBe('CA');
     });
+  });
+});
+
+describe('yearAndMonth', () => {
+  const dates: [stored: string, year: string, month: number][] = [
+    ['2027-05', '2027', 5],
+    ['2027-01', '2027', 1],
+    ['1999-12', '1999', 12],
+    ['2030-10', '2030', 10],
+    ['0001-01', '0001', 1],
+  ];
+
+  it.each(dates)('%s is year %s, month %i', (stored, year, month) => {
+    expect(yearAndMonth(stored)).toEqual({ year, month });
+  });
+
+  // Anything else is not a date, and nothing is read out of it.
+  it.each(['', '2027', '2027-5', '2027-00', '2027-13', '0000-05', '2027-05-15', 'May 2027', '05/2027', '27-05', ' 2027-05', '2027-05 '])('"%s" is no date', (stored) => {
+    expect(yearAndMonth(stored)).toBe(null);
   });
 });

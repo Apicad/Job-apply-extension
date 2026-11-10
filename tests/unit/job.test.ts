@@ -52,6 +52,13 @@ describe('extractJob: the page title on a known job site', () => {
       { title: 'Software Engineer', company: 'Analytical Engines' },
     ],
     [
+      // jobs.ashbyhq.com/ashby/7458d4e9-…, read on 9 November 2026. On Lever this title would be split at its " - ".
+      'Ashby (live Ashby posting), with " - " inside the job title',
+      'Engineering Manager - EU @ Ashby',
+      'ashby',
+      { title: 'Engineering Manager - EU', company: 'Ashby' },
+    ],
+    [
       'Ashby with " @ " inside the job title: the company is after the last one',
       'Developer Advocate @ Events @ Analytical Engines',
       'ashby',
@@ -142,6 +149,7 @@ describe('extractJob: a JobPosting in JSON-LD', () => {
     ['a posting on its own', jsonLd(posting), null, found],
     ['a posting in a list of things', jsonLd([organization, posting]), null, found],
     ['a posting inside @graph', jsonLd({ '@context': 'https://schema.org/', '@graph': [organization, posting] }), null, found],
+    ['a posting that is the only thing under @graph', jsonLd({ '@context': 'https://schema.org/', '@graph': posting }), null, found],
     ['a posting whose @type is a list', jsonLd({ ...posting, '@type': ['JobPosting'] }), null, found],
     ['a posting in the second script', jsonLd(organization) + jsonLd(posting), null, found],
     ['a posting after a script that is not valid JSON', '<script type="application/ld+json">{ oops</script>' + jsonLd(posting), null, found],
@@ -213,14 +221,28 @@ describe('extractJob: a JobPosting in JSON-LD', () => {
     ['JSON that is a number', jsonLd(42)],
     ['JSON that is text', jsonLd('JobPosting')],
     ['JSON that is a list of other things', jsonLd([null, 42, 'JobPosting', []])],
-    ['a @graph that is not a list', jsonLd({ '@graph': posting })],
+    ['a @graph that holds no posting', jsonLd({ '@graph': [organization, null, 42] })],
+    ['a @graph that is text', jsonLd({ '@graph': 'JobPosting' })],
     ['a posting in a script of another type', `<script type="application/json">${JSON.stringify(posting)}</script>`],
   ];
 
-  it.each(unreadable)('reads nothing from %s, and does not throw', (_name, head) => {
+  it.each(unreadable)('reads nothing from %s', (_name, head) => {
     const doc = page(`<html><head>${head}</head><body></body></html>`);
 
     expect(extractJob(doc, null)).toEqual({ title: '', company: '' });
+  });
+
+  // The same scripts, now on a page that also has a site name and a heading.
+  // Finding those shows that a script we cannot use never stops the reading
+  // of the other sources.
+  it.each(unreadable)('still reads the rest of the page after %s', (_name, head) => {
+    const doc = page(`
+      <html>
+        <head>${head}<meta property="og:site_name" content="Other Source Ltd"></head>
+        <body><h1>Other Source Title</h1></body>
+      </html>`);
+
+    expect(extractJob(doc, null)).toEqual({ title: 'Other Source Title', company: 'Other Source Ltd' });
   });
 });
 

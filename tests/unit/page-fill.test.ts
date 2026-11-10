@@ -27,7 +27,8 @@ interface SeenEvent {
   held: unknown;
 }
 
-const stopWatching: (() => void)[] = [];
+/** Whatever a test changed outside the page's body, to be put back when it ends. */
+const undoAfterTest: (() => void)[] = [];
 
 /**
  * Records every event of the kinds a form reacts to as it arrives at the
@@ -46,13 +47,13 @@ function watchEvents<T extends Element = HTMLInputElement>(
   for (const type of ['input', 'change', 'click', 'focus', 'blur', 'focusin', 'focusout']) {
     // Capturing, so that an event that does not bubble is recorded too.
     document.addEventListener(type, record, true);
-    stopWatching.push(() => document.removeEventListener(type, record, true));
+    undoAfterTest.push(() => document.removeEventListener(type, record, true));
   }
   return seen;
 }
 
 afterEach(() => {
-  for (const stop of stopWatching.splice(0)) stop();
+  for (const undo of undoAfterTest.splice(0)) undo();
   vi.restoreAllMocks();
   document.body.innerHTML = '';
 });
@@ -221,6 +222,153 @@ describe('fillText', () => {
     expect(holdsAnswer).toBe(false);
   });
 
+  it('writes nothing when the browser\'s own value setter is not to be found', () => {
+    // A page that shares a world with the script, as it does in these tests, can take it away.
+    const browsers = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    if (browsers === undefined) throw new Error('inputs have no value property here');
+    Reflect.deleteProperty(HTMLInputElement.prototype, 'value');
+    undoAfterTest.push(() => Object.defineProperty(HTMLInputElement.prototype, 'value', browsers));
+    const input = first(mount('<input id="first_name" type="text">'));
+    const seen = watchEvents<HTMLElement>(() => null);
+
+    const holdsAnswer = fillText(input, 'Ada');
+
+    expect(seen).toEqual([]);
+    expect(holdsAnswer).toBe(false);
+  });
+
+  // Each of these has a `value` of its own that a script can set, and none of them is a box to
+  // type into. The scan never offers them as text fields; should one arrive here all the same,
+  // nothing may happen to it.
+  // [what it is, markup, selector, text to write, the value it must still have afterwards]
+  it.each<[string, string, string, string, string]>([
+    // Setting a dropdown's value chooses the option that has it, or none at all when no option does.
+    [
+      'a dropdown that has an option with that value',
+      '<select name="eeo[gender]"><option value="">Select ...</option><option value="Male" selected>Male</option><option value="Female">Female</option></select>',
+      'select',
+      'Female',
+      'Male',
+    ],
+    [
+      'a dropdown that has no option with that value',
+      '<select name="eeo[gender]"><option value="">Select ...</option><option value="Male" selected>Male</option><option value="Female">Female</option></select>',
+      'select',
+      'Ada',
+      'Male',
+    ],
+    // The value of these is what the form sends when the box is ticked: the option, not an answer.
+    ['a radio button', '<input type="radio" name="cards[4f1c][field1]" value="Yes">', 'input', 'Ada', 'Yes'],
+    ['a checkbox', '<input type="checkbox" name="cards[a69a][field0]" value="English (ENG)">', 'input', 'Ada', 'English (ENG)'],
+    // Lever keeps the place chosen in its location box here.
+    ['a hidden input', '<input id="selected-location" type="hidden" name="selectedLocation">', 'input', 'Ada', ''],
+    // The value of a button input is the wording on it.
+    ['a submit input', '<input type="submit" value="Submit application">', 'input', 'Ada', 'Submit application'],
+    ['a button', '<button type="submit" class="btn btn--pill" value="apply">Submit application</button>', 'button', 'Ada', 'apply'],
+    // A browser throws when a script writes anything but '' to a file input.
+    ['a file input', '<input id="resume" class="visually-hidden" type="file" accept=".pdf,.doc,.docx,.txt,.rtf">', 'input', 'Ada-Lovelace-Resume.pdf', ''],
+    // Types the scan never collects (CLAUDE.md, "Never collected").
+    ['a password field', '<input type="password" name="password">', 'input', 'Ada', ''],
+    ['a search box', '<input type="search" name="q" placeholder="Search jobs">', 'input', 'Ada', ''],
+    ['a date field', '<input type="date" name="available_from" value="2027-06-01">', 'input', 'June 2027', '2027-06-01'],
+    ['a slider', '<input type="range" name="years_of_experience" min="0" max="40" value="3">', 'input', 'Ada', '3'],
+  ])('never types into %s', (_name, html, selector, text, valueAfterwards) => {
+    const element = first(mount<HTMLInputElement>(html, selector));
+    const seen = watchEvents<HTMLElement>(() => null);
+
+    const holdsAnswer = fillText(element, text);
+
+    expect(element.value).toBe(valueAfterwards);
+    expect(seen).toEqual([]);
+    expect(holdsAnswer).toBe(false);
+  });
+
+  // A person's typing does nothing in these, while a script's write goes straight through. A form
+  // switches its fields off for a reason: while it is sending a file, say.
+  // [what it is, markup]
+  it.each<[string, string]>([
+    ['a disabled field', '<input id="first_name" type="text" disabled>'],
+    ['a field in a disabled group', '<fieldset disabled><input id="first_name" type="text"></fieldset>'],
+    ['a read-only field', '<input id="first_name" type="text" readonly>'],
+    ['a disabled textarea', '<textarea name="comments" disabled></textarea>'],
+    ['a read-only textarea', '<textarea name="comments" readonly></textarea>'],
+  ])('does not type into %s', (_name, html) => {
+    const control = first(mount<HTMLInputElement | HTMLTextAreaElement>(html));
+    const seen = watchEvents();
+
+    const holdsAnswer = fillText(control, 'Ada');
+
+    expect(control.value).toBe('');
+    expect(seen).toEqual([]);
+    expect(holdsAnswer).toBe(false);
+  });
+
+  it('still reports what a switched-off field already holds', () => {
+    const input = first(mount('<input id="first_name" type="text" value="Grace" disabled>'));
+
+    const holdsAnswer = fillText(input, 'Ada');
+
+    expect(input.value).toBe('Grace');
+    expect(holdsAnswer).toBe(true);
+  });
+
+  // A browser stops a person's typing at `maxlength`, but lets a script write past it and then
+  // raises no complaint: the form would go out with a text the field was never meant to hold.
+  // A phone number cut down to the ten characters the site expected is a wrong answer.
+  // [markup of the control, text that is longer than it takes]
+  it.each<[string, string]>([
+    ['<input id="state" type="text" maxlength="2">', 'California'],
+    ['<input id="phone" type="tel" maxlength="10">', '+1 555-555-0100'],
+    ['<input id="graduation_year" type="text" maxlength="4">', 'May 2027'],
+    ['<input id="linkedin" type="url" maxlength="30">', 'https://www.linkedin.com/in/ada-lovelace'],
+    ['<textarea name="comments" maxlength="20"></textarea>', 'Analytical Engine, 1843'],
+    // A box that takes no typing at all.
+    ['<input name="fax" type="text" maxlength="0">', '555-0100'],
+  ])('writes nothing into %s when the text is longer than the field takes', (html, text) => {
+    const control = first(mount<HTMLInputElement | HTMLTextAreaElement>(html));
+    const seen = watchEvents();
+
+    const holdsAnswer = fillText(control, text);
+
+    expect(control.value).toBe('');
+    expect(seen).toEqual([]);
+    expect(holdsAnswer).toBe(false);
+  });
+
+  // [markup of the control, text that fits]
+  it.each<[string, string]>([
+    // Exactly as long as the limit.
+    ['<input id="state" type="text" maxlength="2">', 'CA'],
+    ['<input id="graduation_year" type="text" maxlength="4">', '2027'],
+    // Greenhouse puts 255 on every one of its text boxes.
+    ['<input id="first_name" class="input input__single-line" type="text" maxLength="255">', 'Ada'],
+    ['<input id="phone" class="input input__single-line" type="tel" maxLength="255">', '555-0100'],
+    // Not a limit at all: the browser ignores these too.
+    ['<input id="first_name" type="text" maxlength="short">', 'Ada'],
+    ['<input id="first_name" type="text" maxlength="-1">', 'Ada'],
+    ['<input id="first_name" type="text" maxlength="">', 'Ada'],
+  ])('writes into %s when the text fits', (html, text) => {
+    const control = first(mount(html));
+
+    const holdsAnswer = fillText(control, text);
+
+    expect(control.value).toBe(text);
+    expect(holdsAnswer).toBe(true);
+  });
+
+  it('never types into a list item that gives its type as "text"', () => {
+    // Its `type` reads like a text box's and it has a `value` too (its number in the list), so
+    // neither of the two proves that something is a text box.
+    const item = first(mount<HTMLLIElement>('<ol><li type="text" value="3">References on request</li></ol>', 'li'));
+    const seen = watchEvents<HTMLElement>(() => null);
+
+    const holdsAnswer = fillText(item as unknown as HTMLInputElement, '7');
+
+    expect(item.value).toBe(3);
+    expect(seen).toEqual([]);
+    expect(holdsAnswer).toBe(false);
+  });
+
   it('reports an answer when the page rewrites the text in its own format', () => {
     // A phone field with an input mask: what it holds is not what was written, and that is fine.
     const input = first(mount('<input id="phone" type="tel">'));
@@ -283,6 +431,23 @@ describe('fillSelect', () => {
     expect(holdsAnswer).toBe(true);
   });
 
+  it('chooses an option that sits inside a group of options', () => {
+    // Positions run through all the options; the groups themselves are not counted.
+    const select = first(
+      mount<HTMLSelectElement>(`
+        <select name="location">
+          <option value="">Select...</option>
+          <optgroup label="Europe"><option value="lon">London</option></optgroup>
+          <optgroup label="Americas"><option value="nyc">New York</option></optgroup>
+        </select>`),
+    );
+
+    const holdsAnswer = fillSelect(select, 2);
+
+    expect(select.value).toBe('nyc');
+    expect(holdsAnswer).toBe(true);
+  });
+
   // [what is asked for, markup, position asked for, position chosen before and after]
   it.each<[string, string, number, number]>([
     [
@@ -304,11 +469,87 @@ describe('fillSelect', () => {
       1,
       0,
     ],
+    // A browser leaves these out of the list it opens, so a person is never offered them.
+    [
+      'an option the page has hidden',
+      `<select name="location">
+         <option value="lon" selected>London</option>
+         <option value="nyc" hidden>New York</option>
+       </select>`,
+      1,
+      0,
+    ],
+    [
+      'an option inside a hidden group',
+      `<select name="location">
+         <option value="lon" selected>London</option>
+         <optgroup label="Not hiring at the moment" hidden><option value="nyc">New York</option></optgroup>
+       </select>`,
+      1,
+      0,
+    ],
+    // The options themselves are not marked as disabled here; the whole list is switched off.
+    [
+      'an option of a disabled list',
+      `<select name="eeo[gender]" disabled>
+         <option value="">Select ...</option>
+         <option value="Male" selected>Male</option>
+         <option value="Female">Female</option>
+       </select>`,
+      2,
+      1,
+    ],
+    ['an option of a list in a disabled group', `<fieldset disabled>${LEVER_GENDER}</fieldset>`, 2, 1],
     // Each of these would otherwise clear the choice already made, or land on a neighbour.
     ['a position past the last option', LEVER_GENDER, 4, 1],
     ['a negative position', LEVER_GENDER, -1, 1],
     ['a position between two options', LEVER_GENDER, 2.5, 1],
     ['a position that is not a number', LEVER_GENDER, Number.NaN, 1],
+    // The same again, in lists where an option's id reads like the position asked for. A list of
+    // options also answers to names, so `options[2.5]` finds the option with the id "2.5", though
+    // 2.5 is no position at all, and the write would go ahead.
+    [
+      'a position between two options, where an option has that id',
+      `<select name="gpa">
+         <option value="">Select...</option>
+         <option id="2.5" value="2.5" selected>2.5 to 2.9</option>
+         <option id="3.0" value="3.0">3.0 to 3.4</option>
+         <option id="3.5" value="3.5">3.5 to 4.0</option>
+       </select>`,
+      2.5,
+      1,
+    ],
+    [
+      'a negative position, where an option has that id',
+      `<select name="notice">
+         <option id="-1" value="">Select...</option>
+         <option id="0" value="0" selected>Available now</option>
+         <option id="1" value="1">One month</option>
+       </select>`,
+      -1,
+      1,
+    ],
+    [
+      'a position that is not a number, where an option has the id "NaN"',
+      `<select name="clearance">
+         <option value="">Select...</option>
+         <option id="NaN" value="n/a" selected>Not applicable</option>
+       </select>`,
+      Number.NaN,
+      1,
+    ],
+    [
+      // Too large to be a position in any list, so it too is taken for a name.
+      'a position far past the last option, where an option has that id',
+      `<select name="employee_id">
+         <option value="">Select...</option>
+         <option id="4294967296" value="4294967296" selected>4294967296</option>
+       </select>`,
+      4_294_967_296,
+      1,
+    ],
+    // Not a number at all, though it names something every list of options has.
+    ['the word "length"', LEVER_GENDER, 'length' as unknown as number, 1],
     [
       'an option of a list that takes several answers',
       `<select name="skills" multiple>
@@ -326,6 +567,21 @@ describe('fillSelect', () => {
 
     expect(select.selectedIndex).toBe(chosen);
     expect(Array.from(select.selectedOptions)).toHaveLength(1);
+    expect(seen).toEqual([]);
+    expect(holdsAnswer).toBe(false);
+  });
+
+  // [what it is, markup, selector]
+  it.each<[string, string, string]>([
+    ['a text box', '<input id="first_name" type="text">', 'input'],
+    // Its `type` property reads like a dropdown's, yet it has no list of options to look through.
+    ['a link that gives its type as "select-one"', '<a href="https://example.com/next" type="select-one">Next step</a>', 'a'],
+  ])('chooses nothing in %s', (_name, html, selector) => {
+    const element = first(mount<HTMLElement>(html, selector));
+    const seen = watchEvents<HTMLElement>(() => null);
+
+    const holdsAnswer = fillSelect(element as HTMLSelectElement, 0);
+
     expect(seen).toEqual([]);
     expect(holdsAnswer).toBe(false);
   });
@@ -516,6 +772,58 @@ describe('fillFile', () => {
     expect(holdsAnswer).toBe(false);
   });
 
+  // In a browser, `element.files = …` on anything but an input simply hangs the list on that
+  // element as an ordinary property, where it then looks like an attached file. (An input of
+  // another kind ignores it there; the stand-in used in these tests does not.)
+  // [what it is, markup, selector]
+  it.each<[string, string, string]>([
+    ['a text box', '<input id="first_name" type="text">', 'input'],
+    ['a dropdown', LEVER_GENDER, 'select'],
+    ['a radio button', '<input type="radio" name="cards[4f1c][field1]" value="Yes">', 'input'],
+    ['the button beside a file input', '<button type="button" class="btn btn--pill">Attach</button>', 'button'],
+    // Its `type` property reads "file" too, so the type alone proves nothing.
+    ['a link that gives its type as "file"', '<a href="https://example.com/ada.pdf" type="file">My CV</a>', 'a'],
+  ])('never attaches a file to %s', (_name, html, selector) => {
+    const element = first(mount<HTMLInputElement>(html, selector));
+    const seen = watchEvents<HTMLElement>(() => null);
+    const assign = vi.fn(assignFiles);
+
+    const holdsAnswer = fillFile(element, resumeFile(), assign);
+
+    expect(holdsAnswer).toBe(false);
+    expect(seen).toEqual([]);
+    expect(Object.hasOwn(element, 'files')).toBe(false);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  // [what it is, markup]
+  it.each<[string, string]>([
+    ['a disabled file input', '<input id="resume" class="visually-hidden" type="file" accept=".pdf,.doc,.docx,.txt,.rtf" disabled>'],
+    ['a file input in a disabled group', `<fieldset disabled>${GREENHOUSE_RESUME}</fieldset>`],
+  ])('does not attach a file to %s', (_name, html) => {
+    const input = first(mount(html));
+    const seen = watchEvents<HTMLElement>(() => null);
+    const assign = vi.fn(assignFiles);
+
+    const holdsAnswer = fillFile(input, resumeFile(), assign);
+
+    expect(holdsAnswer).toBe(false);
+    expect(seen).toEqual([]);
+    expect(input.files).toHaveLength(0);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('still reports the file a switched-off input already holds', () => {
+    const input = first(mount('<input id="resume" type="file" disabled>'));
+    const own = new File(['%PDF-1.7'], 'Ada-Lovelace-CV-2026.pdf', { type: 'application/pdf' });
+    assignFiles(input, [own]);
+
+    const holdsAnswer = fillFile(input, resumeFile(), assignFiles);
+
+    expect(input.files?.[0]).toBe(own);
+    expect(holdsAnswer).toBe(true);
+  });
+
   it('still reports the file when the page removes the input as soon as it has the file', () => {
     // Greenhouse swaps the input for the file name and a "Remove file" button.
     const input = first(mount(GREENHOUSE_RESUME));
@@ -556,6 +864,7 @@ describe('every helper', () => {
     // jsdom has no scrollIntoView at all; give it one for this test so that a call would be noticed.
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
+    undoAfterTest.push(() => Reflect.deleteProperty(Element.prototype, 'scrollIntoView'));
     const seen = watchEvents<HTMLElement>(() => null);
 
     const results = [
@@ -565,7 +874,6 @@ describe('every helper', () => {
       fillRadio(yes as HTMLInputElement),
       fillFile(resume as HTMLInputElement, resumeFile(), assignFiles),
     ];
-    Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
 
     expect(results).toEqual([true, true, true, true, true]);
     expect(focus).not.toHaveBeenCalled();
@@ -595,7 +903,7 @@ describe('inside an open shadow root', () => {
       heard.push({ target: event.target, origin: event.composedPath()[0] });
     };
     document.addEventListener('input', listener);
-    stopWatching.push(() => document.removeEventListener('input', listener));
+    undoAfterTest.push(() => document.removeEventListener('input', listener));
     return heard;
   }
 

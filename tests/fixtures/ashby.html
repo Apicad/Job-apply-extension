@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The title has the shape of an Ashby job page: "(job) @ (company)". -->
+    <title>Notes Translator (Engineering) @ Menabrea Analytics</title>
+    <script>
+      // Test hook, identical on every fixture page. Tests read window.__fixture to prove what the
+      // extension did and did not touch: events holds every input, change, focus, blur, focusin,
+      // focusout, click and keydown event that reaches the document, messages every window message.
+      window.__fixture = { events: [], messages: [] };
+      (function () {
+        var fixture = window.__fixture;
+        var entries = new WeakMap();
+        function attribute(node, name) {
+          // through the prototype: a form answers form.id and form.name with its own controls
+          try {
+            return Element.prototype.getAttribute.call(node, name) || '';
+          } catch (error) {
+            return '';
+          }
+        }
+        function record(event) {
+          var path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+          var target = path.length > 0 ? path[0] : event.target;
+          var entry = entries.get(event);
+          if (entry === undefined) {
+            entry = { type: event.type, id: '', name: '', trusted: event.isTrusted };
+            entries.set(event, entry);
+            fixture.events.push(entry);
+          }
+          entry.id = attribute(target, 'id');
+          entry.name = attribute(target, 'name');
+        }
+        function watch(root) {
+          ['input', 'change', 'focus', 'blur', 'focusin', 'focusout', 'click', 'keydown'].forEach(function (type) {
+            root.addEventListener(type, record, true);
+          });
+        }
+        watch(document);
+        // Not enumerable, so the object still reads { events, messages }. Pages with shadow roots call
+        // it for each root: a change event does not leave a shadow tree, so the document never sees it.
+        Object.defineProperty(fixture, 'watch', { value: watch });
+        window.addEventListener('message', function (event) {
+          fixture.messages.push(event.data);
+        });
+      })();
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font: 16px/1.5 system-ui, sans-serif;
+        color: #1c2330;
+        background: #f7f8fa;
+      }
+      #root {
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 4rem;
+      }
+      .ashby-job-posting-heading {
+        margin: 0 0 1rem;
+        font-size: 1.75rem;
+      }
+      ._tabs_5yu8i_29 {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #d9dde3;
+      }
+      ._tab_5yu8i_29 {
+        padding: 0.5rem 0;
+        color: #5a6474;
+        text-decoration: none;
+      }
+      ._tab_5yu8i_29._active_5yu8i_56 {
+        border-bottom: 2px solid #4b5ae8;
+        color: inherit;
+      }
+      ._container_f7cvd_28 {
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+        border: 1px solid #d9dde3;
+        border-radius: 8px;
+        background: #fff;
+      }
+      ._title_5yu8i_99 {
+        margin: 0 0 0.5rem;
+        font-size: 1.125rem;
+      }
+      ._sectionDescription_5yu8i_105 {
+        margin-bottom: 1rem;
+        color: #5a6474;
+      }
+
+      /* A field: question title above, input below */
+      ._fieldEntry_1e3gg_28 {
+        margin: 0 0 1.25rem;
+        padding: 0;
+        border: 0;
+      }
+      ._heading_f7cvd_52 {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+      }
+      /* The required star is drawn by CSS: it is not in the label's text. */
+      ._required_f7cvd_91::after {
+        content: ' *';
+        color: #c0392b;
+      }
+      ._input_80epu_28,
+      ._input_d7ago_28 {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #b9c0ca;
+        border-radius: 6px;
+        background: #fff;
+        font: inherit;
+      }
+      ._container_pjyt6_1 {
+        padding: 0.45rem 1rem;
+        border: 1px solid #b9c0ca;
+        border-radius: 6px;
+        background: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      /* Location: a text box with a toggle button at its right edge */
+      ._inputContainer_d7ago_28 {
+        position: relative;
+      }
+      ._toggleButton_d7ago_32 {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: inline-flex;
+        padding: 0.3rem;
+        border: 0;
+      }
+
+      /* File field: a drop zone with a button; the real input is the usual 1px clipped box */
+      ._container_10xk4_70 {
+        padding: 1rem;
+        border: 1px dashed #b9c0ca;
+        border-radius: 6px;
+      }
+      ._instructions_10xk4_33 {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      ._dragInstructions_10xk4_28 {
+        margin: 0;
+        color: #5a6474;
+      }
+      ._file_10xk4_76 {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+      ._name_10xk4_41 {
+        margin: 0;
+      }
+      ._alert_xd2v0_114 {
+        margin-top: 0.75rem;
+        color: #a3271c;
+      }
+
+      /* "Autofill from resume": the box above the form */
+      ._root_xd2v0_1 {
+        position: relative;
+      }
+      ._header_xd2v0_43 {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      ._title_xd2v0_64 {
+        margin: 0;
+        font-size: 1rem;
+      }
+      ._description_xd2v0_76 {
+        margin: 0.25rem 0 0.75rem;
+        color: #5a6474;
+      }
+      ._pending_xd2v0_121,
+      ._drag_xd2v0_120 {
+        display: none;
+      }
+      ._root_xd2v0_1[data-state='pending'] ._pending_xd2v0_121 {
+        display: block;
+      }
+
+      /* Yes/No: two buttons; the checkbox behind them is display:none */
+      ._container_1svni_28 {
+        display: inline-flex;
+        gap: 0.5rem;
+      }
+      ._option_1svni_32._active_1svni_57 {
+        border-color: #4b5ae8;
+        background: #4b5ae8;
+        color: #fff;
+      }
+      ._input_1svni_78 {
+        display: none;
+      }
+
+      /* Radios, as the live site draws them: a circle is drawn by a span, and the real radio is
+         stretched over it with opacity 0. The option text is a label beside the pair. */
+      ._option_1258i_34 {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+        margin-bottom: 0.4rem;
+      }
+      ._container_132c8_28 {
+        position: relative;
+        display: inline-block;
+        flex: none;
+        width: 18px;
+        height: 18px;
+      }
+      ._circle_132c8_77 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        border: 1px solid #8791a1;
+        border-radius: 50%;
+        background: #fff;
+      }
+      ._container_132c8_28._checked_132c8_90 ._circle_132c8_77 {
+        border: 5px solid #4b5ae8;
+      }
+      ._container_132c8_28 [type='checkbox'],
+      ._container_132c8_28 [type='radio'] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      ._submitButton_5yu8i_300 {
+        width: 100%;
+        padding: 0.75rem;
+        border-color: #4b5ae8;
+        background: #4b5ae8;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <h1 class="ashby-job-posting-heading">Notes Translator (Engineering)</h1>
+      <div class="_tabs_5yu8i_29" role="tablist">
+        <a class="_tab_5yu8i_29" role="tab" aria-selected="false" tabindex="-1" href="#overview">Overview</a>
+        <a class="_tab_5yu8i_29 _active_5yu8i_56" role="tab" aria-selected="true" tabindex="0" href="#application">Application</a>
+      </div>
+
+      <!-- There is NO <form> element anywhere on an Ashby application page: the fields live in
+           plain divs, and the Submit button is a button with a click handler. So no control on
+           this page has a form owner, and the "Autofill from resume" input below, which comes
+           first in the document, is in the same (form-less) group as the real fields. -->
+
+      <!-- "Autofill from resume": a drop zone above the form with a file input of its own. That
+           input has no id, no name and no label; the nearest text, which comes AFTER it, talks
+           about a résumé. A file dropped here is sent to a parser, and when the parser answers,
+           the whole form is drawn again with the parser's values in place of what was typed.
+           The extension's résumé must never land in this input. -->
+      <div class="_autofillPane_5yu8i_420 _container_f7cvd_28 ashby-application-form-autofill-pane" data-highlight="none">
+        <div class="_root_xd2v0_1 ashby-application-form-autofill-input-root" role="presentation" data-state="default">
+          <input accept="application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.oasis.opendocument.text,.odt,application/rtf,.rtf,text/plain,.txt,text/markdown,.md" type="file" tabindex="-1" style="border:0;clip:rect(0, 0, 0, 0);clip-path:inset(50%);height:1px;margin:0 -1px -1px 0;overflow:hidden;padding:0;position:absolute;width:1px;white-space:nowrap" />
+          <div class="_base_xd2v0_31 ashby-application-form-autofill-input-base-layer">
+            <div class="_content_xd2v0_36">
+              <div class="_header_xd2v0_43">
+                <div class="_iconContainer_xd2v0_50">
+                  <svg class="_icon_xd2v0_50 ashby-application-form-autofill-input-icon" width="18" height="18" viewBox="0 0 18 18"><path d="M9 1l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="currentColor" /></svg>
+                </div>
+                <h3 class="_title_xd2v0_64 ashby-application-form-autofill-input-title">Autofill from resume</h3>
+              </div>
+              <p class="_description_xd2v0_76 ashby-application-form-autofill-input-description">Add your resume here and the main fields of the application are filled in for you.</p>
+              <div class="_cta_xd2v0_88">
+                <button class="_container_pjyt6_1 _ctaButton_xd2v0_94">Upload file</button>
+              </div>
+            </div>
+          </div>
+          <div class="_pending_xd2v0_121 ashby-application-form-autofill-input-pending-layer">Reading your resume…</div>
+          <div class="_drag_xd2v0_120 ashby-application-form-autofill-input-drag-layer">Drop your resume here</div>
+        </div>
+      </div>
+
+      <div class="_jobPostingForm_5yu8i_380 _container_f7cvd_28 ashby-application-form-container" data-highlight="none">
+        <div class="_section_5yu8i_86 ashby-application-form-section-container">
+          <!-- Every field sits in a wrapper with data-field-path: a fixed name for the built-in
+               fields (_systemfield_name, _systemfield_email…), a UUID for the employer's own. Text
+               inputs carry that path as both id and name, and the question title is a label[for]. -->
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="_systemfield_name" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c__systemfield_name">
+            <label class="_heading_f7cvd_52 _required_f7cvd_91 _label_1e3gg_42 ashby-application-form-question-title" for="_systemfield_name">Name</label>
+            <div>
+              <input class="_input_80epu_28 _input_1e3gg_32 ashby-application-form-input-text" placeholder="Type here..." name="_systemfield_name" required id="_systemfield_name" type="text" value="" />
+            </div>
+          </div>
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="_systemfield_email" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c__systemfield_email">
+            <label class="_heading_f7cvd_52 _required_f7cvd_91 _label_1e3gg_42 ashby-application-form-question-title" for="_systemfield_email">Email</label>
+            <div>
+              <input class="_input_80epu_28 _input_1e3gg_32 ashby-application-form-input-text" placeholder="hello@example.com..." name="_systemfield_email" required id="_systemfield_email" type="email" value="" />
+            </div>
+          </div>
+          <!-- Phone is not a built-in field: its path, id and name are a UUID that says nothing.
+               Its placeholder is a sample number, which is not an answer: the box is empty. -->
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="2f6c1c0e-5b7a-4f0d-9a3e-6d1b8c2e4f01" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c_2f6c1c0e-5b7a-4f0d-9a3e-6d1b8c2e4f01">
+            <label class="_heading_f7cvd_52 _label_1e3gg_42 ashby-application-form-question-title" for="2f6c1c0e-5b7a-4f0d-9a3e-6d1b8c2e4f01">Phone</label>
+            <div>
+              <input class="_input_80epu_28 _input_1e3gg_32 ashby-application-form-input-text" placeholder="1-415-555-0100..." name="2f6c1c0e-5b7a-4f0d-9a3e-6d1b8c2e4f01" id="2f6c1c0e-5b7a-4f0d-9a3e-6d1b8c2e4f01" type="tel" value="" />
+            </div>
+          </div>
+
+          <!-- Résumé: the drop zone's real file input is a 1px clipped box (tabindex -1) with the
+               path as its id and no name. The question title is a label[for] that does reach it.
+               Its accept attribute is the list the live site's drop zone writes: MIME types and
+               file extensions side by side, ending in three wildcards ("image/*"…), so a check
+               of the stored file against it has to read both kinds of entry.
+               Once a file is attached, the zone lists the file name and its button reads "Replace";
+               a file saved earlier is shown the same way while the input itself stays empty
+               (open this page as ashby.html?saved-resume to see that state). -->
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="_systemfield_resume" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c__systemfield_resume">
+            <label class="_heading_f7cvd_52 _required_f7cvd_91 _label_1e3gg_42 ashby-application-form-question-title" for="_systemfield_resume">Resume</label>
+            <div class="_container_10xk4_70 ashby-application-form-input-file" role="presentation">
+              <input accept="application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.oasis.opendocument.text,.odt,application/rtf,.rtf,text/plain,.txt,text/markdown,.md,image/*,video/*,audio/*" type="file" tabindex="-1" id="_systemfield_resume" required style="border:0;clip:rect(0, 0, 0, 0);clip-path:inset(50%);height:1px;margin:0 -1px -1px 0;overflow:hidden;padding:0;position:absolute;width:1px;white-space:nowrap" />
+              <div class="_instructions_10xk4_33 ashby-application-form-input-file-dropzone">
+                <button class="_container_pjyt6_1 _button_10xk4_106 ashby-application-form-input-file-dropzone-upload"><span>Upload File</span></button>
+                <p class="_dragInstructions_10xk4_28 ashby-application-form-input-file-dropzone-instructions">or drag and drop here</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Location: an autocomplete. The input has role=combobox and aria-autocomplete=list
+               but NO id, name or type attribute, so the title's for="_systemfield_location" points
+               at nothing. Recorded behaviour, reproduced below: typing opens a list of places, and
+               when the box loses focus without a place having been picked from it, the typed text
+               is thrown away. -->
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="_systemfield_location" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c__systemfield_location">
+            <label class="_heading_f7cvd_52 _label_1e3gg_42 ashby-application-form-question-title" for="_systemfield_location">Location</label>
+            <div class="_inputContainer_d7ago_28">
+              <input class="_input_d7ago_28 ashby-application-form-input-autocomplete" aria-expanded="false" aria-haspopup="listbox" role="combobox" placeholder="Start typing..." aria-autocomplete="list" value="" />
+              <button class="_container_pjyt6_1 _toggleButton_d7ago_32">
+                <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- A link question: rendered as type="url", which refuses an address without a scheme. -->
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="9a4d2e7b-3c1f-4b8a-a6d5-0e7f1c2b3a02" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c_9a4d2e7b-3c1f-4b8a-a6d5-0e7f1c2b3a02">
+            <label class="_heading_f7cvd_52 _label_1e3gg_42 ashby-application-form-question-title" for="9a4d2e7b-3c1f-4b8a-a6d5-0e7f1c2b3a02">LinkedIn Profile</label>
+            <div>
+              <input class="_input_80epu_28 _input_1e3gg_32 ashby-application-form-input-text" placeholder="https://example.com..." name="9a4d2e7b-3c1f-4b8a-a6d5-0e7f1c2b3a02" id="9a4d2e7b-3c1f-4b8a-a6d5-0e7f1c2b3a02" type="url" value="" />
+            </div>
+          </div>
+
+          <!-- A plain text question that is worded like the location field above. Nothing in the
+               markup tells the two apart except the missing combobox role. A "where are you based"
+               answer is never typed for the user, into either of them. -->
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="5e8b3a1d-7c2f-4d9e-b0a6-4f1e2d3c4b03" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c_5e8b3a1d-7c2f-4d9e-b0a6-4f1e2d3c4b03">
+            <label class="_heading_f7cvd_52 _label_1e3gg_42 ashby-application-form-question-title" for="5e8b3a1d-7c2f-4d9e-b0a6-4f1e2d3c4b03">Current location</label>
+            <div>
+              <input class="_input_80epu_28 _input_1e3gg_32 ashby-application-form-input-text" placeholder="Type here..." name="5e8b3a1d-7c2f-4d9e-b0a6-4f1e2d3c4b03" id="5e8b3a1d-7c2f-4d9e-b0a6-4f1e2d3c4b03" type="text" value="" />
+            </div>
+          </div>
+
+          <!-- A Yes/No question: two buttons with aria-pressed and data-option, and behind them a
+               checkbox that is display:none, tabindex -1 and named after the field path. There is
+               no input a filler could set: answering means pressing a button, which the extension
+               never does. The title's for attribute matches no element. -->
+          <div class="_fieldEntry_1e3gg_28 ashby-application-form-field-entry" data-field-path="c7f0a2b4-6d1e-4a3c-8b9f-2e5d4c3b1a04" data-field-entry-id="7b1e4c2a-9f3d-4e6a-8c5b-2d0a1f3e4b5c_c7f0a2b4-6d1e-4a3c-8b9f-2e5d4c3b1a04">
+            <label class="_heading_f7cvd_52 _required_f7cvd_91 _label_1e3gg_42 ashby-application-form-question-title" for="c7f0a2b4-6d1e-4a3c-8b9f-2e5d4c3b1a04">Will you now or in the future require sponsorship for a work visa in the United States?</label>
+            <div class="_container_1svni_28 _yesno_1e3gg_148 ashby-application-form-input-yesno">
+              <button class="_container_pjyt6_1 _option_1svni_32 ashby-application-form-input-yesno-option" aria-pressed="false" data-option="yes">Yes</button>
+              <button class="_container_pjyt6_1 _option_1svni_32 ashby-application-form-input-yesno-option" aria-pressed="false" data-option="no">No</button>
+              <input type="checkbox" class="_input_1svni_78" tabindex="-1" name="c7f0a2b4-6d1e-4a3c-8b9f-2e5d4c3b1a04" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A survey shown after the application's own fields; it is drawn with the same parts. -->
+      <div class="ashby-survey-form-container">
+        <div>
+          <div class="_jobPostingForm_5yu8i_380 _container_f7cvd_28 ashby-application-form-container" data-highlight="none">
+            <div class="_section_5yu8i_86 ashby-application-form-section-container">
+              <div class="_sectionHeader_5yu8i_93 ashby-application-form-section-header">
+                <h2 class="_title_5yu8i_99 ashby-application-form-section-header-title">Voluntary self-identification</h2>
+                <div class="_sectionDescription_5yu8i_105 ashby-application-form-section-header-description">
+                  <p>Answering is up to you. Your answer is kept apart from your application.</p>
+                </div>
+              </div>
+
+              <!-- A radio question, as the live site renders it. The wrapper div carries
+                   data-field-path; inside is a <fieldset> with NO <legend>. The question is a label
+                   (class …question-title) whose for attribute names the field path, which no element
+                   has as its id. Each radio is an opacity:0 overlay on a drawn circle, has NO value
+                   attribute (so its value reads "on"), is named after the field entry, and gets its
+                   text from a sibling label[for]. Recorded behaviour, reproduced below: pressing the
+                   option that is already chosen clears the answer. -->
+              <div data-field-path="b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05" data-field-entry-id="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05">
+                <fieldset class="_container_1258i_28 _fieldEntry_1e3gg_28 ashby-application-form-input-radio-group">
+                  <label class="_heading_f7cvd_52 _label_1e3gg_42 ashby-application-form-question-title" for="b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05">Gender</label>
+                  <div class="_option_1258i_34 ashby-application-form-input-radio-group-option">
+                    <span class="_container_132c8_28 ashby-application-form-input-radio-group-option-radio">
+                      <span class="_circle_132c8_77"></span>
+                      <input type="radio" id="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05-labeled-radio-0" name="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05" />
+                    </span>
+                    <label class="_label_1258i_42 ashby-application-form-input-radio-group-option-label" for="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05-labeled-radio-0">Male</label>
+                  </div>
+                  <div class="_option_1258i_34 ashby-application-form-input-radio-group-option">
+                    <span class="_container_132c8_28 ashby-application-form-input-radio-group-option-radio">
+                      <span class="_circle_132c8_77"></span>
+                      <input type="radio" id="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05-labeled-radio-1" name="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05" />
+                    </span>
+                    <label class="_label_1258i_42 ashby-application-form-input-radio-group-option-label" for="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05-labeled-radio-1">Female</label>
+                  </div>
+                  <div class="_option_1258i_34 ashby-application-form-input-radio-group-option">
+                    <span class="_container_132c8_28 ashby-application-form-input-radio-group-option-radio">
+                      <span class="_circle_132c8_77"></span>
+                      <input type="radio" id="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05-labeled-radio-2" name="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05" />
+                    </span>
+                    <label class="_label_1258i_42 ashby-application-form-input-radio-group-option-label" for="c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f_b3e9d1c7-4a2f-4e8b-9c6d-1f0a2b3c4d05-labeled-radio-2">Decline to self-identify</label>
+                  </div>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- The extension must never press this. A press sets window.__fixture.submitted = true. -->
+      <button class="_container_pjyt6_1 _submitButton_5yu8i_300 ashby-application-form-submit-button"><span>Submit Application</span></button>
+    </div>
+
+    <script>
+      (function () {
+        var fixture = window.__fixture;
+
+        function each(selector, visit) {
+          Array.prototype.forEach.call(document.querySelectorAll(selector), visit);
+        }
+
+        // ---- Submitting: nothing is ever sent, a press only leaves a mark for the tests ----------
+        document.querySelector('.ashby-application-form-submit-button').addEventListener('click', function () {
+          fixture.submitted = true;
+        });
+
+        // ---- File inputs ------------------------------------------------------------------------
+        // For tests: one entry per file that reached a file input of this page, in order.
+        // field is '_systemfield_resume' or 'autofill'. head (the first bytes, read as text) and
+        // encoded are filled in a moment after the file arrives; encoded is true when those bytes
+        // are a data URL or base64 text instead of a real document, which the live site refuses.
+        fixture.uploads = [];
+
+        function note(field, file) {
+          var entry = { field: field, name: file.name, type: file.type, size: file.size, head: null, encoded: null };
+          fixture.uploads.push(entry);
+          var reader = new FileReader();
+          reader.onload = function () {
+            var start = String(reader.result);
+            entry.head = start.slice(0, 8);
+            entry.encoded = /^data:application\/[^;]+;base64,/.test(start) || /^(JVBERi|UEsDBBQA|0M8R4KGx)/.test(start);
+            if (entry.encoded && field === '_systemfield_resume') complain();
+          };
+          reader.readAsText(file.slice(0, 1024));
+          return entry;
+        }
+
+        // The résumé field
+        var resumeInput = document.getElementById('_systemfield_resume');
+        var resumeZone = resumeInput.parentElement;
+        var resumeButtonText = resumeZone.querySelector('.ashby-application-form-input-file-dropzone-upload span');
+
+        function clearListedFile() {
+          each('.ashby-application-form-input-file-item, .ashby-application-form-input-file ._alert_xd2v0_114', function (old) {
+            old.remove();
+          });
+          resumeButtonText.textContent = 'Upload File';
+        }
+        // Lists a file in the drop zone the way the live site does: its name, a delete button,
+        // and "Replace" on the upload button.
+        function listFile(name) {
+          clearListedFile();
+          var item = document.createElement('div');
+          item.className = '_file_10xk4_76 ashby-application-form-input-file-item';
+          var line = document.createElement('p');
+          line.className = '_name_10xk4_41 ashby-application-form-input-file-item-name';
+          var text = document.createElement('span');
+          text.textContent = name;
+          line.appendChild(text);
+          var remove = document.createElement('button');
+          remove.className = '_container_pjyt6_1 _removeButton_10xk4_83 ashby-application-form-input-file-item-delete';
+          remove.title = 'Delete file';
+          remove.textContent = '×';
+          remove.addEventListener('click', function () {
+            resumeInput.value = '';
+            clearListedFile();
+          });
+          item.appendChild(line);
+          item.appendChild(remove);
+          resumeZone.insertBefore(item, resumeZone.querySelector('.ashby-application-form-input-file-dropzone'));
+          resumeButtonText.textContent = 'Replace';
+        }
+        function complain() {
+          var alert = document.createElement('p');
+          alert.className = '_alert_xd2v0_114';
+          alert.setAttribute('role', 'alert');
+          alert.textContent = 'This file could not be read as a document. Please check it and try again.';
+          resumeZone.appendChild(alert);
+        }
+
+        resumeInput.addEventListener('change', function () {
+          var file = resumeInput.files ? resumeInput.files[0] : undefined;
+          if (!file) return;
+          listFile(file.name);
+          note('_systemfield_resume', file);
+        });
+        resumeZone.querySelector('.ashby-application-form-input-file-dropzone-upload').addEventListener('click', function () {
+          resumeInput.click();
+        });
+        // ashby.html?saved-resume: the state after the site has restored a file saved earlier.
+        // The file is listed and the button reads "Replace", but the input itself holds no file.
+        if (/[?&]saved-resume(&|=|$)/.test(window.location.search)) listFile('Ada-Lovelace-CV-2025.pdf');
+
+        // The "Autofill from resume" box
+        var autofillRoot = document.querySelector('.ashby-application-form-autofill-input-root');
+        var autofillInput = autofillRoot.querySelector('input[type="file"]');
+        autofillRoot.querySelector('button').addEventListener('click', function () {
+          autofillInput.click();
+        });
+        autofillInput.addEventListener('change', function () {
+          var file = autofillInput.files ? autofillInput.files[0] : undefined;
+          if (!file) return;
+          note('autofill', file);
+          autofillRoot.setAttribute('data-state', 'pending');
+          // The parser answers, and the form is drawn again from its answer: everything typed
+          // before is gone.
+          window.setTimeout(function () {
+            autofillRoot.setAttribute('data-state', 'default');
+            each('.ashby-application-form-container input', function (input) {
+              if (input.type === 'radio' || input.type === 'checkbox') input.checked = false;
+              else if (input.type !== 'file') input.value = '';
+            });
+            document.getElementById('_systemfield_name').value = 'Name Read From File';
+            document.getElementById('_systemfield_email').value = 'read-from-file@example.com';
+            each('.ashby-application-form-input-yesno', function (group) {
+              group.dispatchEvent(new CustomEvent('fixture-reset'));
+            });
+            each('.ashby-application-form-input-radio-group', paintRadios);
+          }, 600);
+        });
+
+        // ---- Location: the autocomplete ---------------------------------------------------------
+        // Recorded behaviour: typing opens a list of places that the site fetches, and text that
+        // was typed but not picked from that list is thrown away when the box loses focus. The
+        // fixture has no server and so no list: nothing can be picked, and typed text never stays.
+        var locationInput = document.querySelector('.ashby-application-form-input-autocomplete');
+        locationInput.addEventListener('input', function () {
+          locationInput.setAttribute('aria-expanded', locationInput.value === '' ? 'false' : 'true');
+        });
+        locationInput.addEventListener('blur', function () {
+          locationInput.value = '';
+          locationInput.setAttribute('aria-expanded', 'false');
+        });
+
+        // ---- Yes/No questions -------------------------------------------------------------------
+        each('.ashby-application-form-input-yesno', function (group) {
+          var yes = group.querySelector('[data-option="yes"]');
+          var no = group.querySelector('[data-option="no"]');
+          var box = group.querySelector('input[type="checkbox"]');
+          var answer; // undefined (not answered), true or false
+
+          function paint() {
+            yes.setAttribute('aria-pressed', String(answer === true));
+            no.setAttribute('aria-pressed', String(answer === false));
+            yes.classList.toggle('_active_1svni_57', answer === true);
+            no.classList.toggle('_active_1svni_57', answer === false);
+            box.checked = answer === true;
+          }
+          // Pressing the chosen button again takes the answer back.
+          yes.addEventListener('click', function () {
+            answer = answer === true ? undefined : true;
+            paint();
+          });
+          no.addEventListener('click', function () {
+            answer = answer === false ? undefined : false;
+            paint();
+          });
+          box.addEventListener('change', function () {
+            answer = box.checked;
+            paint();
+          });
+          group.addEventListener('fixture-reset', function () {
+            answer = undefined;
+            paint();
+          });
+        });
+
+        // ---- Radio questions --------------------------------------------------------------------
+        function paintRadios(group) {
+          Array.prototype.forEach.call(group.querySelectorAll('input[type="radio"]'), function (radio) {
+            var option = radio.closest('.ashby-application-form-input-radio-group-option');
+            radio.parentElement.classList.toggle('_checked_132c8_90', radio.checked);
+            option.querySelector('label').classList.toggle('_checked_1258i_57', radio.checked);
+            if (radio.checked) option.setAttribute('data-checked', '');
+            else option.removeAttribute('data-checked');
+          });
+        }
+        each('.ashby-application-form-input-radio-group', function (group) {
+          Array.prototype.forEach.call(group.querySelectorAll('input[type="radio"]'), function (radio) {
+            radio.addEventListener('click', function () {
+              // A browser sends "change" after a click only when the click chose a new option.
+              // No "change" means the option was chosen already, and the live site then clears it.
+              var changed = false;
+              function sawChange() {
+                changed = true;
+              }
+              radio.addEventListener('change', sawChange);
+              window.setTimeout(function () {
+                radio.removeEventListener('change', sawChange);
+                if (!changed) radio.checked = false;
+                paintRadios(group);
+              }, 0);
+            });
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

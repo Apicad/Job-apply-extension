@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { detectAts } from '../../lib/ats';
 import { isBackgroundRequest, needsAttention, sanitizeFrameScan, sanitizeOutcomes } from '../../lib/report';
-import type { FieldResult, FieldStatus, FillOutcome, FrameScan } from '../../lib/types';
+import type { ChoiceOption, FieldResult, FieldStatus, FillOutcome, FrameScan } from '../../lib/types';
 
 describe('needsAttention', () => {
   const row: FieldResult = {
@@ -422,58 +423,26 @@ describe('sanitizeFrameScan', () => {
     expect(sanitizeFrameScan(dirty)).toEqual(leverScan());
   });
 
-  // A page decides how long its texts are. A 6 MB heading must not fill the
-  // extension's storage or freeze the popup.
-  const limits: [
+  /** One text somewhere in a scan: where it is, its limit, how to set it and how to read it back. */
+  type TextInScan = [
     where: string,
     max: number,
     put: (scan: FrameScan, text: string) => void,
     get: (scan: FrameScan) => string | undefined,
-  ][] = [
-    ['the url', 2048, (scan, text) => (scan.url = text), (scan) => scan.url],
+  ];
+
+  // A page decides how long its texts are. A 6 MB heading must not fill the
+  // extension's storage or freeze the popup. Texts that are only ever shown
+  // to the user are cut to their limit.
+  const shownOnly: TextInScan[] = [
     ['the job title', 200, (scan, text) => (scan.job.title = text), (scan) => scan.job.title],
     ['the company', 200, (scan, text) => (scan.job.company = text), (scan) => scan.job.company],
     ['the error message', 200, (scan, text) => (scan.error = text), (scan) => scan.error],
-    ['a child origin', 2048, (scan, text) => (scan.childOrigins = [text]), (scan) => scan.childOrigins[0]],
-    ['a label', 200, (scan, text) => (scan.fields[0]!.descriptor.label = text), (scan) => scan.fields[0]?.descriptor.label],
-    [
-      'a group label',
-      200,
-      (scan, text) => (scan.fields[0]!.descriptor.groupLabel = text),
-      (scan) => scan.fields[0]?.descriptor.groupLabel,
-    ],
-    [
-      'an input type',
-      200,
-      (scan, text) => (scan.fields[0]!.descriptor.inputType = text),
-      (scan) => scan.fields[0]?.descriptor.inputType,
-    ],
-    [
-      'an autocomplete value',
-      200,
-      (scan, text) => (scan.fields[0]!.descriptor.autocomplete = text),
-      (scan) => scan.fields[0]?.descriptor.autocomplete,
-    ],
-    ['a name', 200, (scan, text) => (scan.fields[0]!.descriptor.name = text), (scan) => scan.fields[0]?.descriptor.name],
-    ['an id', 200, (scan, text) => (scan.fields[0]!.descriptor.id = text), (scan) => scan.fields[0]?.descriptor.id],
     [
       'a placeholder',
       200,
       (scan, text) => (scan.fields[0]!.descriptor.placeholder = text),
       (scan) => scan.fields[0]?.descriptor.placeholder,
-    ],
-    ['hints', 200, (scan, text) => (scan.fields[0]!.descriptor.hints = text), (scan) => scan.fields[0]?.descriptor.hints],
-    [
-      'an accept list',
-      200,
-      (scan, text) => (scan.fields[2]!.descriptor.accept = text),
-      (scan) => scan.fields[2]?.descriptor.accept,
-    ],
-    [
-      'an option label',
-      120,
-      (scan, text) => (scan.fields[1]!.descriptor.options[1]!.label = text),
-      (scan) => scan.fields[1]?.descriptor.options[1]?.label,
     ],
     [
       'an option value',
@@ -483,7 +452,7 @@ describe('sanitizeFrameScan', () => {
     ],
   ];
 
-  it.each(limits)('cuts %s at %i characters', (_where, max, put, get) => {
+  it.each(shownOnly)('cuts %s at %i characters', (_where, max, put, get) => {
     const scan = leverScan();
     put(scan, 'x'.repeat(5000));
 
@@ -492,10 +461,10 @@ describe('sanitizeFrameScan', () => {
     expect(clean && get(clean)).toBe('x'.repeat(max));
   });
 
-  // Each row is a label; the limit for labels is 200.
+  // Each row is a job title; the limit for job titles is 200.
   const cuts: [name: string, raw: string, want: string][] = [
     ['keeps a text that is exactly at the limit', 'x'.repeat(200), 'x'.repeat(200)],
-    ['counts only what is left after cleaning', '\u202e'.repeat(300) + 'Email', 'Email'],
+    ['counts only what is left after cleaning', '\u202e'.repeat(300) + 'Engineer', 'Engineer'],
     ['leaves no space at the end of a cut text', 'x'.repeat(199) + ' and more', 'x'.repeat(199)],
     // An emoji takes two units; cutting between them would leave a broken character.
     ['drops an emoji that only half fits', 'x'.repeat(199) + '\u{1f4f1} and more', 'x'.repeat(199)],
@@ -504,12 +473,303 @@ describe('sanitizeFrameScan', () => {
 
   it.each(cuts)('%s', (_name, raw, want) => {
     const scan = leverScan();
-    scan.fields[0]!.descriptor.label = raw;
+    scan.job.title = raw;
 
-    expect(sanitizeFrameScan(scan)?.fields[0]?.descriptor.label).toBe(want);
+    expect(sanitizeFrameScan(scan)?.job.title).toBe(want);
   });
 
-  // A page also decides how many controls, options and frames it has.
+  // The texts that rules read are another matter. From them the classifier
+  // works out what a control asks for, and the answer goes into an
+  // application. Half a question is a different question, so these texts are
+  // never cut: a control whose description does not fit is left out of the
+  // scan, and a control that is not in the scan is never filled.
+
+  /** The refs of the controls that came through, in order. */
+  function refsOf(scan: FrameScan | null): number[] | undefined {
+    return scan?.fields.map((field) => field.ref);
+  }
+
+  it('keeps a long question whole, as a label and as a group label', () => {
+    // 255 characters, from live Greenhouse forms.
+    const question =
+      'Do you have a disability or chronic condition (physical, visual, auditory, cognitive, mental, emotional, other) that substantially limits 1 or more of your major life activities, including mobility, communication (seeing, hearing, speaking), and learning?';
+    const scan = leverScan();
+    scan.fields[1]!.descriptor.label = question;
+    scan.fields[1]!.descriptor.groupLabel = question;
+
+    const descriptor = sanitizeFrameScan(scan)?.fields[1]?.descriptor;
+
+    expect(descriptor?.label).toBe(question);
+    expect(descriptor?.groupLabel).toBe(question);
+  });
+
+  // Every row describes the second control of the scan, the one with ref 1.
+  const readByRules: TextInScan[] = [
+    ['a label', 1000, (scan, text) => (scan.fields[1]!.descriptor.label = text), (scan) => scan.fields[1]?.descriptor.label],
+    [
+      'a group label',
+      1000,
+      (scan, text) => (scan.fields[1]!.descriptor.groupLabel = text),
+      (scan) => scan.fields[1]?.descriptor.groupLabel,
+    ],
+    [
+      'an input type',
+      200,
+      (scan, text) => (scan.fields[1]!.descriptor.inputType = text),
+      (scan) => scan.fields[1]?.descriptor.inputType,
+    ],
+    [
+      'an autocomplete value',
+      200,
+      (scan, text) => (scan.fields[1]!.descriptor.autocomplete = text),
+      (scan) => scan.fields[1]?.descriptor.autocomplete,
+    ],
+    ['a name', 200, (scan, text) => (scan.fields[1]!.descriptor.name = text), (scan) => scan.fields[1]?.descriptor.name],
+    ['an id', 200, (scan, text) => (scan.fields[1]!.descriptor.id = text), (scan) => scan.fields[1]?.descriptor.id],
+    ['hints', 200, (scan, text) => (scan.fields[1]!.descriptor.hints = text), (scan) => scan.fields[1]?.descriptor.hints],
+    [
+      'an accept list',
+      1000,
+      (scan, text) => (scan.fields[1]!.descriptor.accept = text),
+      (scan) => scan.fields[1]?.descriptor.accept,
+    ],
+  ];
+
+  it('keeps the accept list of a résumé input whole when it names six formats by extension and by type', () => {
+    // 204 characters: the type of a .docx file alone takes 71. A control left out for this would be the résumé.
+    const accept =
+      '.pdf,.doc,.docx,.rtf,.txt,.odt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/rtf,text/plain,application/vnd.oasis.opendocument.text';
+    const scan = leverScan();
+    scan.fields[2]!.descriptor.accept = accept;
+
+    expect(sanitizeFrameScan(scan)?.fields[2]?.descriptor.accept).toBe(accept);
+  });
+
+  it.each(readByRules)('keeps %s of exactly %i characters whole', (_where, max, put, get) => {
+    const scan = leverScan();
+    put(scan, 'x'.repeat(max));
+
+    const clean = sanitizeFrameScan(scan);
+
+    expect(clean && get(clean)).toBe('x'.repeat(max));
+  });
+
+  it.each(readByRules)('leaves out a control that has %s of more than %i characters', (_where, max, put) => {
+    const scan = leverScan();
+    put(scan, 'x'.repeat(max + 1));
+
+    // The controls before and after it come through, with their own refs.
+    expect(refsOf(sanitizeFrameScan(scan))).toEqual([0, 2]);
+  });
+
+  it('measures a label after cleaning it', () => {
+    const scan = leverScan();
+    scan.fields[1]!.descriptor.label = '\u202e'.repeat(300) + 'x'.repeat(1000);
+
+    expect(sanitizeFrameScan(scan)?.fields[1]?.descriptor.label).toBe('x'.repeat(1000));
+  });
+
+  // Why names and hints count as "read by rules": cut at 200 characters, each of
+  // these would be recognised as something it is not.
+  const halves: [name: string, breakIt: (scan: FrameScan) => void][] = [
+    [
+      // The first 200 characters end in "email-input", the name of Lever's e-mail box.
+      'hints that would be cut into the name of another field',
+      (scan) => (scan.fields[1]!.descriptor.hints = `${'x'.repeat(188)} email-input-of-referrer`),
+    ],
+    [
+      // "signature" marks a field we never fill (Lever: eeo[disabilitySignature]).
+      'a name whose "signature" comes after the first 200 characters',
+      (scan) => (scan.fields[1]!.descriptor.name = `eeo[${'x'.repeat(200)}][disabilitySignature]`),
+    ],
+  ];
+
+  it.each(halves)('leaves out a control that has %s', (_name, breakIt) => {
+    const scan = leverScan();
+    breakIt(scan);
+
+    expect(refsOf(sanitizeFrameScan(scan))).toEqual([0, 2]);
+  });
+
+  // Too long is the page's doing; the wrong shape means the scan is not ours.
+  // A scan with both is still not ours.
+  const tooLongAndMalformed: [name: string, breakIt: (scan: any) => void][] = [
+    [
+      'a label that is too long and a name of the wrong type',
+      (scan) => {
+        scan.fields[1].descriptor.label = 'x'.repeat(1001);
+        scan.fields[1].descriptor.name = 7;
+      },
+    ],
+    [
+      'a label that is too long and options that are not a list',
+      (scan) => {
+        scan.fields[1].descriptor.label = 'x'.repeat(1001);
+        scan.fields[1].descriptor.options = 'Yes, No';
+      },
+    ],
+    [
+      'a label that is too long and no placeholder',
+      (scan) => {
+        scan.fields[1].descriptor.label = 'x'.repeat(1001);
+        delete scan.fields[1].descriptor.placeholder;
+      },
+    ],
+    [
+      'an option that is too long, followed by one of the wrong shape',
+      (scan) => {
+        scan.fields[1].descriptor.options[1].label = 'x'.repeat(301);
+        scan.fields[1].descriptor.options[2] = 'No';
+      },
+    ],
+  ];
+
+  it.each(tooLongAndMalformed)('gives null for a control with %s', (_name, breakIt) => {
+    const scan = leverScan();
+    breakIt(scan);
+
+    expect(sanitizeFrameScan(scan)).toBe(null);
+  });
+
+  // The same goes for the options of a dropdown or a radio group. Rules pick
+  // "the only option that says X", and pick it by position. That means nothing
+  // on half an option or on part of a list, so a list is kept whole or not at
+  // all. An empty list is how a dropdown is described whose choices cannot be
+  // seen: nothing is chosen from it, and the user is still told about it.
+  it('keeps a long option whole', () => {
+    // 255 characters, from the race question of live Greenhouse forms. Without its
+    // closing bracket the option could no longer be read as "Asian or Asian-American".
+    const option =
+      'Asian or Asian-American (A person having origins in any of the original peoples of Asia and the Indian subcontinent including all 48 Asian countries - ie. Cambodia, China, India, Japan, Korea, Malaysia, Pakistan, the Philippine Islands, Thailand, Vietnam)';
+    const scan = leverScan();
+    scan.fields[1]!.descriptor.options[1]!.label = option;
+
+    expect(sanitizeFrameScan(scan)?.fields[1]?.descriptor.options[1]?.label).toBe(option);
+  });
+
+  it('keeps an option of exactly 300 characters whole', () => {
+    const scan = leverScan();
+    scan.fields[1]!.descriptor.options[1]!.label = 'x'.repeat(300);
+
+    expect(sanitizeFrameScan(scan)?.fields[1]?.descriptor.options[1]?.label).toBe('x'.repeat(300));
+  });
+
+  it('keeps none of the options when one of them is longer than 300 characters', () => {
+    const scan = leverScan();
+    scan.fields[1]!.descriptor.options[2]!.label = 'x'.repeat(301);
+
+    const clean = sanitizeFrameScan(scan);
+
+    expect(refsOf(clean)).toEqual([0, 1, 2]);
+    expect(clean?.fields[1]?.descriptor.label).toBe('Are you legally authorized to work in the United States?');
+    expect(clean?.fields[1]?.descriptor.options).toEqual([]);
+  });
+
+  /** A list of the given length, in the shape of a country dropdown. */
+  function optionList(length: number): ChoiceOption[] {
+    return Array.from({ length }, (_, index) => ({ label: `Country ${index}`, value: `${index}`, disabled: false }));
+  }
+
+  // A full country list has 249 entries and a placeholder, and sites add a few of their own.
+  it('keeps a list of 300 options whole and in order', () => {
+    const scan = leverScan();
+    scan.fields[1]!.descriptor.options = optionList(300);
+
+    const options = sanitizeFrameScan(scan)?.fields[1]?.descriptor.options;
+
+    expect(options).toHaveLength(300);
+    expect(options?.[0]).toEqual({ label: 'Country 0', value: '0', disabled: false });
+    expect(options?.[299]).toEqual({ label: 'Country 299', value: '299', disabled: false });
+  });
+
+  it('keeps none of a list of more than 300 options', () => {
+    // Whether an option is the only one that matches cannot be told from the first 300.
+    const scan = leverScan();
+    scan.fields[1]!.descriptor.options = optionList(301);
+
+    const clean = sanitizeFrameScan(scan);
+
+    expect(refsOf(clean)).toEqual([0, 1, 2]);
+    expect(clean?.fields[1]?.descriptor.options).toEqual([]);
+  });
+
+  it('still gives null for a list that is too long and holds something that is not an option', () => {
+    const scan: any = leverScan();
+    scan.fields[1].descriptor.options = optionList(301);
+    scan.fields[1].descriptor.options[7] = null;
+
+    expect(sanitizeFrameScan(scan)).toBe(null);
+  });
+
+  // A page may list 50,000 options. Only the first 300 entries are ever looked at.
+  it('does not read a list past its limit', () => {
+    const scan: any = leverScan();
+    scan.fields[1].descriptor.options = optionList(301);
+    scan.fields[1].descriptor.options[300] = null;
+
+    expect(sanitizeFrameScan(scan)?.fields[1]?.descriptor.options).toEqual([]);
+  });
+
+  // An address is never cut either: its beginning can name another site than
+  // the whole does. One that does not fit is reduced to its origin, which is
+  // the part that tells whose page it is.
+  const addresses: [name: string, url: string, want: string][] = [
+    [
+      'keeps an address of exactly 2048 characters whole',
+      `https://jobs.lever.co/${'x'.repeat(2026)}`,
+      `https://jobs.lever.co/${'x'.repeat(2026)}`,
+    ],
+    ['keeps only the origin of an address of 2049 characters', `https://jobs.lever.co/${'x'.repeat(2027)}`, 'https://jobs.lever.co'],
+    [
+      'keeps only the origin of a job page with a very long query',
+      `https://jobs.lever.co/analyticalengines/apply?source=${'x'.repeat(3000)}`,
+      'https://jobs.lever.co',
+    ],
+    ['keeps the port, which is part of the origin', `http://localhost:3000/${'x'.repeat(3000)}`, 'http://localhost:3000'],
+    [
+      // Everything before the "@" is a user name. The first 2048 characters end in ".greenhouse.io".
+      'is not fooled by a user name made up to look like a job site',
+      `https://${'a'.repeat(2026)}.greenhouse.io@evil.example/apply`,
+      'https://evil.example',
+    ],
+    ['keeps nothing of an address whose host name alone is too long', `https://${'a'.repeat(2026)}.greenhouse.io.evil.example/`, ''],
+    ['keeps nothing of a long data: address, which has no origin', `data:text/html,${'x'.repeat(3000)}`, ''],
+    // A blob is made by a script, not served by the site in its address.
+    ['keeps nothing of a long blob: address', `blob:https://jobs.lever.co/${'x'.repeat(3000)}`, ''],
+    ['keeps nothing of a long text that is no address', 'x'.repeat(3000), ''],
+  ];
+
+  it.each(addresses)('the url: %s', (_name, url, want) => {
+    const scan = leverScan();
+    scan.url = url;
+
+    expect(sanitizeFrameScan(scan)?.url).toBe(want);
+  });
+
+  it('never makes a page on another site look like one on a job site', () => {
+    const scan = leverScan();
+    scan.url = `https://${'a'.repeat(2026)}.greenhouse.io@evil.example/apply`;
+
+    const clean = sanitizeFrameScan(scan);
+
+    expect(detectAts(scan.url)).toBe(null);
+    // 'no scan' so that a refused scan cannot pass for "not a job site".
+    expect(clean === null ? 'no scan' : detectAts(clean.url)).toBe(null);
+  });
+
+  it('reduces the address of an embedded frame to its origin, or leaves it out, when it does not fit', () => {
+    const scan = leverScan();
+    scan.childOrigins = [
+      'https://job-boards.greenhouse.io',
+      // Its first 2048 characters read "https://aaa\u2026.greenhouse.io".
+      `https://${'a'.repeat(2026)}.greenhouse.io.evil.example`,
+      `https://jobs.ashbyhq.com/analyticalengines/embed?source=${'x'.repeat(3000)}`,
+    ];
+
+    expect(sanitizeFrameScan(scan)?.childOrigins).toEqual(['https://job-boards.greenhouse.io', 'https://jobs.ashbyhq.com']);
+  });
+
+  // A page also decides how many controls and frames it has.
   it('keeps at most 400 fields, the first ones', () => {
     const scan = leverScan();
     const field = scan.fields[0]!;
@@ -520,22 +780,6 @@ describe('sanitizeFrameScan', () => {
     expect(fields).toHaveLength(400);
     expect(fields?.[0]?.ref).toBe(0);
     expect(fields?.[399]?.ref).toBe(399);
-  });
-
-  // Options are chosen by position, so the ones kept must keep their positions.
-  it('keeps at most 200 options of a field, the first ones', () => {
-    const scan = leverScan();
-    scan.fields[1]!.descriptor.options = Array.from({ length: 250 }, (_, index) => ({
-      label: `Option ${index}`,
-      value: `${index}`,
-      disabled: false,
-    }));
-
-    const options = sanitizeFrameScan(scan)?.fields[1]?.descriptor.options;
-
-    expect(options).toHaveLength(200);
-    expect(options?.[0]).toEqual({ label: 'Option 0', value: '0', disabled: false });
-    expect(options?.[199]).toEqual({ label: 'Option 199', value: '199', disabled: false });
   });
 
   it('keeps at most 100 child origins, the first ones', () => {

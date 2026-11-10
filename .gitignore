@@ -5,6 +5,9 @@ node_modules
 stats.html
 stats-*.json
 
+# Git worktrees that other work streams keep inside this folder
+.claude/worktrees/
+
 # Personal dev-browser settings for `npm run dev`
 web-ext.config.ts
 
