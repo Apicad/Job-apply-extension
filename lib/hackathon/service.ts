@@ -1,3 +1,4 @@
+import { answerCommand, loadFacts } from './answers';
 import { browser } from 'wxt/browser';
 import { loadProfile, readHackathon, writeHackathon, saveSyntheticProfile } from '../storage';
 import { sanitizeFrameScan } from '../report';
@@ -48,7 +49,8 @@ export async function handle(message: unknown): Promise<unknown> {
  if (!record(message) || typeof message.type !== 'string') throw Error('Invalid command.');
  if (message.type === 'demo') { await saveSyntheticProfile(DEMO_PROFILE); await writeHackathon('facts', DEMO_FACTS); return { loaded: true }; }
  if (!Number.isSafeInteger(message.tabId) || Number(message.tabId) < 0) throw Error('Invalid tab.');
+ if (message.type === 'state') { const plan = await readHackathon<NativePlan>(planKey(Number(message.tabId)), true); return plan ? answerCommand(message, plan) : { facts: await loadFacts(), session: null, plan: null }; }
  if (message.type === 'scan') return scanTab(Number(message.tabId));
  if (message.type === 'fill' && typeof message.planId === 'string') return fillTab(Number(message.tabId), message.planId);
- throw Error('Unsupported command.');
+ return answerCommand(message, await getPlan(Number(message.tabId)));
 }

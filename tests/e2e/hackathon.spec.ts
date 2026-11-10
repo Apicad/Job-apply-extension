@@ -19,3 +19,32 @@ test('actual extension: scan, preview, native React fills, no replay or submit',
  expect(await page.evaluate(() => (window as any).__fixture.submitted)).toBeFalsy();
  expect(await page.evaluate(() => (window as any).__fixture.events.filter((e: any) => e.type === 'keydown' || e.type === 'click' || e.type === 'focus').length)).toBe(0);
 });
+
+test('copy/paste boundary validates identity, shows original sources and revokes edited approval', async ({ context, openExtensionPage }) => {
+ const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui = await openExtensionPage('popup.html');
+ const tabId = await ui.evaluate(async url => (await (globalThis as any).chrome.tabs.query({})).find((t: any) => t.url === url).id, page.url());
+ await ui.goto(ui.url() + `?tabId=${tabId}`);
+ await ui.getByRole('button', { name: 'Load synthetic applicant' }).click();
+ await expect(ui.getByRole('status')).toContainText('Synthetic applicant');
+ await ui.getByRole('button', { name: 'Scan application' }).click();
+ await expect(ui.getByRole('status')).toContainText('Preview ready');
+ await ui.getByLabel('Application question').selectOption({ label: 'Describe a relevant project.' });
+ await ui.getByLabel('Reviewed job context', { exact: false }).fill('The role asks for testing and documentation.');
+ await ui.getByRole('checkbox', { name: 'I built a Python script', exact: false }).check();
+ await ui.getByRole('button', { name: 'Preview exact AI request' }).click();
+ await expect(ui.getByTestId('ai-payload')).toContainText('applicantFacts');
+ await expect(ui.getByTestId('ai-payload')).not.toContainText('ada@example.com');
+ await ui.getByRole('button', { name: 'Copy reviewed request' }).click();
+ const state = await command(ui, { type: 'state', tabId }); const request = state.data.session.request;
+ const reply = { schema: 1, requestId: request.id, context: request.context, facts: request.facts.map(({ id, revision }: any) => ({ id, revision })), segments: [{ text: request.facts[0].text, sources: [{ id: request.facts[0].id, revision: 1 }] }], missing: [] };
+ const wrong = await command(ui, { type: 'response', tabId, raw: JSON.stringify({ ...reply, requestId: 'invented' }) }); expect(wrong.ok).toBe(false);
+ await ui.getByLabel('Paste AI JSON response').fill(JSON.stringify(reply)); await ui.getByRole('button', { name: 'Validate response' }).click();
+ await ui.getByText('Source: Projects', { exact: false }).click(); await expect(ui.locator('.source')).toContainText(request.facts[0].text);
+ await ui.getByLabel('I compared the exact text', { exact: false }).check(); await ui.getByRole('button', { name: 'Approve exact answer' }).click();
+ await expect(ui.getByText('Approved revision 1.')).toBeVisible();
+ await ui.getByLabel('Exact answer', { exact: true }).fill('I built a dashboard using synthetic data.');
+ await expect(ui.getByText('User edited', { exact: false })).toBeVisible();
+ expect((await command(ui, { type: 'state', tabId })).data.session.answer.approval).toBeNull();
+ expect((await command(ui, { type: 'response', tabId, raw: JSON.stringify(reply) })).ok).toBe(false);
+});

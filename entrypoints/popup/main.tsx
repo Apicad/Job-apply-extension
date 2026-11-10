@@ -2,11 +2,70 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { NativePlan } from '../../lib/hackathon/engine';
+import type { Fact } from '../../lib/hackathon/contracts';
+import { promptFor } from '../../lib/hackathon/contracts';
+import type { AnswerSession } from '../../lib/hackathon/answers';
+import { rowKey, supportedQuestion } from '../../lib/hackathon/answers';
 import './style.css';
 function App() {
- const [tabId, setTab] = useState<number>(); const [plan, setPlan] = useState<NativePlan>(); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
+ const [tabId, setTab] = useState<number>();
+ const [plan, setPlan] = useState<NativePlan | null>(null);
+ const [facts, setFacts] = useState<Fact[]>([]); const [selected, setSelected] = useState<string[]>([]);
+ const [session, setSession] = useState<AnswerSession | null>(null);
+ const [question, setQuestion] = useState(''); const [job, setJob] = useState('');
+ const [raw, setRaw] = useState(''); const [text, setText] = useState(''); const [dirty, setDirty] = useState(false);
+ const [reviewed, setReviewed] = useState(false); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
  useEffect(() => { const requested = new URLSearchParams(location.search).get('tabId'); if (requested) setTab(Number(requested)); else void browser.tabs.query({ active: true, currentWindow: true }).then(tabs => setTab(tabs[0]?.id)); }, []);
- async function run(type: string) { setBusy(true); try { const response = await browser.runtime.sendMessage({ type, tabId, planId: plan?.id }); if (!response.ok) throw Error(response.error); if (type === 'demo') setNotice('Synthetic profile loaded.'); else { setPlan(response.data); setNotice(type === 'fill' ? 'Fill finished. Review the results. Submission is manual.' : 'Preview ready. Nothing has been written.'); } } catch (e) { setNotice(String(e)); } finally { setBusy(false); } }
- return <main><header><small>HACKERSQUAD · SYNTHETIC DEMO</small><h1>Job Apply Assistant</h1><p>You review. You submit.</p></header><button disabled={busy} onClick={() => void run('demo')}>Load synthetic applicant</button><button disabled={busy || tabId === undefined} onClick={() => void run('scan')}>Scan application</button><p role="status">{notice}</p>{plan && <section><h2>Fill preview</h2><p>{plan.url}</p>{plan.rows.map(r => <article key={`${r.documentId}:${r.field.ref}`}><strong>{r.field.descriptor.label || r.field.descriptor.name}</strong><p>{r.action ? 'value' in r.action ? r.action.value : r.field.descriptor.options[r.action.index]?.label : r.status}</p>{plan.state === 'finished' && r.action && <b>{plan.outcomes?.find(o => o.documentId === r.documentId && o.ref === r.field.ref)?.ok ? 'Verified write' : 'Not verified / left manual'}</b>}</article>)}<button disabled={busy || plan.state !== 'preview' || !plan.rows.some(r => r.action)} onClick={() => void run('fill')}>Fill previewed fields</button></section>}</main>;
+ async function send(type: string, extra: object = {}) {
+  const response = await browser.runtime.sendMessage({ type, tabId, planId: plan?.id, ...extra });
+  if (!response.ok) throw Error(response.error); return response.data;
+ }
+ async function refresh() {
+  if (tabId === undefined) return;
+  const data = await send('state'); setPlan(data.plan); setFacts(data.facts); setSession(data.session);
+  setText(data.session?.answer?.text ?? ''); setDirty(false); setReviewed(false);
+ }
+ useEffect(() => { void refresh().catch(e => setNotice(String(e))); }, [tabId]);
+ async function run(type: string, extra: object = {}) {
+  setBusy(true); setNotice('');
+  try {
+   const data = await send(type, extra);
+   if (type === 'scan') { setPlan(data); setSession(null); setQuestion(''); setNotice('Preview ready. Nothing has been written.'); }
+   else if (type === 'fill') { setPlan(data); setNotice('Fill finished. Check verified and manual outcomes. You submit manually.'); }
+   else if (type === 'send') {
+    setSession(data.session);
+    try { await navigator.clipboard.writeText(data.prompt); setNotice('Request copied. Paste it into your AI chat, then paste its JSON response below.'); }
+    catch { setNotice('Clipboard unavailable. Select and copy the exact request text below manually.'); }
+   } else if (data.session) { setSession(data.session); setText(data.session.answer?.text ?? ''); setDirty(false); setReviewed(false); setNotice(type === 'approve' ? 'Exact answer approved. It has not been saved or filled.' : 'Updated. Review before continuing.'); }
+   else { await refresh(); setNotice(type === 'demo' ? 'Synthetic applicant saved in this browser.' : 'Saved.'); }
+  } catch (e) { setNotice(String(e)); } finally { setBusy(false); }
+ }
+ const answer = session?.answer;
+ return <main>
+  <header><small>HACKERSQUAD · REVIEWED APPLICATION ASSISTANT</small><h1>Job Apply Assistant</h1><p>Draft from saved experience. Review every claim. Submit yourself.</p></header>
+  <button disabled={busy} onClick={() => void run('demo')}>Load synthetic applicant</button>
+  <button disabled={busy || tabId === undefined} onClick={() => void run('scan')}>Scan application</button>
+  <p role="status">{notice}</p>
+  <details><summary>Saved experience · {facts.length} facts</summary>{facts.map(f => <article key={f.id}><strong>{f.location}</strong><p>{f.text}</p><small>{f.id} · revision {f.revision}</small><label>Edit saved fact<textarea defaultValue={f.text} id={`fact-${f.id}`} /></label><button disabled={busy} onClick={() => void run('fact-edit', { id: f.id, text: (document.getElementById(`fact-${f.id}`) as HTMLTextAreaElement).value })}>Save fact revision</button></article>)}</details>
+  {plan && <section><h2>Draft one project answer</h2><p className="warning">Only the listed project questions are supported. Eligibility, demographics, consent and other questions stay manual.</p>
+   <label>Application question<select value={question} onChange={e => { setQuestion(e.target.value); setReviewed(false); }}><option value="">Select a question</option>{plan.rows.filter(supportedQuestion).map(r => <option key={rowKey(r)} value={rowKey(r)}>{r.field.descriptor.label}</option>)}</select></label>
+   <label>Reviewed job context · requirements, not applicant experience<textarea value={job} maxLength={4000} onChange={e => { setJob(e.target.value); setReviewed(false); }} placeholder="Paste only the relevant, reviewed job requirements. Do not include contacts or private information." /></label>
+   <p>Select the saved facts to send:</p>{facts.map(f => <label key={f.id}><input type="checkbox" checked={selected.includes(f.id)} onChange={e => setSelected(e.target.checked ? [...selected, f.id] : selected.filter(id => id !== f.id))} />{f.text}</label>)}
+   <button disabled={busy || !question || !selected.length} onClick={() => void run('request', { rowKey: question, job, factIds: selected })}>Preview exact AI request</button>
+  </section>}
+  {session?.request && <section><h2>Exact request to AI</h2><p>Only the selected facts and the context below leave the extension when you manually paste them. The extension makes no AI network requests. Free AI chat access may have account and rate limits.</p><pre data-testid="ai-payload">{promptFor(session.request)}</pre><button disabled={busy || session.sent} onClick={() => void run('send')}>Copy reviewed request</button><button disabled={busy} onClick={() => void run('cancel')}>Cancel request</button>{session.sent && <><label>Paste AI JSON response<textarea aria-label="Paste AI JSON response" value={raw} maxLength={30001} onChange={e => setRaw(e.target.value)} /></label><button disabled={busy || !raw} onClick={() => void run('response', { raw })}>Validate response</button></>}</section>}
+  {answer && <section><h2>Review answer and sources</h2><p className="warning">Saved facts are user-provided. Valid source IDs do not prove factual correctness. Compare every sentence with its sources; remove unsupported claims.</p>
+   {answer.origin === 'edited' && <p className="warning">User edited · current sentence mappings removed. Compare the edited text with the original trace before approving.</p>}
+   {answer.segments.map((s, i) => <article key={i}><p>{s.text}</p>{s.sources.map(ref => { const fact = answer.trace.request.facts.find(f => f.id === ref.id && f.revision === ref.revision); return <details className="source" key={ref.id}><summary>Source: {fact?.location} · r{ref.revision}</summary><p>{fact?.text}</p><small>{ref.id}</small></details>; })}{!s.sources.length && <b className="warning">Not supported by saved facts</b>}</article>)}
+   {answer.gaps.map((g, i) => <p className="warning" key={i}>Missing or unsupported: {g}</p>)}
+   <details><summary>Original generation trace</summary>{answer.trace.segments.map((s, i) => <p key={i}>{s.text}</p>)}{answer.trace.request.facts.map(f => <article key={f.id}><strong>{f.location} · r{f.revision}</strong><p>{f.text}</p></article>)}</details>
+   <label>Exact answer<textarea aria-label="Exact answer" value={text} maxLength={6000} onChange={e => { setText(e.target.value); setReviewed(false); if (!dirty) { setDirty(true); void send('invalidate').then(data => setSession(data.session)).catch(e => setNotice(String(e))); } }} /></label>
+   {dirty && <button disabled={busy || !text.trim()} onClick={() => void run('edit', { text })}>Apply edits for review</button>}
+   <label><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} />I compared the exact text with the original saved facts, removed unsupported claims, and reviewed its relevance to this application.</label>
+   <button disabled={busy || dirty || !reviewed || !!answer.gaps.length} onClick={() => void run('approve', { reviewed, revision: answer.revision, text: answer.text })}>Approve exact answer</button>
+   {answer.approval && <p>Approved revision {answer.revision}. Approval alone does not save or fill.</p>}
+  </section>}
+  {plan && <section><h2>Fill preview</h2><p>{plan.url}</p>{plan.rows.map(r => <article key={rowKey(r)}><strong>{r.field.descriptor.label || r.field.descriptor.name}</strong><p>{r.action ? 'value' in r.action ? r.action.value : r.field.descriptor.options[r.action.index]?.label : r.status}</p>{plan.state === 'finished' && r.action && <b>{plan.outcomes?.find(o => o.documentId === r.documentId && o.ref === r.field.ref)?.ok ? 'Verified write' : 'Not verified / left manual'}</b>}</article>)}{plan.errors?.map((e, i) => <p key={i} className="warning">{e}</p>)}<button disabled={busy || dirty || plan.state !== 'preview' || !plan.rows.some(r => r.action)} onClick={() => void run('fill')}>Fill previewed fields</button></section>}
+ </main>;
 }
 createRoot(document.getElementById('root')!).render(<App />);
