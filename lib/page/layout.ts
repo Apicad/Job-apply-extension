@@ -51,9 +51,10 @@ interface Box {
  */
 function isRendered(el: Element): boolean {
   try {
-    const view = el.ownerDocument.defaultView;
-    if (view === null || typeof el.checkVisibility !== 'function') return false;
-    if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })) return false;
+    const view = ownerDocumentOf(el)?.defaultView ?? null;
+    const checkVisibility = methodOnPrototype(el, 'checkVisibility');
+    if (view === null || checkVisibility === undefined) return false;
+    if (!checkVisibility.call(el, { opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })) return false;
 
     let box: Box | null = boxOf(el);
     let opacity = 1;
@@ -248,7 +249,8 @@ function cutByAncestor(box: Box, ancestor: Element, style: CSSStyleDeclaration):
   const cut = { ...box };
 
   if (scrolls(style.overflowX)) {
-    if (!canScrollIntoView(box.left - frame.left + ancestor.scrollLeft, box.right - frame.left + ancestor.scrollLeft, ancestor.scrollWidth)) {
+    const scrollLeft = scrollMetric(ancestor, 'scrollLeft');
+    if (!canScrollIntoView(box.left - frame.left + scrollLeft, box.right - frame.left + scrollLeft, scrollMetric(ancestor, 'scrollWidth'))) {
       return null;
     }
     cut.left = frame.left;
@@ -259,7 +261,8 @@ function cutByAncestor(box: Box, ancestor: Element, style: CSSStyleDeclaration):
   }
 
   if (scrolls(style.overflowY)) {
-    if (!canScrollIntoView(box.top - frame.top + ancestor.scrollTop, box.bottom - frame.top + ancestor.scrollTop, ancestor.scrollHeight)) {
+    const scrollTop = scrollMetric(ancestor, 'scrollTop');
+    if (!canScrollIntoView(box.top - frame.top + scrollTop, box.bottom - frame.top + scrollTop, scrollMetric(ancestor, 'scrollHeight'))) {
       return null;
     }
     cut.top = frame.top;
@@ -295,7 +298,10 @@ function cutByPage(box: Box, view: Window): Box {
 }
 
 function boxOf(el: Element): Box {
-  const rect = el.getBoundingClientRect();
+  // Through the prototype: a form control named "getBoundingClientRect" would otherwise be what
+  // `el.getBoundingClientRect` returns, and calling it throws.
+  const rect = methodOnPrototype(el, 'getBoundingClientRect')?.call(el) as DOMRect | undefined;
+  if (rect === undefined) return { left: Number.NaN, top: Number.NaN, right: Number.NaN, bottom: Number.NaN };
   return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
 }
 
@@ -308,9 +314,64 @@ function scrolls(overflow: string): boolean {
   return overflow === 'auto' || overflow === 'scroll';
 }
 
+/**
+ * A property of an element, ignoring a form control that has taken its name.
+ *
+ * A `<form>` answers for its controls by name, and in Chrome those names are own properties that
+ * win over the built-in ones: with `<input name="parentElement">` inside it, `form.parentElement`
+ * is that input, and the same happens to `scrollLeft` and `getBoundingClientRect`. The value is
+ * then an element, not the number or function the property really has. An own value of the right
+ * kind is kept, so a test can still stand in for the layout. Anything else is read from the
+ * prototype, as lib/page/describe.ts reads `parentElement`.
+ */
+function ownValue(object: object, name: string): unknown {
+  const own = Object.getOwnPropertyDescriptor(object, name);
+  if (own === undefined) return undefined;
+  return 'value' in own ? own.value : own.get?.call(object);
+}
+
+function memberOnPrototype(object: object, name: string): PropertyDescriptor | undefined {
+  let proto: object | null = Object.getPrototypeOf(object);
+  while (proto !== null) {
+    const descriptor = Object.getOwnPropertyDescriptor(proto, name);
+    if (descriptor !== undefined) return descriptor;
+    proto = Object.getPrototypeOf(proto);
+  }
+  return undefined;
+}
+
+function methodOnPrototype(object: object, name: string): ((this: unknown, ...args: unknown[]) => unknown) | undefined {
+  const own = ownValue(object, name);
+  if (typeof own === 'function') return own as (this: unknown, ...args: unknown[]) => unknown;
+  const value = memberOnPrototype(object, name)?.value;
+  return typeof value === 'function' ? (value as (this: unknown, ...args: unknown[]) => unknown) : undefined;
+}
+
+function ownerDocumentOf(el: Element): Document | null {
+  const own = ownValue(el, 'ownerDocument');
+  if (own instanceof Document) return own;
+  const getter = memberOnPrototype(el, 'ownerDocument')?.get;
+  const doc = getter?.call(el);
+  return doc instanceof Document ? doc : null;
+}
+
+function scrollMetric(el: Element, name: 'scrollLeft' | 'scrollTop' | 'scrollWidth' | 'scrollHeight'): number {
+  const own = ownValue(el, name);
+  if (typeof own === 'number' && Number.isFinite(own)) return own;
+  const getter = memberOnPrototype(el, name)?.get;
+  const value = getter?.call(el);
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
 /** The parent element, or the host when `el` sits at the top of a shadow tree. */
 function parentOf(el: Element): Element | null {
-  return el.parentElement ?? shadowHostOf(el);
+  const own = ownValue(el, 'parentElement');
+  // A control that sits inside this element is not its parent, whatever the property says.
+  const namedControl = own instanceof Element && own !== el && Node.prototype.contains.call(el, own);
+  if (!namedControl && (own instanceof Element || own === null)) return own ?? shadowHostOf(el);
+  const getter = memberOnPrototype(el, 'parentElement')?.get;
+  const parent = getter?.call(el) as Element | null | undefined;
+  return parent ?? shadowHostOf(el);
 }
 
 /** Puts files into a file input the only way a script can: through a DataTransfer's file list. */

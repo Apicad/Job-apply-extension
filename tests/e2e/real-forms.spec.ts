@@ -152,6 +152,47 @@ test.describe('a real Lever form in a real browser', () => {
     expect(controls.every((control) => control.form === 0)).toBe(true);
   });
 
+  test('a control named parentElement does not hide the fields in its form', async ({ openFixture }) => {
+    // Layout reads parentElement, the scroll metrics and getBoundingClientRect while it walks
+    // up to the form. A control of one of those names replaces the property. jsdom does not
+    // do this, so only a real browser can show that the fields stay measurable.
+    const page = await openFixture('lever.html');
+    const names = [
+      'parentElement',
+      'scrollLeft',
+      'scrollTop',
+      'scrollWidth',
+      'scrollHeight',
+      'getBoundingClientRect',
+      'checkVisibility',
+      'ownerDocument',
+    ];
+
+    const shadowed = await page.evaluate((planted) => {
+      const form = document.querySelector<HTMLFormElement>('#application-form');
+      if (form === null) throw new Error('the page has no application form');
+      form.insertAdjacentHTML('beforeend', planted.map((name) => `<input name="${name}">`).join(''));
+      return form.parentElement instanceof HTMLInputElement && typeof form.getBoundingClientRect !== 'function';
+    }, names);
+    const controls = await page.evaluate(() => window.__pageSide.readControls());
+    const planted = new Set(names);
+
+    expect(shadowed).toBe(true);
+    expect(controls.filter(({ descriptor, shown }) => shown && !planted.has(descriptor.name)).map(({ descriptor }) => descriptor.name)).toEqual([
+      'resume',
+      'name',
+      'email',
+      'phone',
+      'location',
+      'org',
+      'urls[LinkedIn]',
+      'cards[1c719ca9-5069-4afe-9e82-39ca420e0edb][field0]',
+      'cards[a6197d84-549e-4a91-8bb0-6af972510013][field0]',
+      'cards[ce72d538-c9ad-41f3-8e9a-618d40c82e3a][field0]',
+      'comments',
+    ]);
+  });
+
   test('does not see honeypots planted among the real fields', async ({ openFixture }) => {
     const page = await openFixture('lever.html');
     await page.evaluate(() => {

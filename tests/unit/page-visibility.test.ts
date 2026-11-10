@@ -1004,16 +1004,16 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
     expect(browserEnv.isRendered(inside)).toBe(false);
   });
 
-  it('gives up when the chain of ancestors never ends', () => {
+  it('does not follow a parentElement that is really a control inside the form', () => {
     // In a browser a control named "parentElement" replaces that property of its form, so climbing
-    // from the form leads back down into it. jsdom does not do this; the getter below does.
+    // from the form would lead back down into it. jsdom does not do this; the getter below does.
     mount(`<form id="loop">${FIELD}</form>`);
     setPage();
     const input = find('#target');
     layOut(input, box(100, 100, 200, 30));
     Object.defineProperty(find('#loop'), 'parentElement', { configurable: true, get: () => input });
 
-    expect(browserEnv.isRendered(input)).toBe(false);
+    expect(browserEnv.isRendered(input)).toBe(true);
   });
 
   it('is false, not an error, when the browser cannot answer', () => {
