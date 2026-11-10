@@ -12,6 +12,13 @@ const MIN_SIDE = 8;
 /** Deeper than any real page; reaching it means the ancestor chain cannot be trusted. */
 const MAX_DEPTH = 500;
 
+/**
+ * Fainter than this, a box is there in name only. `checkVisibility` notices an opacity of exactly 0;
+ * 0.01 is what a page writes to get past exactly that. A field dimmed to look disabled is nowhere
+ * near this low.
+ */
+const MIN_OPACITY = 0.1;
+
 /** Edges in the coordinates of `getBoundingClientRect` (relative to the viewport). */
 interface Box {
   left: number;
@@ -25,12 +32,22 @@ interface Box {
  *
  * 1. `checkVisibility` says it has a box and is neither transparent, `visibility: hidden` nor skipped
  *    content. (Without the three options it would call an opacity:0 honeypot visible.)
- * 2. What is left of its box after every ancestor has cut or scrolled it is at least 8 by 8 pixels.
- *    This rejects the 1px "visually hidden" box and anything inside a collapsed overflow:hidden parent.
- * 3. That remainder lies inside the page. Below the fold counts as visible; parked at left: -9999px
+ * 2. It is not faint beyond seeing: its own opacity and that of everything around it, multiplied,
+ *    stay at or above 0.1. `filter: opacity()` counts as well.
+ * 3. What is left of its box after its own clip, and after every ancestor has clipped, cut or
+ *    scrolled it, is at least 8 by 8 pixels. This rejects the 1px "visually hidden" box, anything
+ *    inside a collapsed overflow:hidden parent, and a full-size box emptied by `clip-path` or `clip`.
+ * 4. That remainder lies inside the page. Below the fold counts as visible; parked at left: -9999px
  *    does not.
  *
  * Anything that cannot be measured counts as not rendered.
+ *
+ * Out of reach for a check like this one: a field covered by something else, pushed behind the
+ * page, painted in the colours of its background, or hidden by a mask image.
+ *
+ * Two layouts are judged hidden although a person can see them, which only costs a field we could
+ * have filled: a positioned box that escapes a clipping ancestor which is not its containing block,
+ * and what a right-to-left panel has to be scrolled sideways for.
  */
 function isRendered(el: Element): boolean {
   try {
@@ -39,18 +56,182 @@ function isRendered(el: Element): boolean {
     if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })) return false;
 
     let box: Box | null = boxOf(el);
-    let ancestor = parentOf(el);
-    for (let depth = 0; ancestor !== null; depth++) {
+    let opacity = 1;
+    // the element itself first, then everything around it
+    let current: Element | null = el;
+    for (let depth = 0; current !== null; depth++) {
       if (depth === MAX_DEPTH || !isBigEnough(box)) return false;
-      box = cutByAncestor(box, ancestor, view.getComputedStyle(ancestor));
+      const style = view.getComputedStyle(current);
+
+      opacity *= opacityOf(style);
+      if (opacity < MIN_OPACITY) return false;
+
+      box = cutByClip(box, current, style);
+      // an element's overflow cuts what is inside it, never the element itself
+      if (box !== null && current !== el) box = cutByAncestor(box, current, style);
       if (box === null) return false;
-      ancestor = parentOf(ancestor);
+      current = parentOf(current);
     }
     return isBigEnough(cutByPage(box, view));
   } catch {
     // a browser too old for checkVisibility options, a detached element, a page that broke its own DOM
     return false;
   }
+}
+
+/** How much of an element shows: its `opacity`, times every opacity() in its `filter`. */
+function opacityOf(style: CSSStyleDeclaration): number {
+  let opacity = fractionOr(style.opacity, 1);
+  for (const [, amount] of (style.filter ?? '').matchAll(/\bopacity\(([^()]*)\)/g)) {
+    opacity *= fractionOr(amount ?? '', 1);
+  }
+  return opacity;
+}
+
+/** "0.5" or "50%" as a number from 0 to 1; `otherwise` for anything else (jsdom gives '' where it has no style). */
+function fractionOr(text: string, otherwise: number): number {
+  const trimmed = text.trim();
+  const value = Number.parseFloat(trimmed);
+  if (!Number.isFinite(value)) return otherwise;
+  return Math.min(Math.max(trimmed.endsWith('%') ? value / 100 : value, 0), 1);
+}
+
+// ---------------------------------------------------------------------------
+// clip-path and clip
+//
+// Both hide whatever lies outside a shape and leave every box as it was, so a field emptied by
+// `clip-path: inset(50%)` still measures 200 by 30 pixels. The shape is worked out from the computed
+// style, as Chromium writes it, and reduced to the box around it. That is exact for the shapes that
+// hide a field (they let through nothing, or next to nothing) and generous for the decorative ones.
+// ---------------------------------------------------------------------------
+
+/**
+ * What an element's own clip leaves of a box that is that element or lies inside it. null when
+ * nothing is left to speak of, or when the shape cannot be worked out here.
+ */
+function cutByClip(box: Box, el: Element, style: CSSStyleDeclaration): Box | null {
+  if (style.display === 'contents') return box; // no box of its own, so nothing to clip with
+
+  const clipPath = (style.clipPath ?? '').trim();
+  const clip = (style.clip ?? '').trim();
+  const hasClipPath = clipPath !== '' && clipPath !== 'none';
+  // the older `clip` only works on absolutely positioned elements
+  const hasClip = clip !== '' && clip !== 'auto' && (style.position === 'absolute' || style.position === 'fixed');
+  if (!hasClipPath && !hasClip) return box;
+
+  const frame = boxOf(el);
+  let cut: Box | null = box;
+  if (hasClipPath) cut = within(cut, shapeBox(clipPath, frame));
+  if (hasClip) cut = within(cut, clipRectBox(clip, frame));
+  return cut;
+}
+
+/** The part of a box inside another one; null when either is missing. */
+function within(box: Box | null, limit: Box | null): Box | null {
+  if (box === null || limit === null) return null;
+  return {
+    left: Math.max(box.left, limit.left),
+    top: Math.max(box.top, limit.top),
+    right: Math.min(box.right, limit.right),
+    bottom: Math.min(box.bottom, limit.bottom),
+  };
+}
+
+/** "12px" or "40%" as pixels, a percentage being that share of `whole`; null for anything else (calc(), keywords). */
+function pixels(text: string, whole: number): number | null {
+  const length = /^(-?\d*\.?\d+(?:e[-+]?\d+)?)(px|%)$/i.exec(text);
+  if (length === null) return null;
+  const value = Number(length[1]);
+  return length[2] === '%' ? (value / 100) * whole : value;
+}
+
+/**
+ * The box around what a computed `clip-path` lets through, in the coordinates of `frame`, which is
+ * the box of the element that carries it. null when the shape cannot be worked out: url(), path(),
+ * anything calculated.
+ */
+function shapeBox(clipPath: string, frame: Box): Box | null {
+  const width = frame.right - frame.left;
+  const height = frame.bottom - frame.top;
+  // "inset(10px) content-box": the box a shape is measured from is taken to be the element's own
+  const shape = /^(inset|circle|ellipse|polygon)\((.*)\)(?:\s+[a-z-]+)?$/i.exec(clipPath);
+  // a box name alone ("border-box") clips to that box, which is as good as the element's own
+  if (shape === null) return /^[a-z-]+$/i.test(clipPath) ? frame : null;
+  const kind = (shape[1] ?? '').toLowerCase();
+  const inside = (shape[2] ?? '').trim();
+
+  if (kind === 'polygon') {
+    // "evenodd, 0px 0px, 100% 0px, 50% 100%": the fill rule, when given, comes first
+    const points = inside.split(',').map((point) => point.trim().split(/\s+/));
+    if (points[0]?.length === 1) points.shift();
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (const point of points) {
+      const x = point.length === 2 ? pixels(point[0] ?? '', width) : null;
+      const y = point.length === 2 ? pixels(point[1] ?? '', height) : null;
+      if (x === null || y === null) return null;
+      xs.push(x);
+      ys.push(y);
+    }
+    if (xs.length === 0) return null;
+    return { left: frame.left + Math.min(...xs), top: frame.top + Math.min(...ys), right: frame.left + Math.max(...xs), bottom: frame.top + Math.max(...ys) };
+  }
+
+  if (kind === 'inset') {
+    // "1px 2px 3px 4px round 6px": top, right, bottom, left, filled in like margin's short forms
+    const offsets = (inside.split(/\s+round\s+/i)[0] ?? '').trim().split(/\s+/);
+    if (offsets.length < 1 || offsets.length > 4) return null;
+    const top = pixels(offsets[0] ?? '', height);
+    const right = pixels(offsets[1] ?? offsets[0] ?? '', width);
+    const bottom = pixels(offsets[2] ?? offsets[0] ?? '', height);
+    const left = pixels(offsets[3] ?? offsets[1] ?? offsets[0] ?? '', width);
+    if (top === null || right === null || bottom === null || left === null) return null;
+    return { left: frame.left + left, top: frame.top + top, right: frame.right - right, bottom: frame.bottom - bottom };
+  }
+
+  // "circle(40% at 10px 20%)", "ellipse(10px 40% at 0% 0%)"; the centre is the middle when left out
+  const [radii = '', centre] = inside.split(/\s*\bat\s+/i);
+  const at = centre === undefined ? ['50%', '50%'] : centre.trim().split(/\s+/);
+  const x = at.length === 2 ? pixels(at[0] ?? '', width) : null;
+  const y = at.length === 2 ? pixels(at[1] ?? '', height) : null;
+  if (x === null || y === null) return null;
+  const given = radii.trim() === '' ? [] : radii.trim().split(/\s+/);
+  // a radius that is left out reaches to the closest side
+  const toSideX = Math.min(Math.abs(x), Math.abs(width - x));
+  const toSideY = Math.min(Math.abs(y), Math.abs(height - y));
+  let radiusX: number | null;
+  let radiusY: number | null;
+  if (kind === 'circle') {
+    if (given.length > 1) return null;
+    // a circle's percentage is taken of the box's diagonal, divided by the square root of two
+    radiusX = given.length === 0 ? Math.min(toSideX, toSideY) : pixels(given[0] ?? '', Math.hypot(width, height) / Math.SQRT2);
+    radiusY = radiusX;
+  } else {
+    if (given.length !== 0 && given.length !== 2) return null;
+    radiusX = given.length === 0 ? toSideX : pixels(given[0] ?? '', width);
+    radiusY = given.length === 0 ? toSideY : pixels(given[1] ?? '', height);
+  }
+  if (radiusX === null || radiusY === null) return null;
+  return { left: frame.left + x - radiusX, top: frame.top + y - radiusY, right: frame.left + x + radiusX, bottom: frame.top + y + radiusY };
+}
+
+/**
+ * The box a computed `clip` lets through: "rect(0px, 0px, 0px, 0px)" is top, right, bottom and left,
+ * all four measured from the element's top left corner, and "auto" is the edge itself.
+ */
+function clipRectBox(clip: string, frame: Box): Box | null {
+  const rect = /^rect\((.*)\)$/i.exec(clip);
+  const edges = rect === null ? [] : (rect[1] ?? '').trim().split(/[\s,]+/);
+  if (edges.length !== 4) return null;
+  const width = frame.right - frame.left;
+  const height = frame.bottom - frame.top;
+  const edge = (text: string | undefined, auto: number): number | null => (text === 'auto' ? auto : pixels(text ?? '', 0));
+  const top = edge(edges[0], 0);
+  const right = edge(edges[1], width);
+  const bottom = edge(edges[2], height);
+  const left = edge(edges[3], 0);
+  if (top === null || right === null || bottom === null || left === null) return null;
+  return { left: frame.left + left, top: frame.top + top, right: frame.left + right, bottom: frame.top + bottom };
 }
 
 /**

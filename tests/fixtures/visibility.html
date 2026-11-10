@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en" data-ready>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Who can see what</title>
+    <style>
+      body {
+        font: 16px/1.5 system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      /* Every case sits in a block of its own. A block has room for what is in it and nothing else to say. */
+      section {
+        position: relative;
+        min-height: 2.5rem;
+        margin: 0.25rem 0;
+      }
+      section > h3 {
+        margin: 0;
+        font-size: 0.75rem;
+        font-weight: normal;
+        color: #5b6474;
+      }
+      .panel {
+        position: relative;
+        width: 300px;
+        height: 80px;
+        border: 1px solid #cfd6e0;
+      }
+      .tall {
+        height: 400px;
+      }
+      .wide {
+        width: 900px;
+        height: 1px;
+      }
+
+      /* The 1px clipped box that hides something from the eye and keeps it for screen readers. */
+      .visually-hidden {
+        border: 0;
+        clip: rect(0 0 0 0);
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        padding: 0;
+        position: absolute;
+        width: 1px;
+        white-space: nowrap;
+      }
+
+      /* Radios drawn by a circle beside a transparent input, as Ashby draws them. */
+      .drawn-radio {
+        position: relative;
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        vertical-align: middle;
+      }
+      .drawn-radio input {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        opacity: 0;
+      }
+      .drawn-radio span {
+        display: block;
+        width: 16px;
+        height: 16px;
+        border: 1px solid #5b6474;
+        border-radius: 50%;
+      }
+      /* Radios that look like buttons: the input is gone, its label is the button. */
+      .button-radio input {
+        display: none;
+      }
+      .button-radio {
+        display: inline-block;
+        padding: 0.25rem 1rem;
+        border: 1px solid #5b6474;
+        border-radius: 3px;
+      }
+
+      /* A React-Select dropdown, with the rules its own style sheet gives it (see greenhouse.html). */
+      .select__control {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        min-height: 38px;
+        position: relative;
+        border: 1px solid rgb(204, 204, 204);
+        border-radius: 4px;
+        box-sizing: border-box;
+        width: 300px;
+      }
+      .select__value-container {
+        align-items: center;
+        display: grid;
+        flex: 1 1 0%;
+        position: relative;
+        overflow: hidden;
+        padding: 2px 8px;
+        box-sizing: border-box;
+      }
+      .select__placeholder {
+        grid-area: 1 / 1 / 2 / 3;
+        color: rgb(128, 128, 128);
+        margin: 0 2px;
+      }
+      .select__input-container {
+        flex: 1 1 auto;
+        display: inline-grid;
+        grid-area: 1 / 1 / 2 / 3;
+        grid-template-columns: 0px min-content;
+        margin: 2px;
+        padding: 2px 0;
+        box-sizing: border-box;
+      }
+      .select__input-container::after {
+        content: attr(data-value) ' ';
+        visibility: hidden;
+        white-space: pre;
+        grid-area: 1 / 2;
+        font: inherit;
+        min-width: 2px;
+      }
+      .select__input {
+        color: inherit;
+        background: 0;
+        opacity: 1;
+        width: 100%;
+        grid-area: 1 / 2;
+        font: inherit;
+        min-width: 2px;
+        border: 0;
+        margin: 0;
+        outline: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Who can see what</h1>
+    <p>
+      One control per block. <code>data-expect</code> says what a person could make of it: <code>shown</code> if they
+      could see and use it, scrolling if need be; <code>hidden</code> if they could not; <code>absent</code> if it is
+      never even looked at. The end-to-end tests hold the extension to every line.
+    </p>
+
+    <h2>Shown</h2>
+    <section data-case="a plain text box" data-expect="shown"><h3>a plain text box</h3><input /></section>
+    <section data-case="a text area" data-expect="shown"><h3>a text area</h3><textarea></textarea></section>
+    <section data-case="a native dropdown" data-expect="shown">
+      <h3>a native dropdown</h3>
+      <select><option>California</option></select>
+    </section>
+    <section data-case="a text box dimmed to half its strength" data-expect="shown">
+      <h3>a text box dimmed to half its strength</h3>
+      <input style="opacity: 0.5" />
+    </section>
+    <section data-case="inside a panel that scrolls, below its fold" data-expect="shown">
+      <h3>inside a panel that scrolls, below its fold</h3>
+      <div class="panel" style="overflow: auto"><div class="tall"></div><input /></div>
+    </section>
+    <section data-case="inside a panel that scrolls sideways, off to the right" data-expect="shown">
+      <h3>inside a panel that scrolls sideways, off to the right</h3>
+      <div class="panel" style="overflow: auto; white-space: nowrap"><span class="wide" style="display: inline-block"></span><input /></div>
+    </section>
+    <section data-case="sticking 10px into a panel that scrolls" data-expect="shown">
+      <h3>sticking 10px into a panel that scrolls</h3>
+      <div class="panel" style="overflow: auto"><input style="position: absolute; left: -190px; top: 20px; width: 200px; box-sizing: border-box" /></div>
+    </section>
+    <section data-case="in an overflow:hidden box that it fits into" data-expect="shown">
+      <h3>in an overflow:hidden box that it fits into</h3>
+      <div class="panel" style="overflow: hidden"><input /></div>
+    </section>
+    <section data-case="cut by an overflow:hidden box so that 20px are left" data-expect="shown">
+      <h3>cut by an overflow:hidden box so that 20px are left</h3>
+      <div class="panel" style="overflow: hidden"><input style="position: absolute; left: -180px; top: 20px; width: 200px; box-sizing: border-box" /></div>
+    </section>
+    <section data-case="inside an open dialog" data-expect="shown">
+      <h3>inside an open dialog</h3>
+      <dialog open style="position: static"><input /></dialog>
+    </section>
+    <section data-case="inside an open details" data-expect="shown">
+      <h3>inside an open details</h3>
+      <details open><summary>More</summary><input /></details>
+    </section>
+    <section data-case="in a display:contents wrapper" data-expect="shown">
+      <h3>in a display:contents wrapper</h3>
+      <div style="display: contents"><input /></div>
+    </section>
+    <section data-case="in a container scaled down to 80%" data-expect="shown">
+      <h3>in a container scaled down to 80%</h3>
+      <div style="transform: scale(0.8); transform-origin: left top"><input /></div>
+    </section>
+    <section data-case="in a right-to-left block" data-expect="shown">
+      <h3>in a right-to-left block</h3>
+      <div dir="rtl"><input /></div>
+    </section>
+    <section data-case="in a card whose corners are rounded with clip-path" data-expect="shown">
+      <h3>in a card whose corners are rounded with clip-path</h3>
+      <div style="clip-path: inset(0 round 12px); padding: 8px; background: #eef2f7"><input /></div>
+    </section>
+    <section data-case="in a block with a slanted edge cut by clip-path" data-expect="shown">
+      <h3>in a block with a slanted edge cut by clip-path</h3>
+      <div style="clip-path: polygon(0 0, 100% 0, 100% 80%, 0 100%); padding: 8px 8px 24px; background: #eef2f7"><input /></div>
+    </section>
+    <section data-case="radios drawn beside transparent inputs" data-expect="shown">
+      <h3>radios drawn beside transparent inputs</h3>
+      <span class="drawn-radio"><input type="radio" id="drawn-yes" name="drawn" /><span></span></span><label for="drawn-yes">Yes</label>
+      <span class="drawn-radio"><input type="radio" id="drawn-no" name="drawn" /><span></span></span><label for="drawn-no">No</label>
+    </section>
+    <section data-case="radios that are buttons made of their labels" data-expect="shown">
+      <h3>radios that are buttons made of their labels</h3>
+      <label class="button-radio"><input type="radio" name="buttons" />Yes</label>
+      <label class="button-radio"><input type="radio" name="buttons" />No</label>
+    </section>
+    <section data-case="an upload behind its Attach button" data-expect="shown">
+      <h3>an upload behind its Attach button</h3>
+      <div><button type="button">Attach</button><label class="visually-hidden" for="upload">Attach</label><input id="upload" class="visually-hidden" type="file" /></div>
+    </section>
+    <section data-case="a custom dropdown with a search box 4px wide" data-expect="shown">
+      <h3>a custom dropdown with a search box 4px wide</h3>
+      <div class="select__control"><div class="select__value-container"><div class="select__placeholder">Select...</div><div class="select__input-container" data-value=""><input class="select__input" type="text" role="combobox" aria-autocomplete="list" aria-haspopup="true" aria-expanded="false" value="" /></div></div></div>
+    </section>
+    <section data-case="inside a bar fixed to the bottom of the window" data-expect="shown">
+      <h3>inside a bar fixed to the bottom of the window</h3>
+      <div style="position: fixed; right: 8px; bottom: 8px"><input /></div>
+    </section>
+
+    <h2>Hidden</h2>
+    <section data-case="display: none" data-expect="hidden"><h3>display: none</h3><input style="display: none" /></section>
+    <section data-case="display: none on a wrapper" data-expect="hidden"><h3>display: none on a wrapper</h3><div style="display: none"><p><input /></p></div></section>
+    <section data-case="visibility: hidden" data-expect="hidden"><h3>visibility: hidden</h3><input style="visibility: hidden" /></section>
+    <section data-case="opacity: 0" data-expect="hidden"><h3>opacity: 0</h3><input style="opacity: 0" /></section>
+    <section data-case="opacity: 0 on a wrapper" data-expect="hidden"><h3>opacity: 0 on a wrapper</h3><div style="opacity: 0"><input /></div></section>
+    <section data-case="opacity: 0.01" data-expect="hidden"><h3>opacity: 0.01</h3><input style="opacity: 0.01" /></section>
+    <section data-case="opacity: 0.01 on a wrapper" data-expect="hidden"><h3>opacity: 0.01 on a wrapper</h3><div style="opacity: 0.01"><input /></div></section>
+    <section data-case="filter: opacity(0)" data-expect="hidden"><h3>filter: opacity(0)</h3><input style="filter: opacity(0)" /></section>
+    <section data-case="filter: opacity(0) on a wrapper" data-expect="hidden"><h3>filter: opacity(0) on a wrapper</h3><div style="filter: opacity(0)"><input /></div></section>
+    <section data-case="parked at left: -9999px" data-expect="hidden"><h3>parked at left: -9999px</h3><input style="position: absolute; left: -9999px" /></section>
+    <section data-case="parked at top: -9999px" data-expect="hidden"><h3>parked at top: -9999px</h3><input style="position: absolute; top: -9999px" /></section>
+    <section data-case="pulled away with margin-left: -9999px" data-expect="hidden"><h3>pulled away with margin-left: -9999px</h3><input style="margin-left: -9999px" /></section>
+    <section data-case="fixed far outside the window" data-expect="hidden"><h3>fixed far outside the window</h3><input style="position: fixed; left: -9999px; top: 10px" /></section>
+    <section data-case="the 1px clipped box" data-expect="hidden"><h3>the 1px clipped box</h3><input class="visually-hidden" /></section>
+    <section data-case="the 1px clipped box, with a label anyone can see" data-expect="hidden">
+      <h3>the 1px clipped box, with a label anyone can see</h3>
+      <label for="clipped">Website</label><input id="clipped" class="visually-hidden" />
+    </section>
+    <section data-case="no size at all" data-expect="hidden"><h3>no size at all</h3><input style="width: 0; height: 0; border: 0; padding: 0" /></section>
+    <section data-case="in a wrapper of height 0 that hides its overflow" data-expect="hidden">
+      <h3>in a wrapper of height 0 that hides its overflow</h3>
+      <div style="height: 0; overflow: hidden"><input /></div>
+    </section>
+    <section data-case="in a wrapper of max-height 0 that hides its overflow" data-expect="hidden">
+      <h3>in a wrapper of max-height 0 that hides its overflow</h3>
+      <div style="max-height: 0; overflow: hidden"><input /></div>
+    </section>
+    <section data-case="scaled to nothing" data-expect="hidden"><h3>scaled to nothing</h3><input style="transform: scale(0)" /></section>
+    <section data-case="moved away with a transform" data-expect="hidden"><h3>moved away with a transform</h3><input style="transform: translateX(-9999px)" /></section>
+    <section data-case="the hidden attribute" data-expect="hidden"><h3>the hidden attribute</h3><input hidden /></section>
+    <section data-case="inside a closed details" data-expect="hidden"><h3>inside a closed details</h3><details><summary>More</summary><input /></details></section>
+    <section data-case="inside content-visibility: hidden" data-expect="hidden"><h3>inside content-visibility: hidden</h3><div style="content-visibility: hidden"><input /></div></section>
+    <section data-case="inside a dialog that is not open" data-expect="hidden"><h3>inside a dialog that is not open</h3><dialog><input /></dialog></section>
+    <section data-case="inside a popover that is not open" data-expect="hidden"><h3>inside a popover that is not open</h3><div popover><input /></div></section>
+    <section data-case="clip-path: inset(50%) on a box of full size" data-expect="hidden"><h3>clip-path: inset(50%) on a box of full size</h3><input style="clip-path: inset(50%)" /></section>
+    <section data-case="clip-path: inset(100%) on a box of full size" data-expect="hidden"><h3>clip-path: inset(100%) on a box of full size</h3><input style="clip-path: inset(100%)" /></section>
+    <section data-case="clip-path: circle(0)" data-expect="hidden"><h3>clip-path: circle(0)</h3><input style="clip-path: circle(0)" /></section>
+    <section data-case="clip-path: a polygon without an inside" data-expect="hidden"><h3>clip-path: a polygon without an inside</h3><input style="clip-path: polygon(0 0, 0 0, 0 0)" /></section>
+    <section data-case="clip-path: inset(100%) on a wrapper" data-expect="hidden"><h3>clip-path: inset(100%) on a wrapper</h3><div style="clip-path: inset(100%)"><input /></div></section>
+    <section data-case="clip: rect(0 0 0 0) on a box of full size" data-expect="hidden">
+      <h3>clip: rect(0 0 0 0) on a box of full size</h3>
+      <input style="position: absolute; clip: rect(0 0 0 0)" />
+    </section>
+    <section data-case="clip: rect(0 0 0 0) on a wrapper" data-expect="hidden">
+      <h3>clip: rect(0 0 0 0) on a wrapper</h3>
+      <div style="position: absolute; clip: rect(0, 0, 0, 0)"><input /></div>
+    </section>
+    <section data-case="sticking 5px into a panel that scrolls" data-expect="hidden">
+      <h3>sticking 5px into a panel that scrolls</h3>
+      <div class="panel" style="overflow: auto"><input style="position: absolute; left: -195px; top: 20px; width: 200px; box-sizing: border-box" /></div>
+    </section>
+    <section data-case="sticking 5px into an overflow:hidden box" data-expect="hidden">
+      <h3>sticking 5px into an overflow:hidden box</h3>
+      <div class="panel" style="overflow: hidden"><input style="position: absolute; left: -195px; top: 20px; width: 200px; box-sizing: border-box" /></div>
+    </section>
+    <section data-case="in a scrolling box 1px wide" data-expect="hidden">
+      <h3>in a scrolling box 1px wide</h3>
+      <div style="width: 1px; height: 1px; overflow: auto"><input /></div>
+    </section>
+    <section data-case="radios whose labels are hidden too" data-expect="hidden">
+      <h3>radios whose labels are hidden too</h3>
+      <label style="display: none"><input type="radio" name="gone" />Yes</label>
+      <label style="display: none"><input type="radio" name="gone" />No</label>
+    </section>
+    <section data-case="transparent radios with nothing drawn in their place" data-expect="hidden">
+      <h3>transparent radios with nothing drawn in their place</h3>
+      <input type="radio" name="bare" style="opacity: 0" /><input type="radio" name="bare" style="opacity: 0" />
+    </section>
+    <section data-case="a clipped upload with nothing to click" data-expect="hidden">
+      <h3>a clipped upload with nothing to click</h3>
+      <div><span>Resume</span><input class="visually-hidden" type="file" /></div>
+    </section>
+    <section data-case="a custom dropdown inside a block that is not displayed" data-expect="hidden">
+      <h3>a custom dropdown inside a block that is not displayed</h3>
+      <div style="display: none"><div class="select__control"><div class="select__value-container"><div class="select__input-container" data-value=""><input class="select__input" type="text" role="combobox" aria-autocomplete="list" value="" /></div></div></div></div>
+    </section>
+    <section data-case="a custom dropdown at opacity 0" data-expect="hidden">
+      <h3>a custom dropdown at opacity 0</h3>
+      <div style="opacity: 0"><div class="select__control"><div class="select__value-container"><div class="select__input-container" data-value=""><input class="select__input" type="text" role="combobox" aria-autocomplete="list" value="" /></div></div></div></div>
+    </section>
+    <section data-case="a disabled text box" data-expect="hidden"><h3>a disabled text box</h3><input disabled /></section>
+    <section data-case="a read-only text box" data-expect="hidden"><h3>a read-only text box</h3><input readonly value="ada@example.com" /></section>
+    <section data-case="a text box in a disabled fieldset" data-expect="hidden"><h3>a text box in a disabled fieldset</h3><fieldset disabled><input /></fieldset></section>
+
+    <h2>Never looked at</h2>
+    <section data-case="aria-hidden" data-expect="absent"><h3>aria-hidden</h3><input aria-hidden="true" /></section>
+    <section data-case="inert" data-expect="absent"><h3>inert</h3><div inert><input /></div></section>
+    <section data-case="type=hidden" data-expect="absent"><h3>type=hidden</h3><input type="hidden" value="x" /></section>
+    <section data-case="a password box" data-expect="absent"><h3>a password box</h3><input type="password" /></section>
+    <section data-case="a checkbox" data-expect="absent"><h3>a checkbox</h3><input type="checkbox" /></section>
+    <section data-case="a search box of the site" data-expect="absent"><h3>a search box of the site</h3><div role="search"><input /></div></section>
+
+    <h2>Far down the page</h2>
+    <div style="height: 3000px"></div>
+    <section data-case="three screens below the fold" data-expect="shown"><h3>three screens below the fold</h3><input /></section>
+  </body>
+</html>
