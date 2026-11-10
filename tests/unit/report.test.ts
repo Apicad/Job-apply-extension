@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { classifyWorkEligibility } from '../../lib/classify';
 import { isBackgroundRequest, needsAttention, sanitizeFrameScan, sanitizeOutcomes } from '../../lib/report';
 import type { FieldResult, FieldStatus, FillOutcome, FrameScan } from '../../lib/types';
 
@@ -435,10 +436,10 @@ describe('sanitizeFrameScan', () => {
     ['the company', 200, (scan, text) => (scan.job.company = text), (scan) => scan.job.company],
     ['the error message', 200, (scan, text) => (scan.error = text), (scan) => scan.error],
     ['a child origin', 2048, (scan, text) => (scan.childOrigins = [text]), (scan) => scan.childOrigins[0]],
-    ['a label', 200, (scan, text) => (scan.fields[0]!.descriptor.label = text), (scan) => scan.fields[0]?.descriptor.label],
+    ['a label', 4000, (scan, text) => (scan.fields[0]!.descriptor.label = text), (scan) => scan.fields[0]?.descriptor.label],
     [
       'a group label',
-      200,
+      4000,
       (scan, text) => (scan.fields[0]!.descriptor.groupLabel = text),
       (scan) => scan.fields[0]?.descriptor.groupLabel,
     ],
@@ -492,7 +493,8 @@ describe('sanitizeFrameScan', () => {
     expect(clean && get(clean)).toBe('x'.repeat(max));
   });
 
-  // Each row is a label; the limit for labels is 200.
+  // Ordinary texts are cut at 200. A placeholder stands in for them: a label is allowed
+  // to be longer, so that classification still sees the end of the question.
   const cuts: [name: string, raw: string, want: string][] = [
     ['keeps a text that is exactly at the limit', 'x'.repeat(200), 'x'.repeat(200)],
     ['counts only what is left after cleaning', '\u202e'.repeat(300) + 'Email', 'Email'],
@@ -504,9 +506,26 @@ describe('sanitizeFrameScan', () => {
 
   it.each(cuts)('%s', (_name, raw, want) => {
     const scan = leverScan();
-    scan.fields[0]!.descriptor.label = raw;
+    scan.fields[0]!.descriptor.placeholder = raw;
 
-    expect(sanitizeFrameScan(scan)?.fields[0]?.descriptor.label).toBe(want);
+    expect(sanitizeFrameScan(scan)?.fields[0]?.descriptor.placeholder).toBe(want);
+  });
+
+  it('keeps a label whose safety word sits past character 200, so the question is still refused', () => {
+    // The preamble is a real authorization question. The word that reverses it is past the
+    // old 200-character cut. Losing that word would make this look like a plain "yes".
+    let label = 'Are you legally authorized to work in the United States';
+    while (label.length < 201) label += ' for the role';
+    label += ' without visa sponsorship?';
+    expect(label.indexOf('without')).toBeGreaterThan(200);
+
+    const scan = leverScan();
+    scan.fields[0]!.descriptor.label = label;
+    const kept = sanitizeFrameScan(scan)?.fields[0]?.descriptor.label;
+
+    expect(kept).toBe(label);
+    expect(classifyWorkEligibility(kept ?? '')).toBeNull();
+    expect(classifyWorkEligibility(label.slice(0, 200))).toBe('workAuthorization');
   });
 
   // A page also decides how many controls, options and frames it has.

@@ -91,7 +91,14 @@ const MAX_CHILD_ORIGINS = 100;
 // Text lengths, in UTF-16 units (what String.length counts).
 const MAX_URL = 2048;
 const MAX_OPTION_LABEL = 120;
-/** Every other text: labels, names, ids, placeholders, job title, error message. */
+/**
+ * Labels and the group headings they sit under. Classification reads the whole question:
+ * the word that makes an eligibility question unsafe ("without", "not", "any employer")
+ * often comes after a long preamble. Cutting at the ordinary text limit would drop it
+ * and the question would be answered. Still capped, so a page cannot hand us a megabyte.
+ */
+const MAX_LABEL = 4000;
+/** Every other text: names, ids, placeholders, job title, error message. */
 const MAX_TEXT = 200;
 
 // ---------------------------------------------------------------------------
@@ -237,7 +244,7 @@ type DescriptorTexts = Pick<FieldDescriptor, (typeof DESCRIPTOR_TEXTS)[number]>;
 function sanitizeDescriptorTexts(source: Record<string, unknown>): DescriptorTexts | null {
   const texts: Partial<DescriptorTexts> = {};
   for (const key of DESCRIPTOR_TEXTS) {
-    const text = sanitizeText(source[key], MAX_TEXT);
+    const text = sanitizeText(source[key], key === 'label' || key === 'groupLabel' ? MAX_LABEL : MAX_TEXT);
     if (text === null) return null;
     texts[key] = text;
   }
