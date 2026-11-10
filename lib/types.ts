@@ -461,10 +461,10 @@ export type RememberControls = (controls: readonly Control[]) => number[];
 /** lib/page/refs.ts — null when the handle is unknown or its element has left the document. */
 export type RecallControl = (ref: number) => Control | null;
 
-/** lib/page/fill.ts — each returns true when the control holds an answer afterwards. See "Writing" in CLAUDE.md. */
-export type FillText = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => boolean;
-export type FillSelect = (el: HTMLSelectElement, index: number) => boolean;
-export type FillRadio = (radio: HTMLInputElement) => boolean;
+/** lib/page/fill.ts — boolean is readback, optional observer records mutation/click dispatch before page reactions. See "Writing" in CLAUDE.md. */
+export type FillText = (el: HTMLInputElement | HTMLTextAreaElement, value: string, onWrite?: () => void) => boolean;
+export type FillSelect = (el: HTMLSelectElement, index: number, onWrite?: () => void) => boolean;
+export type FillRadio = (radio: HTMLInputElement, onWrite?: () => void) => boolean;
 export type FillFile = (input: HTMLInputElement, file: File, assignFiles: PageEnv['assignFiles']) => boolean;
 
 /** lib/regions.ts — ISO 3166-1 alpha-2 code of the one country a text names ("US" for "United States", "U.S.", "USA", "America"), or null when it names none or several. */

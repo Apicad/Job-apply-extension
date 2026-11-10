@@ -1,6 +1,6 @@
 # Preliminary foundation audit triage
 
-External reports from Kevin and Safety reviewed **1f22cb3f76189001d34703db9a6e964fad21518d**, not this candidate. No external candidate verdict exists. Report summaries were delivered by the owner's coordination chat; relevant Kevin F1 details were read from the supplied full report. Do not transfer an old PASS or INCOMPLETE to the final SHA. The final exact-SHA handoff is exported separately after the last commit and fresh-checkout tests.
+External reports from Kevin and Safety reviewed **1f22cb3f76189001d34703db9a6e964fad21518d**, not this candidate. This paragraph records the earlier foundation review only. Subsequent exact-candidate reports on `5985c2331e357ae57da25fad0eacab0b32db0a2d` and their fixes are documented in [AUDIT-CYCLE-1.md](AUDIT-CYCLE-1.md). Report summaries were delivered by the owner's coordination chat; relevant Kevin F1 details were read from the supplied full report. Do not transfer an old PASS or INCOMPLETE to the final SHA. The final exact-SHA handoff is exported separately after the last commit and fresh-checkout tests.
 
 | Finding | Current evidence and disposition |
 | --- | --- |
@@ -14,7 +14,7 @@ External reports from Kevin and Safety reviewed **1f22cb3f76189001d34703db9a6e96
 | Safety F8, shared fixture port | E2E runner selects a free loopback port; Playwright refuses reuse of another server; iframe ports follow the host page. Each worktree builds its own output. |
 | Same-document job changes | New failing browser reproduction demonstrated stale approval; fixed by read-only live revalidation before response/approval/save/preview plus execution job binding. Application identity includes URL and extracted job identity; question identity includes full control fingerprint. |
 | Duplicate/negative refs | Worker rejects negative/duplicate scan refs; actions originate only from that scan. Outcome reporting is bound to the injected document and plan; page readback produces one outcome per planned action. |
-| Overlong stored profile strings | Existing normalizer fails closed. This release does not round-trip or rewrite existing profiles; synthetic loader refuses nonempty profiles. Rich profile editor remains another stream. |
+| Overlong stored profile strings | Correction from cycle 1 AB-5: the old synthetic loader tested the normalized profile, so an overlong-only raw profile could be overwritten. The cycle 1 fix checks raw presence and refuses any existing profile or fact storage. The rich profile editor remains another stream. See AUDIT-CYCLE-1.md. |
 | Résumé filename/size hypotheses | Existing résumé tests retained. This slice never attaches or rewrites files; no reachable auto-attachment path. Do not claim file-upload verification. |
 | Private history metadata / public readiness | No history rewrite, push or visibility change. Export uses `git archive` of the exact source tree, without `.git`, browser profiles or local research dumps. Repository history/metadata and license choice still need owner review before publishing. |
 

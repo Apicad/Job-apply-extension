@@ -51,6 +51,7 @@ test('copy/paste boundary validates identity, shows original sources and revokes
  await ui.getByLabel('I compared the exact text', { exact: false }).check(); await ui.getByRole('button', { name: 'Approve exact answer' }).click();
  await expect(ui.getByText('Approved revision 1.')).toBeVisible();
  await ui.getByLabel('Exact answer', { exact: true }).fill('I built a dashboard using synthetic data.');
+ await ui.getByRole('button', { name: 'Apply edits for review' }).click();
  await expect(ui.getByText('User edited', { exact: false })).toBeVisible();
  expect((await command(ui, { type: 'state', tabId })).data.session.answer.approval).toBeNull();
  expect((await command(ui, { type: 'response', tabId, raw: JSON.stringify(reply) })).ok).toBe(false);
@@ -97,7 +98,8 @@ test('explicit save, reopen, renewed reuse, exact textarea readback and deleted-
  const second = await command(ui, {type:'reuse',tabId,id:saved.id}); expect(second.ok).toBe(true); expect(second.data.session.answer.approval).toBeNull();
  const b = second.data.session.answer; await command(ui,{type:'approve',tabId,reviewed:true,revision:b.revision,text:b.text}); await command(ui,{type:'save',tabId,scope:'factual'});
  const pending = await command(ui,{type:'answer-preview',tabId}); expect(pending.ok).toBe(true);
- expect((await command(ui,{type:'delete',tabId,id:saved.id})).ok).toBe(true);
+ const secondSaved=(await command(ui,{type:'state',tabId})).data.session.savedId;
+ expect((await command(ui,{type:'delete',tabId,id:secondSaved})).ok).toBe(true);
  expect((await command(ui,{type:'fill',tabId,planId:pending.data.plan.id})).ok).toBe(false);
  await expect(page.locator('#project')).toHaveValue('');
 });
@@ -161,7 +163,7 @@ test('source change and malformed library, no storage success or unsafe fill', a
  await command(ui,{type:'fact-edit',tabId,id:'demo-project-build',revision:1,text:'I documented the synthetic dashboard.'});
  expect((await command(ui,{type:'fill',tabId,planId:preview.data.plan.id})).ok).toBe(false);await expect(page.locator('#project')).toHaveValue('');
  await ui.evaluate(async()=>{await (globalThis as any).chrome.storage.local.set({'hackathon:library':{schema:999,answers:[]}});});
- const malformed=await command(ui,{type:'state',tabId});expect(malformed.ok).toBe(false);expect(malformed.error).toContain('preserved');
+ const malformed=await command(ui,{type:'state',tabId});expect(malformed.ok).toBe(true);expect(malformed.data.libraryError).toContain('preserved');expect(malformed.data.facts).toHaveLength(3);
  expect(await ui.evaluate(async()=>(await (globalThis as any).chrome.storage.local.get('hackathon:library'))['hackathon:library'].schema)).toBe(999);
 });
 

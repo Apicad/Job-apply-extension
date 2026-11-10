@@ -23,3 +23,11 @@ All H0–H5 branches were created lazily from tested integration commits. Each o
 Release-export compatibility check caught an older local Git lacking `branch --show-current`; the exporter now uses `rev-parse --abbrev-ref HEAD`. The earlier `a48e4e8` export attempt was incomplete and is superseded by the final candidate. Its GitHub probe returned no such commit; source-access probing is repeated for the final SHA.
 
 Final self-review added optimistic concurrency checks: fact edits must name the current fact revision; answer edit/invalidate/approve/save requests must name the exact displayed answer ID/revision; replacing a library answer must match its previously observed saved revision. Older editors now fail visibly instead of overwriting newer work. `npm run compile`, targeted library tests (4) and actual-extension browser tests (12) pass, including stale fact/answer editor rejection. Final clean-checkout gate is repeated after this fix; earlier exported SHAs are superseded.
+
+## Audit cycle 1
+
+Owned branch `codex/fix/audit-cycle-1` starts at audited `5985c2331e357ae57da25fad0eacab0b32db0a2d` in an isolated worktree. Read both complete Kevin A+B and Safety C+D reports, reproduced failures before fixing, deduplicated C-4/AB-3, and implemented the dispositions in `AUDIT-CYCLE-1.md`. No unrelated feature work or shared-checkout edits.
+
+Pre-commit full gate: typecheck, 18 files / 4,143 unit tests and 21 actual-extension browser tests passed. A subsequent invalidated-plan notice and recovery-token assertion passed compile, all 5 library unit tests and 6 affected browser tests. The clean-release metadata guard was separately observed refusing the dirty development tree. Final clean-clone checks and real-response smoke results are recorded in the exact-SHA external handoff after this commit. Candidate publication is authorized only after those release checks; no main merge, visibility change, paid model API call or event submission.
+
+Current branch names are `codex/feature/answer-contracts`, `codex/feature/native-autofill`, `codex/feature/answer-provenance`, `codex/feature/approved-answers`, `codex/test/integration`, `codex/integration`, and `codex/release/candidate`. Renaming preserved historical SHAs and worktree directory names. Historical H0–H5 branch references above remain historical.

@@ -4,7 +4,7 @@ Copy this prompt to the implementation agent. This is an instruction to build; t
 
 ---
 
-You are implementing Job Apply Assistant in `/Users/abdiel/Job-apply-extension`. Build the small hackathon release described below, test it in separate branches/worktrees, and prepare a reproducible candidate. Preserve current and concurrent work. Continue through implementation and verification; do not return only another plan.
+You are implementing Job Apply Assistant in the repository root. Build the small hackathon release described below, test it in separate branches/worktrees, and prepare a reproducible candidate. Preserve current and concurrent work. Continue through implementation and verification; do not return only another plan.
 
 ## Read and establish the baseline
 
@@ -49,7 +49,7 @@ The owner wants LinkedIn as a starting source of experience. Follow the main pla
 
 ## Parts and local branches
 
-Create a verified `codex/hackathon-integration` baseline. Reuse matching branches or choose unique suffixes; never overwrite existing branches. Create feature branches lazily from the tested integration SHA that contains their dependencies. Use external worktree paths such as `/Users/abdiel/Job-apply-extension-worktrees/`, each with its own dependencies, build outputs and isolated browser profile.
+Create a verified `codex/hackathon-integration` baseline. Reuse matching branches or choose unique suffixes; never overwrite existing branches. Create feature branches lazily from the tested integration SHA that contains their dependencies. Use external worktree paths such as `../Job-apply-extension-worktrees/`, each with its own dependencies, build outputs and isolated browser profile.
 
 | Part | Branch | Deliverable and dependencies |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ Finish with the release location/SHA, integrated branches, completed core behavi
 ## Short launch prompt
 
 ```text
-In /Users/abdiel/Job-apply-extension, execute
+From the repository root, execute
  docs/plans/2026-11-09-hackersquad-build-handoff.md
 and the authoritative hackathon scope in its linked plan.
 Build the small source-visible AI answer → review → approve → save →

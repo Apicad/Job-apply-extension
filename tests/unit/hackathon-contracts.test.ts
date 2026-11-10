@@ -53,3 +53,20 @@ it('canonical identity survives storage key reordering and rejects unsupported j
  response.segments[0].text = 'I used Rust to build the dashboard.';
  expect(parseReply(JSON.stringify(response),r,DEMO_FACTS,101).gaps.join(' ')).toMatch(/Rust/);
 });
+
+it('AB-1/AB-4: edits recompute known unsupported claims, preserve missing notes and exact numeric tokens', () => {
+ const r = request(); const data = JSON.parse(reply(r)); data.segments[0].text = 'I used Rust and Kubernetes to build the dashboard.'; data.missing = ['Confirm deployment experience.'];
+ const draft = parseReply(JSON.stringify(data), r, DEMO_FACTS, 101);
+ const unchanged = editAnswer(draft, draft.text); expect(unchanged.gaps.join(' ')).toMatch(/Rust/); expect(() => approve(unchanged, context, DEMO_FACTS, true)).toThrow();
+ expect(unchanged.trace).toEqual(draft.trace);
+ const corrected = editAnswer(draft, DEMO_FACTS[0]!.text); expect(corrected.gaps.join(' ')).not.toMatch(/Rust/); expect(corrected.trace.missing).toEqual(data.missing);
+ const unsupported = editAnswer(corrected, 'I deployed Kubernetes.'); expect(unsupported.gaps.join(' ')).toMatch(/Kubernetes/);
+ const facts = [{ ...DEMO_FACTS[0]!, text: 'In 2021 I wrote 12 tests for synthetic data.' }]; const req = makeRequest(context, facts, 100);
+ const numeric = { ...JSON.parse(reply(req)), segments: [{ text: 'I wrote 2 tests in 1 week for 20 users over three years.', sources: [{ id: facts[0]!.id, revision: 1 }] }] };
+ const a = parseReply(JSON.stringify(numeric), req, facts, 101); expect(a.gaps.join(' ')).toMatch(/2, 1, 20/); expect(a.gaps.join(' ')).toMatch(/three/);
+});
+it('C-2: both generated and edited text canonicalize only DOM line endings', () => {
+ const r = request(); const data = JSON.parse(reply(r)); data.segments[0].text = 'I built a Python script.\r\nI cleaned readings.\rI made a dashboard.';
+ const a = parseReply(JSON.stringify(data), r, DEMO_FACTS, 101); expect(a.text).toBe('I built a Python script.\nI cleaned readings.\nI made a dashboard.');
+ expect(editAnswer(a, 'A  line\r\nB\rC').text).toBe('A  line\nB\nC');
+});

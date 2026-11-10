@@ -1,6 +1,6 @@
 import { assertLiveRow } from './live';
-import { readLibrary, saveAnswer, deleteAnswer } from './library';
-import { currentApproval, reusableDraft, factsCurrent } from './contracts';
+import { readLibrary, saveAnswer, deleteAnswer, libraryState } from './library';
+import { currentApproval, reusableDraft, resolveMissing, answerGaps } from './contracts';
 import { fieldSignature } from './engine';
 import { browser } from 'wxt/browser';
 import { readHackathon, writeHackathon } from '../storage';
@@ -27,14 +27,14 @@ export async function getSession(tabId: number): Promise<AnswerSession> {
 }
 export async function invalidatePlan(tabId: number): Promise<void> {
  const plan = await readHackathon<NativePlan>(`plan:${tabId}`, true);
- if (plan?.answerBinding) { plan.state = 'finished'; delete plan.answerBinding; for (const row of plan.rows) if (row.action?.type === 'answer') { row.action = null; row.status = 'Review required'; } await writeHackathon(`plan:${tabId}`, plan, true); }
+ if (plan?.answerBinding && plan.state === 'preview') { plan.state = 'invalidated'; delete plan.answerBinding; for (const row of plan.rows) if (row.action?.type === 'answer') { row.action = null; row.status = 'Review required'; } await writeHackathon(`plan:${tabId}`, plan, true); }
 }
 export async function answerCommand(message: Record<string, unknown>, plan: NativePlan): Promise<unknown> {
  const tabId = plan.tabId; const facts = await loadFacts();
  if (message.type === 'state') {
   const session = await readHackathon<AnswerSession>(sessionKey(tabId), true);
-  if (session?.answer && !factsCurrent(session.answer.facts, facts)) { session.answer.approval = null; await writeHackathon(sessionKey(tabId), session, true); }
-  return { library: await readLibrary(libraryStore), facts, session, plan };
+  if (session?.answer) { session.answer.gaps = answerGaps(session.answer); if (!currentApproval(session.answer, session.context, facts)) session.answer.approval = null; await writeHackathon(sessionKey(tabId), session, true); }
+  return { ...await libraryState(libraryStore), facts, session, plan };
  }
  if (message.type === 'context-reset') { await invalidatePlan(tabId); await writeHackathon(sessionKey(tabId), null, true); return { reset: true }; }
  if (message.type === 'request') {
@@ -79,15 +79,16 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
  if (message.type === 'reuse') {
   const saved = (await readLibrary(libraryStore)).find(a => a.id === message.id);
   if (!saved) throw Error('Saved answer was deleted.');
-  await invalidatePlan(tabId); session.answer = reusableDraft(saved, session.context, facts); session.savedId = saved.id; session.savedRevision = saved.revision; session.request = null; session.sent = false;
+  await invalidatePlan(tabId); session.answer = reusableDraft(saved, session.context, facts); session.savedId = saved.context.application === session.context.application ? saved.id : undefined; session.savedRevision = session.savedId ? saved.revision : undefined; session.request = null; session.sent = false;
   await writeHackathon(sessionKey(tabId), session, true); return { session };
  }
  if (!session.answer) throw Error('Generate or open an answer first.');
- if (['save','edit','invalidate','approve'].includes(String(message.type)) && (message.answerId !== session.answer.id || message.answerRevision !== session.answer.revision)) throw Error('Answer changed in another editor. Reopen its current revision.');
+ if (['save','edit','invalidate','approve','resolve-missing'].includes(String(message.type)) && (message.answerId !== session.answer.id || message.answerRevision !== session.answer.revision)) throw Error('Answer changed in another editor. Reopen its current revision.');
  if (message.type === 'save') {
   const saved = await saveAnswer(libraryStore, session.answer, facts, message.scope, session.savedId, session.savedRevision);
   session.answer = saved; session.savedId = saved.id; session.savedRevision = saved.revision; await invalidatePlan(tabId);
  } else if (message.type === 'answer-preview') {
+  if (plan.state !== 'preview') throw Error('This plan was used or invalidated. Scan again before previewing an answer; prior outcomes are preserved.');
   const saved = (await readLibrary(libraryStore)).find(a => a.id === session.savedId);
   if (!saved || saved.revision !== session.answer.revision || saved.text !== session.answer.text || !currentApproval(session.answer, session.context, facts)) throw Error('Save this exact approved revision before previewing. Deleted or stale answers cannot fill.');
   const row = plan.rows.find(r => rowKey(r) === session.rowKey);
@@ -100,7 +101,9 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
   await writeHackathon(sessionKey(tabId), session, true); return { session, plan };
  } else if (message.type === 'edit' || message.type === 'invalidate') {
   await invalidatePlan(tabId);
-  session.answer = editAnswer(session.answer, message.type === 'invalidate' ? session.answer.text : String(message.text ?? ''));
+  session.answer = message.type === 'invalidate' ? { ...session.answer, revision: session.answer.revision + 1, approval: null } : editAnswer(session.answer, String(message.text ?? ''));
+ } else if (message.type === 'resolve-missing') {
+  await invalidatePlan(tabId); session.answer = resolveMissing(session.answer, message.reviewed === true);
  } else if (message.type === 'approve') {
   if (message.revision !== session.answer.revision || message.text !== session.answer.text) throw Error('Answer changed. Review the current revision.');
   session.answer = approve(session.answer, session.context, facts, message.reviewed === true);

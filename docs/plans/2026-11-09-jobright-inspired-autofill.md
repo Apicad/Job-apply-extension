@@ -68,7 +68,7 @@ The investigation used REA 6.8.0 and direct static inspection of the locally ins
 
 REA's full-bundle pass timed out on the large helper after preserving partial evidence. A focused pass parsed six extracted autofill modules successfully, but relationship/semantic coverage remains incomplete. Direct module inspection supports the pipeline findings; neither pass establishes runtime success or feature parity.
 
-Investigation report: [Jobright analysis](/Users/abdiel/Documents/ChatGPT/replica/jobright-analysis/reports/ANALYSIS.md). Original file hashes are in [inventory.json](/Users/abdiel/Documents/ChatGPT/replica/jobright-analysis/reports/inventory.json). Third-party bundles stay in that analysis workspace; they are not implementation source for this repository.
+Prior investigation: the owner retains a private Jobright analysis report and inventory outside this repository. Those machine-specific research files and third-party bundles are not part of the public source export or implementation. See [research and contributions](../hackathon/CREDITS.md) for the portable disclosure.
 
 Two paths must be kept separate:
 

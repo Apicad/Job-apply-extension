@@ -61,3 +61,15 @@ Use an empty directory. Read its `request.txt`, obtain a real response in your A
 - Public release and independent audit are pending. The final SHA and fresh-checkout results are in the exported `RELEASE-HANDOFF.md` alongside the exact source archive. **Do not audit main as a substitute.**
 
 See [authoritative scope](docs/plans/2026-11-09-jobright-inspired-autofill.md), [build handoff](docs/plans/2026-11-09-hackersquad-build-handoff.md), [audit instructions](docs/plans/2026-11-09-grok-github-audit-prompt.md), [preliminary finding triage](docs/hackathon/AUDIT-TRIAGE.md), [contributions and license status](docs/hackathon/CREDITS.md), and [three-minute demo script](docs/hackathon/DEMO.md).
+
+## Audit cycle 1
+
+See [finding dispositions and verification limits](docs/hackathon/AUDIT-CYCLE-1.md). The canonical branch is `codex/release/candidate`; current fix branches use `codex/fix/<purpose>` and integrate through `codex/integration`. Older branch names in historical plans/worklogs describe their original checkpoints.
+
+On a clean committed checkout run `JAA_REQUIRE_CLEAN=1 npm run check`, then `npm run build`. The Playwright JSON report records the exact SHA, tree, branch and dirty status; the release flag refuses a dirty tree. Development test runs remain allowed and are explicitly marked dirty. `node scripts/e2e.mjs` now adds the local tool binaries to PATH. Use `npm run test:e2e` to build first.
+
+An executed, interrupted or invalidated fill plan cannot be previewed again. Inspect the page and scan again before reusing a saved answer. The UI distinguishes refused writes, attempted but unverified writes, verified writes, and unknown/unreachable outcomes. "Verified" covers immediate readback plus the existing 100 ms window only.
+
+Edits rerun the bounded numeric/technology checks against selected applicant facts, keep original missing notes visible, and remove sentence mappings. To resolve missing notes after correcting the answer, explicitly confirm their resolution; this is human review, not automated factual verification. Cross-application reuse creates a new record and preserves the original reusable answer.
+
+Synthetic loading requires absent raw profile and fact storage. If a saved-answer library is damaged, valid records and facts remain visible, while library mutations fail closed. Use **Inspect raw library**, optionally **Export raw library**, then explicitly confirm **Recover saved answers**. Recovery keeps the entire original envelope in local quarantine and restores only valid, unique records of the supported schema. Quarantine is preserved by later saves/deletes; it is not sent anywhere. An unknown schema recovers no records but retains its complete original data.

@@ -252,7 +252,7 @@ function sanitizeList<T>(value: unknown, max: number, sanitizeEntry: (entry: unk
   return clean;
 }
 
-function sanitizeJob(value: unknown): JobInfo | null {
+export function sanitizeJob(value: unknown): JobInfo | null {
   if (!isRecord(value)) return null;
   const title = sanitizeText(value.title, MAX_TEXT);
   const company = sanitizeText(value.company, MAX_TEXT);
@@ -282,6 +282,20 @@ function sanitizeDescriptor(value: unknown): FieldDescriptor | TooLong | null {
   if (texts === null || placeholder === null || options === null) return null;
   if (texts === TOO_LONG) return TOO_LONG;
   return { control, ...texts, placeholder, required, options };
+}
+
+/** Native plan signatures and page rechecks use the same canonical descriptor.
+ * Unlike display-only sanitization, never cut placeholder safety cues or option
+ * values used to bind an exact choice. Oversized fields remain manual.
+ */
+export function sanitizeNativeDescriptor(value: unknown): FieldDescriptor | null {
+ if (!isRecord(value)) return null;
+ const descriptor = sanitizeDescriptor(value);
+ if (descriptor === null || descriptor === TOO_LONG) return null;
+ const placeholder = sanitizeWholeText(value.placeholder, MAX_TEXT);
+ if (typeof placeholder !== 'string' || !Array.isArray(value.options)) return null;
+ for (const option of value.options) if (!isRecord(option) || typeof sanitizeWholeText(option.value, MAX_TEXT) !== 'string') return null;
+ return { ...descriptor, placeholder };
 }
 
 /** Every ControlType. Written as an object so the compiler notices when the union gains a member. */

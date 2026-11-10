@@ -1,3 +1,4 @@
+import type { NativeOutcome } from './outcomes';
 import { stableKey } from './identity';
 import { classifyField } from '../classify';
 import { textValueFor } from '../profile';
@@ -6,7 +7,7 @@ import type { FieldDescriptor, Profile, JobInfo } from '../types';
 import type { NativeScan, NativeField, NativeAction } from './page';
 export interface Frame { frameId: number; documentId: string; scan: NativeScan }
 export interface Row { job: JobInfo; documentId: string; frameId: number; scanId: string; url: string; field: NativeField; action: NativeAction | null; status: string }
-export interface NativePlan { id: string; tabId: number; url: string; profileKey: string; rows: Row[]; state: 'preview' | 'executing' | 'finished'; answerBinding?: { id: string; revision: number; savedId?: string }; errors?: string[]; outcomes?: { ref: number; documentId: string; ok: boolean }[] }
+export interface NativePlan { id: string; tabId: number; url: string; profileKey: string; rows: Row[]; state: 'preview' | 'executing' | 'finished' | 'invalidated'; answerBinding?: { id: string; revision: number; savedId?: string }; errors?: string[]; outcomes?: (NativeOutcome & { documentId: string })[] }
 export const fieldSignature = (descriptor: FieldDescriptor, form: number, maxLength: number): string => stableKey({ descriptor, form, maxLength });
 export function planNative(frames: Frame[], profile: Profile): Row[] {
  const groups = frames.flatMap(frame => [...new Set(frame.scan.fields.map(f => f.form))].map(form => {

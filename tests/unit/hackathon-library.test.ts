@@ -35,3 +35,17 @@ it('rejects a stale editor replacing a newer saved revision', async () => {
  await expect(saveAnswer(store,a,DEMO_FACTS,'application',a.id,1)).rejects.toThrow(/changed/);
  expect((await readLibrary(store))[0]?.revision).toBe(3);
 });
+
+it('AB-6: recovery is explicit, rejects stale inspection and keeps unknown envelopes intact', async () => {
+ const { libraryState, recoverLibrary } = await import('../../lib/hackathon/library');
+ const a = answer(); let value: unknown = { schema: 999, answers: [a] };
+ const store = { read: async () => value, write: async (v: unknown) => { value = v; } };
+ const state = await libraryState(store); expect(state.library).toEqual([]); expect(state.libraryError).toMatch(/preserved/);
+ await expect(recoverLibrary(store, state.recoveryToken, false)).rejects.toThrow();
+ value = { schema: 999, answers: [], changed: true };
+ await expect(recoverLibrary(store, state.recoveryToken, true)).rejects.toThrow(/changed/);
+ const latest = await libraryState(store); const original = value; await recoverLibrary(store, latest.recoveryToken, true);
+ expect(value).toMatchObject({ schema: 1, answers: [], quarantine: { raw: original } });
+ await expect(recoverLibrary(store, state.recoveryToken, true)).rejects.toThrow();
+ await saveAnswer(store, a, DEMO_FACTS, 'application'); expect((value as any).quarantine.raw).toEqual(original);
+});

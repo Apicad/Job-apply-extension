@@ -83,7 +83,7 @@ function takesTyping(el: HTMLInputElement | HTMLTextAreaElement): boolean {
 }
 
 /** Types text into a text box. True when the box is not blank afterwards. */
-export const fillText: FillText = (el, value) => {
+export const fillText: FillText = (el, value, onWrite) => {
   // Many things have a `value` a script can set, and only a text box takes an
   // answer that way. On a dropdown it would choose or clear an option; on a
   // radio button it would change what the form sends for that option.
@@ -96,6 +96,7 @@ export const fillText: FillText = (el, value) => {
   // '' in the profile means "no answer"; writing it would only wipe the field.
   if (value.trim() !== '' && takesTyping(el) && !isTooLongFor(el, value)) {
     setValue.call(el, value);
+    onWrite?.();
     announceEdit(el);
   }
   // "Not blank" rather than "equal to what was written": a phone field with an
@@ -111,7 +112,7 @@ export const fillText: FillText = (el, value) => {
 const NOT_ON_OFFER = ':disabled, [hidden], optgroup[hidden] > option';
 
 /** Chooses the option at `index` of a dropdown. True when that option is the chosen one afterwards. */
-export const fillSelect: FillSelect = (el, index) => {
+export const fillSelect: FillSelect = (el, index, onWrite) => {
   // A list that takes several answers has no single answer to set. The tag is
   // asked as well, because a link can give its type as "select-one" too.
   if (el.localName !== 'select' || el.type !== 'select-one') return false;
@@ -131,12 +132,13 @@ export const fillSelect: FillSelect = (el, index) => {
 
   // By position, not `el.value = …`: option values repeat on real forms.
   el.selectedIndex = index;
+  onWrite?.();
   announceEdit(el);
   return el.selectedIndex === index;
 };
 
 /** Chooses one radio button of a group. True when it is the chosen one afterwards. */
-export const fillRadio: FillRadio = (radio) => {
+export const fillRadio: FillRadio = (radio, onWrite) => {
   // The one click in this extension, so it must be unable to land on anything
   // but a radio button: not a checkbox, not a button, not a link.
   if (radio.localName !== 'input' || radio.type !== 'radio') return false;
@@ -145,6 +147,7 @@ export const fillRadio: FillRadio = (radio) => {
   // else; the click brings its own input and change events. Never on a chosen
   // radio: on Ashby a second click un-chooses it.
   if (!radio.checked && !radio.matches(':disabled')) {
+    onWrite?.(); // A click may be cancelled or reverted; the caller still reports an attempted write.
     radio.click();
   }
   return radio.checked;

@@ -69,7 +69,7 @@ export async function writeHackathon(key: string, value: unknown, session = fals
  await storage.setItem(`${session ? 'session' : 'local'}:hackathon:${key}`, value);
 }
 export async function saveSyntheticProfile(profile: unknown): Promise<void> {
- const current = await loadProfile();
- if (Object.values(current).some(value => value !== '')) throw Error('A profile already exists. Synthetic loading will not replace it. Use a fresh browser profile for the demo.');
+ const current = await storage.getItem<unknown>(PROFILE_KEY);
+ if (current !== null) throw Error('A profile already exists. Synthetic loading will not replace it. Use a fresh browser profile for the demo.');
  await storage.setItem(PROFILE_KEY, normalizeProfile(profile));
 }

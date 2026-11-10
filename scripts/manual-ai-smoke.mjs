@@ -2,10 +2,14 @@
  * Run after npm run build:e2e. Read request.txt in an authorized AI chat;
  * put that actual model's JSON into response.json. The runner then validates via the UI.
  */
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { createServer } from 'vite';
+const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+const source = { sha: git('rev-parse', 'HEAD'), dirty: git('status', '--porcelain').length > 0 };
+if (source.dirty) throw Error('Use a clean committed checkout for the real model smoke.');
 const dir = path.resolve(process.env.JAA_SMOKE_DIR ?? 'docs/hackathon/smoke');
 await fs.mkdir(dir, { recursive: true });
 try { await fs.access(path.join(dir, 'response.json')); throw Error('Use an empty smoke directory; this runner will not replay an old response.'); } catch(e) { if(e.code !== 'ENOENT') throw e; }
@@ -51,6 +55,6 @@ try {
  await ui.getByRole('button',{name:'Preview approved textarea fill'}).click();await ui.getByRole('button',{name:'Fill previewed fields'}).click();
  await expect(page.locator('#project')).toHaveValue(draft.text);await expect(page.locator('#submitted')).toHaveText('Not submitted');
  const final=(await ui.evaluate(async tabId=>await chrome.runtime.sendMessage({type:'state',tabId}),tabId)).data;
- await fs.writeFile(path.join(dir,'result.json'),JSON.stringify({date:new Date().toISOString(),chromium:context.browser()?.version(),requestId:draft.trace.request.id,answer: draft.text,sourceReferences:draft.segments.map(s=>s.sources),savedCount:final.library.length,reopened:true,verifiedWrites:final.plan.outcomes.filter(o=>o.ok).length,textareaExact:await page.locator('#project').inputValue()===draft.text,submitted:false},null,2)+'\n');
+ await fs.writeFile(path.join(dir,'result.json'),JSON.stringify({...source,date:new Date().toISOString(),chromium:context.browser()?.version(),requestId:draft.trace.request.id,answer: draft.text,sourceReferences:draft.segments.map(s=>s.sources),savedCount:final.library.length,reopened:true,verifiedWrites:final.plan.outcomes.filter(o=>o.ok).length,textareaExact:await page.locator('#project').inputValue()===draft.text,submitted:false},null,2)+'\n');
  await page.screenshot({path:path.join(dir,'filled-sample.png'),fullPage:true});console.log('REAL_RESPONSE_UI_SMOKE_PASSED');
 } finally { await context.close();await server.close(); }
