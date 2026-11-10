@@ -1,6 +1,13 @@
 import { test, expect, ORIGIN } from './extension';
 import type { Page } from '@playwright/test';
-async function command(ui: Page, value: object) { return ui.evaluate(async message => await (globalThis as any).chrome.runtime.sendMessage(message), value); }
+async function command(ui: Page, value: Record<string, unknown>) {
+ // Valid UI-style revision envelope. Explicit test overrides still test stale callers.
+ if (['save','edit','invalidate','approve'].includes(String(value.type))) {
+  const state=await ui.evaluate(async tabId=>await (globalThis as any).chrome.runtime.sendMessage({type:'state',tabId}),value.tabId);
+  const a=state.data?.session?.answer; value={answerId:a?.id,answerRevision:a?.revision,...value};
+ }
+ return ui.evaluate(async message => await (globalThis as any).chrome.runtime.sendMessage(message), value);
+}
 test('actual extension: scan, preview, native React fills, no replay or submit', async ({ context, openExtensionPage }) => {
  const page = await context.newPage(); await page.goto(`${ORIGIN.main}/react.html`);
  await expect(page.locator('#first-name')).toBeVisible();
@@ -151,7 +158,7 @@ test('source change and malformed library, no storage success or unsafe fill', a
  const page=await context.newPage();await page.goto(`${ORIGIN.main}/hackathon.html`);
  const ui=await openExtensionPage('popup.html');const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
  await command(ui,{type:'demo'});const a=await prepareDraft(ui,tabId);await command(ui,{type:'approve',tabId,reviewed:true,revision:a.revision,text:a.text});await command(ui,{type:'save',tabId,scope:'application'});const preview=await command(ui,{type:'answer-preview',tabId});
- await command(ui,{type:'fact-edit',tabId,id:'demo-project-build',text:'I documented the synthetic dashboard.'});
+ await command(ui,{type:'fact-edit',tabId,id:'demo-project-build',revision:1,text:'I documented the synthetic dashboard.'});
  expect((await command(ui,{type:'fill',tabId,planId:preview.data.plan.id})).ok).toBe(false);await expect(page.locator('#project')).toHaveValue('');
  await ui.evaluate(async()=>{await (globalThis as any).chrome.storage.local.set({'hackathon:library':{schema:999,answers:[]}});});
  const malformed=await command(ui,{type:'state',tabId});expect(malformed.ok).toBe(false);expect(malformed.error).toContain('preserved');
@@ -216,4 +223,15 @@ test('persistent review workspace remains bound to the application tab', async (
  const opened=context.waitForEvent('page');await ui.getByRole('button',{name:'Open review workspace'}).click();const workspace=await opened;
  await workspace.waitForLoadState();expect(new URL(workspace.url()).searchParams.get('tabId')).toBe(String(tabId));
  await workspace.getByRole('button',{name:'Scan application'}).click();await expect(workspace.getByRole('status')).toContainText('Preview ready');await expect(page.locator('#first')).toHaveValue('');
+});
+
+test('stale fact and answer editors cannot replace newer revisions',async({context,openExtensionPage})=>{
+ const page=await context.newPage();await page.goto(`${ORIGIN.main}/hackathon.html`);const ui=await openExtensionPage('popup.html');
+ const tabId=await ui.evaluate(async url=>(await (globalThis as any).chrome.tabs.query({})).find((t:any)=>t.url===url).id,page.url());
+ await command(ui,{type:'demo'});const original=await prepareDraft(ui,tabId);
+ expect((await command(ui,{type:'edit',tabId,text:'I built a Python dashboard.'})).ok).toBe(true);
+ const stale=await command(ui,{type:'edit',tabId,answerId:original.id,answerRevision:original.revision,text:'Old editor overwrite.'});expect(stale.ok).toBe(false);
+ expect((await command(ui,{type:'fact-edit',tabId,id:'demo-project-build',revision:1,text:'New source revision.'})).ok).toBe(true);
+ expect((await command(ui,{type:'fact-edit',tabId,id:'demo-project-build',revision:1,text:'Old source overwrite.'})).ok).toBe(false);
+ expect((await command(ui,{type:'state',tabId})).data.facts[0].text).toBe('New source revision.');
 });

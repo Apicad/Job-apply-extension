@@ -18,7 +18,7 @@ function App() {
  const [reviewed, setReviewed] = useState(false); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
  useEffect(() => { const requested = new URLSearchParams(location.search).get('tabId'); if (requested) setTab(Number(requested)); else void browser.tabs.query({ active: true, currentWindow: true }).then(tabs => setTab(tabs[0]?.id)); }, []);
  async function send(type: string, extra: object = {}) {
-  const response = await browser.runtime.sendMessage({ type, tabId, planId: plan?.id, ...extra });
+  const response = await browser.runtime.sendMessage({ type, tabId, planId: plan?.id, answerId: session?.answer?.id, answerRevision: session?.answer?.revision, ...extra });
   if (!response.ok) throw Error(response.error); return response.data;
  }
  async function refresh() {
@@ -51,7 +51,7 @@ function App() {
   <button disabled={busy || tabId === undefined} onClick={() => void run('scan')}>Scan application</button>
   <button disabled={busy || tabId === undefined} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/popup.html') + `?tabId=${tabId}` })}>Open review workspace</button>
   <p role="status">{notice}</p>
-  <details><summary>Saved experience · {facts.length} facts</summary>{facts.map(f => <article key={f.id}><strong>{f.location}</strong><p>{f.text}</p><small>{f.id} · revision {f.revision}</small><label>Edit saved fact<textarea defaultValue={f.text} id={`fact-${f.id}`} /></label><button disabled={busy} onClick={() => void run('fact-edit', { id: f.id, text: (document.getElementById(`fact-${f.id}`) as HTMLTextAreaElement).value })}>Save fact revision</button></article>)}</details>
+  <details><summary>Saved experience · {facts.length} facts</summary>{facts.map(f => <article key={`${f.id}:${f.revision}`}><strong>{f.location}</strong><p>{f.text}</p><small>{f.id} · revision {f.revision}</small><label>Edit saved fact<textarea defaultValue={f.text} id={`fact-${f.id}`} /></label><button disabled={busy} onClick={() => void run('fact-edit', { id: f.id, revision: f.revision, text: (document.getElementById(`fact-${f.id}`) as HTMLTextAreaElement).value })}>Save fact revision</button></article>)}</details>
   {plan && <section><h2>Draft one project answer</h2><p className="warning">Only the listed project questions are supported. Eligibility, demographics, consent and other questions stay manual.</p>
    <label>Application question<select value={question} onChange={e => { setQuestion(e.target.value); resetContext(); }}><option value="">Select a question</option>{plan.rows.filter(supportedQuestion).map(r => <option key={rowKey(r)} value={rowKey(r)}>{r.field.descriptor.label}</option>)}</select></label>
    <label>Reviewed job context · requirements, not applicant experience<textarea value={job} maxLength={4000} onChange={e => { setJob(e.target.value); resetContext(); }} placeholder="Paste only the relevant, reviewed job requirements. Do not include contacts or private information." /></label>
@@ -63,7 +63,7 @@ function App() {
    {answer.origin === 'edited' && <p className="warning">User edited · current sentence mappings removed. Compare the edited text with the original trace before approving.</p>}
    {answer.segments.map((s, i) => <article key={i}><p>{s.text}</p>{s.sources.map(ref => { const fact = answer.trace.request.facts.find(f => f.id === ref.id && f.revision === ref.revision); return <details className="source" key={ref.id}><summary>Source: {fact?.location} · r{ref.revision}</summary><p>{fact?.text}</p><small>{ref.id}</small></details>; })}{!s.sources.length && <b className="warning">Not supported by saved facts</b>}</article>)}
    {answer.gaps.map((g, i) => <p className="warning" key={i}>Missing or unsupported: {g}</p>)}
-   <details><summary>Original generation trace</summary>{answer.trace.segments.map((s, i) => <p key={i}>{s.text}</p>)}{answer.trace.request.facts.map(f => <article key={f.id}><strong>{f.location} · r{f.revision}</strong><p>{f.text}</p></article>)}</details>
+   <details><summary>Original generation trace</summary>{answer.trace.segments.map((s, i) => <p key={i}>{s.text}</p>)}{answer.trace.request.facts.map(f => <article key={`${f.id}:${f.revision}`}><strong>{f.location} · r{f.revision}</strong><p>{f.text}</p></article>)}</details>
    <label>Exact answer<textarea aria-label="Exact answer" value={text} maxLength={6000} onChange={e => { setText(e.target.value); setReviewed(false); if (!dirty) { setDirty(true); void send('invalidate').then(data => setSession(data.session)).catch(e => setNotice(String(e))); } }} /></label>
    {dirty && <button disabled={busy || !text.trim()} onClick={() => void run('edit', { text })}>Apply edits for review</button>}
    <label><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} />I compared the exact text with the original saved facts, removed unsupported claims, and reviewed its relevance to this application.</label>

@@ -7,7 +7,7 @@ import { readHackathon, writeHackathon } from '../storage';
 import { allowedQuestion, approve, bounded, editAnswer, isFact, key, makeRequest, parseReply, promptFor } from './contracts';
 import type { Answer, Context, Fact, Request } from './contracts';
 import type { NativePlan, Row } from './engine';
-export interface AnswerSession { planId: string; rowKey: string; context: Context; request: Request | null; sent: boolean; answer: Answer | null; savedId?: string }
+export interface AnswerSession { planId: string; rowKey: string; context: Context; request: Request | null; sent: boolean; answer: Answer | null; savedId?: string; savedRevision?: number }
 export const rowKey = (row: Row): string => `${row.documentId}:${row.field.ref}`;
 export function supportedQuestion(row: Row): boolean {
  const d = row.field.descriptor;
@@ -57,7 +57,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
  }
  if (message.type === 'fact-edit') {
   const fact = facts.find(f => f.id === message.id);
-  if (!fact || !bounded(message.text, 2000)) throw Error('Invalid saved fact.');
+  if (!fact || fact.revision !== message.revision || !bounded(message.text, 2000)) throw Error('Saved fact changed or input is invalid. Reopen the current revision.');
   const updated = facts.map(f => f.id === fact.id ? { ...f, revision: f.revision + 1, text: message.text as string } : f);
   await writeHackathon('facts', updated); await invalidatePlan(tabId); return { facts: updated };
  }
@@ -79,13 +79,14 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
  if (message.type === 'reuse') {
   const saved = (await readLibrary(libraryStore)).find(a => a.id === message.id);
   if (!saved) throw Error('Saved answer was deleted.');
-  await invalidatePlan(tabId); session.answer = reusableDraft(saved, session.context, facts); session.savedId = saved.id; session.request = null; session.sent = false;
+  await invalidatePlan(tabId); session.answer = reusableDraft(saved, session.context, facts); session.savedId = saved.id; session.savedRevision = saved.revision; session.request = null; session.sent = false;
   await writeHackathon(sessionKey(tabId), session, true); return { session };
  }
  if (!session.answer) throw Error('Generate or open an answer first.');
+ if (['save','edit','invalidate','approve'].includes(String(message.type)) && (message.answerId !== session.answer.id || message.answerRevision !== session.answer.revision)) throw Error('Answer changed in another editor. Reopen its current revision.');
  if (message.type === 'save') {
-  const saved = await saveAnswer(libraryStore, session.answer, facts, message.scope, session.savedId);
-  session.answer = saved; session.savedId = saved.id; await invalidatePlan(tabId);
+  const saved = await saveAnswer(libraryStore, session.answer, facts, message.scope, session.savedId, session.savedRevision);
+  session.answer = saved; session.savedId = saved.id; session.savedRevision = saved.revision; await invalidatePlan(tabId);
  } else if (message.type === 'answer-preview') {
   const saved = (await readLibrary(libraryStore)).find(a => a.id === session.savedId);
   if (!saved || saved.revision !== session.answer.revision || saved.text !== session.answer.text || !currentApproval(session.answer, session.context, facts)) throw Error('Save this exact approved revision before previewing. Deleted or stale answers cannot fill.');

@@ -28,3 +28,10 @@ it('preserves malformed records and rejects drafts, stale facts and invalid scop
  await expect(readLibrary({...store, read:async()=>({schema:3,answers:[a]})})).rejects.toThrow();
  expect(writes).toBe(0);
 });
+
+it('rejects a stale editor replacing a newer saved revision', async () => {
+ const a=answer();let value:unknown={schema:1,answers:[{...a,revision:3,approval:{...a.approval!,revision:3}}]};
+ const store={read:async()=>value,write:async(v:unknown)=>{value=v;}};
+ await expect(saveAnswer(store,a,DEMO_FACTS,'application',a.id,1)).rejects.toThrow(/changed/);
+ expect((await readLibrary(store))[0]?.revision).toBe(3);
+});
