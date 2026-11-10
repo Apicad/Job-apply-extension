@@ -176,6 +176,43 @@ describe('describeControl: where the label comes from', () => {
       '<span id="q">  </span><label for="target">School</label><input id="target" aria-labelledby="q">',
       'School',
     ],
+    // Markup can hide a name. CSS that only clips it off screen cannot: that is how a
+    // screen-reader label is written, and it is still the name of the control.
+    [
+      'a screen-reader label clipped off screen still names the control',
+      '<span id="q" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">Email</span><label for="target">Manager email</label><input id="target" aria-labelledby="q">',
+      'Email',
+    ],
+    [
+      'aria-labelledby pointing at a hidden element falls through to the visible label',
+      '<span id="q" hidden>Email</span><label for="target">Manager email</label><input id="target" aria-labelledby="q">',
+      'Manager email',
+    ],
+    [
+      'aria-labelledby pointing at an aria-hidden element falls through',
+      '<span id="q" aria-hidden="true">Email</span><label for="target">Phone</label><input id="target" aria-labelledby="q">',
+      'Phone',
+    ],
+    [
+      'aria-labelledby pointing at an inert element falls through',
+      '<span id="q" inert>Email</span><label for="target">Phone</label><input id="target" aria-labelledby="q">',
+      'Phone',
+    ],
+    [
+      'a name inside a hidden ancestor falls through',
+      '<div hidden><span id="q">Email</span></div><label for="target">City</label><input id="target" aria-labelledby="q">',
+      'City',
+    ],
+    [
+      'a name inside a closed details element falls through',
+      '<details><span id="q">Email</span></details><label for="target">School</label><input id="target" aria-labelledby="q">',
+      'School',
+    ],
+    [
+      'a hidden name is skipped and a visible one is kept',
+      '<span id="a" hidden>Email</span><span id="b">Phone</span><input id="target" aria-labelledby="a b">',
+      'Phone',
+    ],
     ['an empty aria-label falls through to the label element', '<label for="target">School</label><input id="target" aria-label="  ">', 'School'],
     // 3. label elements
     ['label[for]', '<label for="target">LinkedIn Profile</label><input id="target">', 'LinkedIn Profile'],

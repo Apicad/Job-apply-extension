@@ -250,7 +250,11 @@ function ariaName(el: Element, anchors: readonly Element[]): string {
   const ids = attribute(el, 'aria-labelledby').split(/\s+/);
   const named = ids.flatMap((id) => {
     const target = id === '' ? null : elementById(el, id);
-    return target === null ? [] : [captionIn(target, anchors)];
+    // A name the markup hides is not a label. aria-labelledby is the first source, so a hidden
+    // "Email" would otherwise win over the words the person can see. A label only moved off
+    // screen with CSS (the usual screen-reader-only pattern) is not hidden by markup and stays.
+    if (target === null || isHiddenByMarkup(target)) return [];
+    return [captionIn(target, anchors)];
   });
   return collapse(named.join(' ')) || attribute(el, 'aria-label');
 }
