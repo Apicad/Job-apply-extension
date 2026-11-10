@@ -236,6 +236,64 @@ describe('isShown: a text box, textarea or dropdown must itself be visible', () 
   });
 });
 
+describe('isShown: a custom dropdown may keep its text box out of sight inside the box the user sees', () => {
+  // Verbatim from a live Greenhouse form: a React-Select. Its search box is 4px wide by design,
+  // too small to count as visible (marked data-test-hidden here); what the user sees and clicks
+  // is the box around it.
+  const reactSelect = (boxAttributes = ''): string => `
+    <div class="select"><div class="select__container"><label id="country-label" for="country" class="label select__label">Country</label><div class="select-shell remix-css-b62m3t-container" ${boxAttributes}><span id="react-select-country-live-region" class="remix-css-7pg0cj-a11yText"></span><span aria-live="polite" aria-atomic="false" aria-relevant="additions text" role="log" class="remix-css-7pg0cj-a11yText"></span><div><div class="select__control remix-css-13cymwt-control"><div class="select__value-container remix-css-hlgwow"><div class="select__placeholder remix-css-1jqq78o-placeholder" id="react-select-country-placeholder">Select...</div><div class="select__input-container remix-css-19bb58m" data-value=""><input class="select__input" autoCapitalize="none" autoComplete="off" autoCorrect="off" id="country" spellcheck="false" tabindex="0" type="text" aria-autocomplete="list" aria-expanded="false" aria-haspopup="true" aria-errormessage="country-error" aria-invalid="false" aria-labelledby="country-label" aria-required="false" role="combobox" aria-activedescendant="" aria-describedby="react-select-country-placeholder" enterKeyHint="done" value="" data-test-hidden/></div></div><div class="select__indicators remix-css-1wy0on6"><button type="button" class="icon-button icon-button--sm" aria-label="Toggle flyout" tabindex="-1"></button></div></div></div></div></div></div>`;
+
+  // As React-Select 5 renders a dropdown that cannot be searched: the input is an invisible
+  // stand-in for the keyboard (opacity:0, scaled to nothing) and says it cannot be typed into.
+  const READ_ONLY_REACT_SELECT = `
+    <div class="select__control css-13cymwt-control"><div class="select__value-container css-hlgwow"><div class="select__placeholder css-1jqq78o-placeholder" id="react-select-5-placeholder">Select...</div><input id="country" tabindex="0" inputmode="none" aria-autocomplete="list" aria-expanded="false" aria-haspopup="true" aria-labelledby="country-label" role="combobox" aria-activedescendant="" aria-readonly="true" aria-describedby="react-select-5-placeholder" class="css-1s80ejz-dummyInput-DummyInput" value="" data-test-hidden></div><div class="select__indicators css-1wy0on6"></div></div>`;
+
+  const cases: [name: string, html: string, want: boolean][] = [
+    ['Greenhouse: a 4px search box inside a visible dropdown', reactSelect(), true],
+    ['a dropdown that cannot be searched: invisible, read-only input in a visible box', READ_ONLY_REACT_SELECT, true],
+    ['a visible box that opens a list and cannot be typed into', '<div class="picker"><input id="country" role="combobox" readonly aria-haspopup="listbox" value=""></div>', true],
+    // Nothing a person could see.
+    ['the whole dropdown in a block that is not rendered', `<div data-test-hidden>${reactSelect()}</div>`, false],
+    ['the whole dropdown in a hidden block', `<div hidden>${reactSelect()}</div>`, false],
+    ['the dropdown marked aria-hidden', reactSelect('aria-hidden="true"'), false],
+    ['an invisible search box with nothing around it', '<input id="country" role="combobox" data-test-hidden>', false],
+    [
+      'an invisible search box whose only visible block is shared with another field',
+      '<div class="row"><input id="first_name"><input id="country" role="combobox" aria-autocomplete="list" data-test-hidden></div>',
+      false,
+    ],
+    [
+      'an invisible search box four blocks deep in the nearest visible one',
+      '<div class="far"><div data-test-hidden><div><div><input id="country" role="combobox" data-test-hidden></div></div></div></div>',
+      false,
+    ],
+    // Not the user's to change.
+    ['a disabled dropdown', '<div class="select__control"><input id="country" role="combobox" disabled data-test-hidden></div>', false],
+    ['a dropdown in a disabled fieldset', `<fieldset disabled>${reactSelect()}</fieldset>`, false],
+    ['a dropdown marked aria-disabled', '<div class="select__control"><input id="country" role="combobox" aria-disabled="true"></div>', false],
+  ];
+  it.each(cases)('%s', (_name, html, want) => {
+    expect(shown(html, '#country')).toBe(want);
+  });
+
+  it('never extends this to a box that takes typed text: its box must be visible itself', () => {
+    // the same shapes with an ordinary text box, a text area and a native dropdown in place of the search box
+    const hidden = [
+      '<div class="select__control"><div class="select__input-container"><input id="target" name="email" data-test-hidden></div></div>',
+      '<div class="field"><textarea id="target" data-test-hidden></textarea></div>',
+      '<div class="field"><select id="target" data-test-hidden><option>CA</option></select></div>',
+    ];
+
+    expect(hidden.map((html) => shown(html))).toEqual([false, false, false]);
+  });
+
+  it('is never shown just because there is no layout to ask', () => {
+    mount(reactSelect());
+
+    expect(isShown(controlAt('#country'), noLayout)).toBe(false);
+  });
+});
+
 describe('isShown: a radio group may hide its inputs behind labels or styled wrappers that are visible', () => {
   // Verbatim from a live Lever form: native radios, each inside its own label.
   const LEVER_RADIOS = `

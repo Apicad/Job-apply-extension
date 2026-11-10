@@ -81,6 +81,9 @@ popup ◀─ result ──┘                                              ◀�
   `role=combobox|listbox`, `aria-autocomplete=list|both`, or `aria-haspopup`
   set and not `false` is a `combobox`: recognised, status `unsupported`, never
   written, no events dispatched on it. Every dropdown on Greenhouse is one.
+  Its text box is out of sight by design (4px wide in a React-Select, fully
+  invisible and marked read-only where searching is off), so it counts as
+  shown when a wrapper that holds no other field is visible.
 - **`location` is never written** (typeahead on Greenhouse, Lever and Ashby).
   Nothing is written into a `<textarea>`. Checkboxes are not collected.
 - **Never collected:** input types password, hidden, search, submit, button,
@@ -171,6 +174,13 @@ Re-check them if a major version changes.
   page, with a `change` event. Job sites upload it immediately.
 - `Element.checkVisibility()` and `chrome.dom.openOrClosedShadowRoot()` exist
   in content scripts. Only open shadow roots are walked.
+- The search box of a React-Select 5 (stock styles, as on Greenhouse) measures
+  4 by 18 CSS pixels while empty; its `select__input-container` wrapper is
+  as wide as the dropdown. With `isSearchable: false` the input is a
+  `DummyInput`: `opacity: 0`, `transform: scale(0.01)`, `aria-readonly="true"`.
+  A chosen value is printed into `select__single-value` (or
+  `select__multi-value`) beside the input, whose own value stays empty.
+  Measured with react-select 5.10.2 in Chromium 153.
 - Playwright only loads extensions in its bundled Chromium with a persistent
   context (`channel: 'chromium'`); headless works.
 

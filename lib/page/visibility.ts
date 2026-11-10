@@ -11,6 +11,9 @@ const CLOSED_DETAILS = 'details:not([open])';
 /** How far up a hidden radio may look for the styled wrapper the user sees instead of it. */
 const RADIO_WRAPPER_LEVELS = 3;
 
+/** How far up the box of a custom dropdown may reach from its text box (one level in a React-Select). */
+const DROPDOWN_BOX_LEVELS = 3;
+
 /** How far up the upload widget around a hidden file input may reach (Greenhouse needs four levels). */
 const FILE_WIDGET_LEVELS = 4;
 
@@ -18,9 +21,11 @@ const FILE_WIDGET_LEVELS = 4;
 const CLICKABLE = 'label, button, [role="button" i], input[type="button" i]';
 
 /**
- * Product rule 4: never fill a field the user cannot see. A text box, textarea or dropdown must be
- * visible itself. A radio may be hidden behind its label or styled wrapper, but only when that is
- * visible. Disabled and read-only controls are never shown: they are not the user's to change.
+ * Product rule 4: never fill a field the user cannot see. A text box, textarea or native dropdown
+ * must be visible itself. A radio may be hidden behind its label or styled wrapper, a file input
+ * behind its upload widget and the text box of a custom dropdown inside the box drawn around it,
+ * but only when that is visible. Disabled and read-only controls are never shown: they are not the
+ * user's to change.
  */
 export const isShown: IsShown = (control, env) => {
   if (control.control === 'radio') {
@@ -31,7 +36,10 @@ export const isShown: IsShown = (control, env) => {
     return choosable.every((radio) => isRadioSeen(radio, env));
   }
 
-  if (isDisabled(control.el) || isReadOnly(control.el)) return false;
+  if (isDisabled(control.el)) return false;
+  // Read-only says something else on a custom dropdown: "choose from the list, do not type".
+  if (control.control === 'combobox') return isDropdownSeen(control.el, env);
+  if (isReadOnly(control.el)) return false;
   if (control.control === 'file') return isFileInputSeen(control.el, env);
   return isSeen(control.el, env);
 };
@@ -80,6 +88,21 @@ function isRadioSeen(radio: HTMLInputElement, env: PageEnv): boolean {
   const labels = ownLabels(radio);
   if (labels.length > 0) return labels.some((label) => isSeen(label, env));
   return ownWrappers([radio], RADIO_WRAPPER_LEVELS).some((wrapper) => isSeen(wrapper, env));
+}
+
+/**
+ * A custom dropdown keeps its text box out of sight on purpose. In a React-Select (every dropdown
+ * on Greenhouse) the search box is 4 pixels wide until something is typed, and where searching is
+ * switched off it is an invisible stand-in for the keyboard. What the user sees and clicks is the
+ * box around it, so the dropdown is seen when a wrapper that holds no other field is.
+ *
+ * This is safe because a custom dropdown is only ever reported, never written to. A text box that
+ * takes typed text gets no such allowance: a visible wrapper never vouches for it.
+ */
+function isDropdownSeen(input: HTMLInputElement, env: PageEnv): boolean {
+  if (isHiddenByMarkup(input)) return false;
+  if (env.isRendered(input)) return true;
+  return ownWrappers([input], DROPDOWN_BOX_LEVELS).some((wrapper) => isSeen(wrapper, env));
 }
 
 /**

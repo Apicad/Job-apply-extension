@@ -460,7 +460,7 @@ export type DescribeControl = (control: Control) => FieldDescriptor;
 /** lib/page/describe.ts — the "Empty means unanswered" rule in CLAUDE.md. */
 export type IsEmpty = (control: Control) => boolean;
 
-/** lib/page/visibility.ts — product rule 4 for one control: markup checks, then `env.isRendered` on the control or, for radios and file inputs, on its visible stand-in. Also false for disabled and read-only controls. */
+/** lib/page/visibility.ts — product rule 4 for one control: markup checks, then `env.isRendered` on the control or, for radios, file inputs and the text box of a custom dropdown, on its visible stand-in. Also false for disabled controls, and for read-only ones unless they are custom dropdowns. */
 export type IsShown = (control: Control, env: PageEnv) => boolean;
 
 /** lib/page/refs.ts — the handle table. It lives on globalThis so the scan and fill scripts, which are separate bundles in one isolated world, share it. Remembering replaces the previous table. */
