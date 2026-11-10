@@ -52,6 +52,9 @@ export const KIND_CONTROLS: Readonly<Record<FieldKind, readonly ControlType[]>> 
 // Field names
 // ---------------------------------------------------------------------------
 
+/** What the phone number is called, as a label and as the heading of the group that holds its parts. */
+const PHONE_NAME = /^(mobile )?phone( number)?$|^mobile( number)?$|^telephone$/;
+
 /**
  * What a label must read, in full, to name a field. Every pattern is anchored
  * at both ends: "What is the name of your current employer?" contains "name",
@@ -64,7 +67,7 @@ const FIELD_NAMES: readonly (readonly [FieldKind, RegExp])[] = [
   ['fullName', /^(full |legal |full legal )?name$|^(legal )?first (and|&) last name$/],
   // "Confirm email" is the one field that may repeat an answer; the planner decides what to do with it.
   ['email', /^(confirm )?e-?mail( address)?$/],
-  ['phone', /^(mobile )?phone( number)?$|^mobile( number)?$|^telephone$/],
+  ['phone', PHONE_NAME],
   ['addressLine1', /^(street )?address$|^address( line)? 1$/],
   ['city', /^city$/],
   ['state', /^state$|^province$|^state ?(\/|or) ?province$/],
@@ -85,6 +88,8 @@ const FIELD_NAMES: readonly (readonly [FieldKind, RegExp])[] = [
   ['graduationDate', /^(expected )?graduation date$/],
   ['graduationYear', /^(expected )?graduation year$|^year of graduation$/],
   ['gpa', /^(cumulative )?gpa$/],
+  // The upload itself: "Resume/CV" on Greenhouse and Lever, "Resume" on Ashby. Only ever a file input (KIND_CONTROLS).
+  ['resume', /^((upload|attach) (your |a )?)?(resume|cv|curriculum vitae|resume ?(\/|or) ?cv|cv ?(\/|or) ?resume)$/],
 ];
 
 /**
@@ -120,9 +125,10 @@ const SOMEONE_ELSE =
 
 // Another subject that shares words with ours: "Portfolio password", "Passport Country",
 // "Preferred First Name", "What are your pronouns?", "What is the country of your birth?".
+// A cover letter is the other upload beside the résumé ("Resume or cover letter" wants either).
 // The last three alternatives are the wording of honeypots ("This input is for robots only").
 const OTHER_SUBJECT =
-  /password|pronoun|prefer|passport|citizen|birth|nationality|consent|\bagree|employee id|\brobots?\b|\bhuman\b|\bleave\b.*\b(blank|empty)\b/;
+  /password|pronoun|prefer|passport|citizen|birth|nationality|consent|\bagree|employee id|\bcover letter\b|\brobots?\b|\bhuman\b|\bleave\b.*\b(blank|empty)\b/;
 
 // A second one of something: "Alternate Email", "Other website", "a secondary or more specific ethnicity".
 const QUALIFIED = /\b(secondary|second|third|additional|alternate|alternative)\b|^other\b/;
@@ -131,7 +137,7 @@ const QUALIFIED = /\b(secondary|second|third|additional|alternate|alternative)\b
 // "What is the name of your current employer?"). Real case: Ashby gives every
 // e-mail-typed question autocomplete="email", whoever's e-mail it asks for.
 const MENTIONS_A_FIELD =
-  /\b(name|e-?mail|phone|mobile|address|city|state|province|zip|postal|postcode|country|countries|location|linkedin|github|portfolio|website|company|employer|title|school|university|college|degree|major|gpa|graduat\w*)\b/;
+  /\b(name|e-?mail|phone|mobile|address|city|state|province|zip|postal|postcode|country|countries|location|linkedin|github|portfolio|website|company|employer|title|school|university|college|degree|major|gpa|graduat\w*|resume|cv)\b/;
 
 /** What a label says: a kind, nothing we know, or something that rules the box out. */
 type LabelReading = FieldKind | 'nothing' | 'blocked';
@@ -248,6 +254,8 @@ const IDENTIFIERS: Readonly<Partial<Record<FieldKind, readonly string[]>>> = {
   graduationDate: ['graduationdate'],
   graduationYear: ['graduationyear'],
   gpa: ['gpa'],
+  // Greenhouse: id "resume" (the label there is only "Attach"). Lever: name "resume", data-qa "input-resume". Ashby: "_systemfield_resume".
+  resume: ['resume', 'cv', 'resumecv', 'inputresume', 'systemfieldresume'],
 };
 
 // A Map for the same reason as above: these strings come from the page.
@@ -295,12 +303,38 @@ const NEEDS_ITS_OWN_LABEL: ReadonlySet<FieldKind> = new Set<FieldKind>([
 /**
  * Signing and attesting are the user's own act. Lever's disability form has a
  * text box labelled just "Name" whose name is eeo[disabilitySignature]; Lyft
- * asks for a typed name under "I certify that the facts set forth…".
+ * asks for a typed name under "I certify that the facts set forth…". The
+ * heading of the group counts too: a "Name" box under "Signature" signs.
  */
 const SIGNING = /signature|certif|attest|acknowledg|declar/i;
 
 function isForSigning(field: FieldDescriptor): boolean {
-  return [field.label, field.name, field.id, field.hints].some((text) => SIGNING.test(text));
+  return [field.label, field.groupLabel, field.name, field.id, field.hints].some((text) => SIGNING.test(text));
+}
+
+/**
+ * True when the heading of the group a control sits in (the legend of its
+ * fieldset, the name of its role=group) says the control is not the field its
+ * own label names.
+ *
+ * - The group is about someone or something else: "Emergency contact",
+ *   "References", "Preferred name", "Passport details", "If you answered yes
+ *   above". Every control inside is then left alone.
+ * - The group is the phone number. Greenhouse's <fieldset class="phone-input">
+ *   with the legend "Phone" holds a dial-code picker labelled "Country" beside
+ *   the number: inside such a group only the number itself is a field of ours.
+ *
+ * An ordinary heading rules nothing out, even one that names fields itself
+ * ("Address", "Name and contact details") or reads like a second something
+ * ("Additional information", "Other details"). And a heading that only repeats
+ * the control's own label (the legend of a radio group is its question) has
+ * been judged already, as that label.
+ */
+function groupRulesOut(field: FieldDescriptor, kind: FieldKind): boolean {
+  const group = fieldName(field.groupLabel);
+  if (group === '' || group === fieldName(field.label)) return false;
+  if (FOLLOW_UP.test(group) || SOMEONE_ELSE.test(group) || OTHER_SUBJECT.test(group)) return true;
+  return PHONE_NAME.test(group) && kind !== 'phone';
 }
 
 /** What the label and the attributes say together, before looking at the control itself. */
@@ -346,6 +380,7 @@ export const classifyField: ClassifyField = (field) => {
 
   const kind = kindAskedFor(field);
   if (kind === null) return null;
+  if (groupRulesOut(field, kind)) return null;
   if (!KIND_CONTROLS[kind].includes(field.control)) return null;
   if (!optionsFit(kind, field.options)) return null;
   return kind;

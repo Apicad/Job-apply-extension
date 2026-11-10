@@ -1056,7 +1056,13 @@ describe('which controls a kind is recognised on', () => {
     ['race', 'Race', ['select', 'radio', 'combobox'], ['Asian', 'White', 'Decline To Self Identify']],
     ['veteran', 'Veteran Status', ['select', 'radio', 'combobox'], ['I am not a protected veteran', "I don't wish to answer"]],
     ['disability', 'Disability Status', ['select', 'radio', 'combobox'], ['Yes, I have a disability', "No, I don't have a disability"]],
+    // a file, and nothing else
+    ['resume', 'Resume/CV', ['file'], []],
   ];
+
+  it('covers every kind there is', () => {
+    expect(kinds.map(([kind]) => kind).sort()).toEqual(Object.keys(KIND_CONTROLS).sort());
+  });
 
   const allControls: ControlType[] = ['text', 'textarea', 'select', 'radio', 'combobox', 'file'];
 
@@ -1205,5 +1211,165 @@ describe('classifyField: the group a control sits in can rule it out', () => {
       options: options('Select...', 'Male', 'Female', 'Decline to self-identify'),
     });
     expect(classifyField(gender)).toBe('gender');
+  });
+
+  // Not real controls: other names a group of phone parts goes by. Whatever sits beside the number
+  // in such a group (a dial code, an extension, a type) is part of the phone, not a field of its own.
+  const phoneParts: [groupLabel: string, descriptor: Partial<FieldDescriptor>][] = [
+    ['Mobile phone', { label: 'Country' }],
+    ['Telephone', { label: 'Country', autocomplete: 'country' }],
+    ['Phone *', { label: 'Country' }],
+    ['Phone (required)', { label: 'Country of residence' }],
+    ['Phone', { label: 'State' }],
+    ['Phone', { label: '', name: 'city' }],
+  ];
+
+  it.each(phoneParts)('null: a part of the phone in the group "%s" (%o)', (groupLabel, descriptor) => {
+    expect(classifyField(field({ groupLabel, ...descriptor }))).toBeNull();
+  });
+
+  // Not real controls: the legend and the label are the same text once clean-up leftovers are gone.
+  const sameText: [groupLabel: string, label: string, want: FieldKind][] = [
+    ['Phone*', 'Phone', 'phone'],
+    ['PHONE', 'Phone:', 'phone'],
+    ['Passport Country (required)', 'Passport Country', 'country'],
+  ];
+
+  it.each(sameText.slice(0, 2))('judges once when the group "%s" only repeats the label "%s"', (groupLabel, label, want) => {
+    expect(classifyField(field({ label, groupLabel }))).toBe(want);
+  });
+
+  it('still refuses a label that rules itself out when its group only repeats it', () => {
+    // "Passport Country" is ruled out as a label; being repeated by the legend must not rescue it.
+    const [groupLabel, label] = sameText[2] ?? ['', '', 'country'];
+    expect(classifyField(field({ label, groupLabel }))).toBeNull();
+  });
+
+  // Not real controls. A section heading is not a second copy of something: "Additional
+  // information" and "Other details" are ordinary sections, unlike the labels "Additional email"
+  // or "Other website".
+  const ordinarySections: [groupLabel: string, label: string, want: FieldKind][] = [
+    ['Other details', 'Website', 'portfolio'],
+    ['Additional questions', 'Current company', 'currentCompany'],
+    ['Second step: about you', 'First Name', 'firstName'],
+    ['Legal name', 'Last Name', 'lastName'],
+    ['Where do you live?', 'City', 'city'],
+  ];
+
+  it.each(ordinarySections)('group "%s", label "%s" → %s', (groupLabel, label, want) => {
+    expect(classifyField(field({ label, groupLabel }))).toBe(want);
+  });
+
+  // Not real controls: the group rules a control out whatever its attributes say.
+  const whateverTheAttributesSay: [groupLabel: string, descriptor: Partial<FieldDescriptor>][] = [
+    ['Emergency contact', { label: 'Phone', autocomplete: 'tel', name: 'phone' }],
+    ['Emergency contact', { label: '', autocomplete: 'tel' }],
+    ['Referral', { label: '', name: 'name' }],
+    ['Their details', { label: 'Email', inputType: 'email', autocomplete: 'email' }],
+    ['Acknowledgement', { label: '', autocomplete: 'name' }],
+    ['I certify that the above is true', { label: 'Full name', name: 'name' }],
+  ];
+
+  it.each(whateverTheAttributesSay)('null: group "%s", %o', (groupLabel, descriptor) => {
+    expect(classifyField(field({ groupLabel, ...descriptor }))).toBeNull();
+  });
+});
+
+describe('classifyField: the résumé upload', () => {
+  /** A file input; each test states only what differs. */
+  const upload = (overrides: Partial<FieldDescriptor>): FieldDescriptor => field({ control: 'file', inputType: 'file', ...overrides });
+
+  // Real controls, as lib/page/describe.ts describes them (markup in tests/unit/page-collect.test.ts).
+  const resumes: [what: string, descriptor: Partial<FieldDescriptor>][] = [
+    // The input's own label is the hidden word "Attach"; the widget around it is a group named "Resume/CV".
+    ['Greenhouse', { label: 'Attach', groupLabel: 'Resume/CV', id: 'resume', accept: '.pdf,.doc,.docx,.txt,.rtf' }],
+    ['Lever', { label: 'Resume/CV', name: 'resume', id: 'resume-upload-input', hints: 'input-resume' }],
+    ['Ashby', { label: 'Resume', id: '_systemfield_resume', required: true }],
+  ];
+
+  it.each(resumes)('%s → resume', (_what, descriptor) => {
+    expect(classifyField(upload(descriptor))).toBe('resume');
+  });
+
+  // The plain names of the upload, in the usual spellings (not from the research).
+  const names: string[] = [
+    'Resume',
+    'Résumé',
+    'CV',
+    'Resume/CV',
+    'Resume / CV',
+    'CV/Resume',
+    'Resume or CV',
+    'CV or Resume',
+    'Curriculum Vitae',
+    'Resume*',
+    'Resume/CV ✱',
+    'Resume (required)',
+    'Resume:',
+    'Upload Resume',
+    'Upload your resume',
+    'Upload CV',
+    'Attach Resume',
+    'Attach your CV',
+    'Attach Resume/CV',
+  ];
+
+  it.each(names)('"%s" → resume', (label) => {
+    expect(classifyField(upload({ label }))).toBe('resume');
+  });
+
+  // Identifiers stand in when the label says nothing (Greenhouse: "Attach").
+  const identifiers: [attribute: 'name' | 'id' | 'hints', value: string][] = [
+    ['id', 'resume'],
+    ['name', 'resume'],
+    ['name', 'cv'],
+    ['name', 'resume_cv'],
+    ['id', '_systemfield_resume'],
+    ['hints', 'input-resume'],
+  ];
+
+  it.each(identifiers)('%s="%s" with a label that says nothing → resume', (attribute, value) => {
+    expect(classifyField(upload({ label: 'Attach', [attribute]: value }))).toBe('resume');
+    expect(classifyField(upload({ [attribute]: value }))).toBe('resume');
+  });
+
+  // Other uploads, and things that only mention a résumé. Attaching the résumé there is a wrong
+  // answer that the job site uploads at once.
+  const others: [what: string, descriptor: Partial<FieldDescriptor>][] = [
+    ['Greenhouse cover letter (real)', { label: 'Attach', groupLabel: 'Cover Letter', id: 'cover_letter', accept: '.pdf,.doc,.docx,.txt,.rtf' }],
+    ['a cover letter', { label: 'Cover Letter' }],
+    ['a cover letter, whatever the box is called', { label: 'Cover Letter', name: 'resume' }],
+    ['a cover letter group, whatever the box is called', { label: 'Attach', groupLabel: 'Cover Letter', id: 'resume' }],
+    ['either of two documents', { label: 'Resume or cover letter', name: 'resume' }],
+    ['both documents', { label: 'Resume and Cover Letter' }],
+    ['a transcript', { label: 'Transcript', id: 'transcript' }],
+    ['a portfolio file', { label: 'Portfolio', name: 'portfolio' }],
+    ['a photo', { label: 'Photo', accept: 'image/*' }],
+    ['more documents', { label: 'Additional documents', name: 'resume' }],
+    ['another résumé', { label: 'Other resume', name: 'resume' }],
+    ['a sentence about the résumé', { label: 'Please make sure your resume includes your GPA', name: 'resume' }],
+    ['a question about the résumé', { label: 'Is your resume up to date?' }],
+    ['someone else', { label: 'Resume', groupLabel: 'Referral' }],
+    ['a bare upload', { label: 'Attach' }],
+    ['a bare upload with a made-up name', { label: 'Upload', name: 'file' }],
+    ['nothing to go on', {}],
+    // Greenhouse's "Enter manually" box beside the upload
+    ['an identifier that only contains the word', { label: 'Attach', id: 'resume_text' }],
+    // The label says résumé, an identifier says something else we know.
+    ['a résumé label on a box named for the e-mail', { label: 'Resume', name: 'email' }],
+  ];
+
+  it.each(others)('null: %s', (_what, descriptor) => {
+    expect(classifyField(upload(descriptor))).toBeNull();
+  });
+
+  it('keeps a résumé label when an identifier it does not know says nothing either way', () => {
+    // Lever's id is "resume-upload-input": not a name we list, so it neither confirms nor contradicts.
+    expect(classifyField(upload({ label: 'Resume/CV', id: 'resume-upload-input' }))).toBe('resume');
+  });
+
+  it('is never recognised on a box for text: Greenhouse\'s "Enter manually" is a textarea for pasting the résumé', () => {
+    expect(classifyField(field({ control: 'textarea', inputType: '', label: 'Resume/CV', name: 'resume' }))).toBeNull();
+    expect(classifyField(field({ label: 'Resume', name: 'resume' }))).toBeNull();
   });
 });

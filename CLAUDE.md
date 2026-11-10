@@ -88,8 +88,17 @@ popup ◀─ result ──┘                                              ◀�
   `new-password`; anything inside `[role=search]`; every control of a form
   that contains a password field; anything with `aria-hidden="true"` or
   `inert` on itself or an ancestor.
-- **Signature and attestation fields are never filled**: label, name, id or
-  hints matching `signature|certif|attest|acknowledg|declar`.
+- **Signature and attestation fields are never filled**: label, group
+  heading, name, id or hints matching `signature|certif|attest|acknowledg|declar`.
+- **The group can rule a control out.** A fieldset legend or group name about
+  someone or something else ("Emergency contact", "References", "Preferred
+  name", "If you answered yes above") leaves every control inside alone. Inside
+  a group named for the phone only the number itself is recognised: the
+  "Country" picker beside it is a dial code. Ordinary section headings
+  ("Address", "Additional information") rule nothing out.
+- **The résumé is recognised on a file input only**, by its label ("Resume",
+  "CV", "Resume/CV") or, when the label says nothing ("Attach"), by its name or
+  id. A cover letter is never taken for it.
 - **Labels decide.** Identity, contact, address and education kinds match only
   short field-name-like labels (no question mark, at most six words, anchored
   patterns). `autocomplete`, `name`, `id` and data hints may confirm a label or
