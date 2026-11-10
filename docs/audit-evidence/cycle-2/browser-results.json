@@ -1,0 +1,451 @@
+{
+  "metadata": {
+    "sha": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+    "tree": "3e53623c142a22c97f64973c8877bc0e4faac819",
+    "branch": "codex/fix/audit-cycle-2",
+    "dirty": false,
+    "actualWorkers": 4
+  },
+  "stats": {
+    "startTime": "2026-11-10T06:28:40.353Z",
+    "duration": 30098.299000000003,
+    "expected": 27,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "cases": [
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "C-1: completed native fill retains its outcomes and cannot be revived by answer preview",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4875
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "C-1/C-3: interrupted plan stays unknown through preview and answer invalidation",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4671
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "C-2: CRLF and CR normalize before exact approval, save and textarea readback",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4652
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "C-3: UI distinguishes refused, written-unverified and unreachable outcomes",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4769
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "C-4: canonical labels match execution without hiding safety cues or mutations",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3520
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "AB-1: real popup no-op keystrokes cannot hide unsupported claims; correction and new claims are rechecked",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4746
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "AB-2: cross-job saves fork records and preserve source scope, approval and concurrent previews",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3899
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "AB-5: synthetic loading preserves raw profiles and facts even when malformed or overlong",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 2527
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-1.spec.ts",
+      "title": "AB-6: damaged library remains inspectable and explicit recovery preserves raw data and valid answers",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3593
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-2.spec.ts",
+      "title": "N1: real no-op keystrokes retain per-sentence warnings with all facts selected",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3586
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-2.spec.ts",
+      "title": "N2: UI reuse on another question preserves original record and concurrent preview in the same application",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 5334
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-2.spec.ts",
+      "title": "N3: ordinary one-part prose passes review while an unsupported quantity stays blocked",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4051
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-2.spec.ts",
+      "title": "N6: legacy CRLF reuse with exact approval, changed readback=false",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4887
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-2.spec.ts",
+      "title": "N6: legacy CRLF reuse with exact approval, changed readback=true",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4426
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "audit-cycle-2.spec.ts",
+      "title": "demo cross-check: native fill then explicit rescan and saved-answer review fills only the textarea",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4674
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "actual extension: scan, preview, native React fills, no replay or submit",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 2507
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "copy/paste boundary validates identity, shows original sources and revokes edited approval",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3859
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "explicit save, reopen, renewed reuse, exact textarea readback and deleted-plan rejection",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3897
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "context changes and changing selected question revoke previous approval and plan",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 2441
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "two tabs, rescans, changed question, cancelled AI and native fallback",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 4620
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "worker restart restores preview; interrupted execution marker prevents replay",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3180
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "source change and malformed library, no storage success or unsafe fill",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 2735
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "storage quota error reaches UI without a saved-success message",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3056
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "native descriptor/options mutations, prefilled files, overlength and delayed rewrite are not reported as verified",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 3576
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "all maintained sample fixtures execute through the actual extension without arbitrary actions",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 5579
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "persistent review workspace remains bound to the application tab",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 2961
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "hackathon.spec.ts",
+      "title": "stale fact and answer editors cannot replace newer revisions",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "duration": 2863
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

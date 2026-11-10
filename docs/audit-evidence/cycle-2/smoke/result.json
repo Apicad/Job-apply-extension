@@ -1,0 +1,27 @@
+{
+  "sha": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+  "dirty": false,
+  "date": "2026-11-10T06:31:48.539Z",
+  "chromium": "158.0.8127.18",
+  "requestId": "bca184eb-2e71-415d-8901-c142a473771d",
+  "answer": "I built a Python script to clean synthetic sensor readings and display them in a dashboard. I also wrote tests for missing readings and documented how to run the project locally.",
+  "sourceReferences": [
+    [
+      {
+        "id": "demo-project-build",
+        "revision": 1
+      }
+    ],
+    [
+      {
+        "id": "demo-project-tests",
+        "revision": 1
+      }
+    ]
+  ],
+  "savedCount": 1,
+  "reopened": true,
+  "verifiedWrites": 6,
+  "textareaExact": true,
+  "submitted": false
+}

@@ -1,0 +1,43 @@
+{
+  "sourceSha": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+  "sourceTree": "3e53623c142a22c97f64973c8877bc0e4faac819",
+  "clean": true,
+  "node": "24.15.0",
+  "playwright": "1.65.0",
+  "chromium": "158.0.8127.18",
+  "wxt": "0.21.5",
+  "checks": [
+    {
+      "command": "npm ci",
+      "status": "passed"
+    },
+    {
+      "command": "JAA_REQUIRE_CLEAN=1 npm run check",
+      "status": "passed",
+      "unitFiles": 19,
+      "unitTests": 4154,
+      "browserTests": 27
+    },
+    {
+      "command": "npm run build",
+      "status": "passed",
+      "reportedSizeKB": 448.74
+    },
+    {
+      "command": "node scripts/manual-ai-smoke.mjs (external smoke directory)",
+      "status": "passed",
+      "verifiedWrites": 6,
+      "submitted": false
+    }
+  ],
+  "productionPermissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "productionHostPermissions": [],
+  "productionContentScripts": [],
+  "sourceExportFiles": 136,
+  "sourceZipSHA256": "74d34b5194d95e95970e973f71f0344c50b5f07c3fc40305960c82d203d6b986",
+  "smokeProvenance": "Fresh request, actual current Codex session authored response after comparing both sentences to supplied synthetic facts. No paid API call, no replay, no independent auditor or fresh judge-account execution."
+}
