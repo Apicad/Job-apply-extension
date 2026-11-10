@@ -1,0 +1,138 @@
+[WebServer] (node:2698) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 7 tests using 4 workers
+
+(node:2700) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2701) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2702) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2699) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at preview before writes (22.7s)
+  ✘  2 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at preview before writes (23.2s)
+  ✘  1 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at fill before writes (23.2s)
+  ✘  3 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at fill before writes (23.2s)
+(node:3229) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3228) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3226) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  6 tests/e2e/audit-cycle-4.spec.ts:60:68 › C4-1 positive: explicit application reuse/review/save retains target and source record semantics (10.6s)
+  ✓  5 tests/e2e/audit-cycle-4.spec.ts:60:68 › C4-1 positive: explicit question reuse/review/save retains target and source record semantics (10.6s)
+  ✓  7 tests/e2e/audit-cycle-4.spec.ts:60:68 › C4-1 positive: explicit same reuse/review/save retains target and source record semantics (10.6s)
+
+
+  1) tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at preview before writes
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      52 |  }, { tabId, session, plan: next.plan });
+      53 |  const result = await ui.evaluate(async ({ tabId, planId, stage }) => (globalThis as any).chrome.runtime.sendMessage({ type: stage === 'preview' ? 'answer-preview' : 'fill', tabId, planId }), { tabId, planId: next.plan.id, stage });
+    > 54 |  expect(result.ok).toBe(false); expect(result.error).toContain('Answer target does not match');
+         |                    ^
+      55 |  await expect(page.locator('#project')).toHaveValue(''); await expect(page.locator('#project-two')).toHaveValue('');
+      56 |  await expect(page.locator('input').first()).toHaveValue(''); await expect(page.locator('#submitted')).toHaveText('Not submitted');
+      57 |  const after = await state(ui, tabId); expect(after.library).toEqual(original.library); expect(after.plan.state).toBe('preview'); expect(after.plan.outcomes).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-4.spec.ts:54:20
+
+    Error Context: test-results/audit-cycle-4-C4-1-privile-1efd5-ed-at-preview-before-writes/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-4-C4-1-privile-1efd5-ed-at-preview-before-writes/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-4-C4-1-privile-1efd5-ed-at-preview-before-writes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at preview before writes
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      52 |  }, { tabId, session, plan: next.plan });
+      53 |  const result = await ui.evaluate(async ({ tabId, planId, stage }) => (globalThis as any).chrome.runtime.sendMessage({ type: stage === 'preview' ? 'answer-preview' : 'fill', tabId, planId }), { tabId, planId: next.plan.id, stage });
+    > 54 |  expect(result.ok).toBe(false); expect(result.error).toContain('Answer target does not match');
+         |                    ^
+      55 |  await expect(page.locator('#project')).toHaveValue(''); await expect(page.locator('#project-two')).toHaveValue('');
+      56 |  await expect(page.locator('input').first()).toHaveValue(''); await expect(page.locator('#submitted')).toHaveText('Not submitted');
+      57 |  const after = await state(ui, tabId); expect(after.library).toEqual(original.library); expect(after.plan.state).toBe('preview'); expect(after.plan.outcomes).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-4.spec.ts:54:20
+
+    Error Context: test-results/audit-cycle-4-C4-1-privile-d8829-ed-at-preview-before-writes/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-4-C4-1-privile-d8829-ed-at-preview-before-writes/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-4-C4-1-privile-d8829-ed-at-preview-before-writes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at fill before writes
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      52 |  }, { tabId, session, plan: next.plan });
+      53 |  const result = await ui.evaluate(async ({ tabId, planId, stage }) => (globalThis as any).chrome.runtime.sendMessage({ type: stage === 'preview' ? 'answer-preview' : 'fill', tabId, planId }), { tabId, planId: next.plan.id, stage });
+    > 54 |  expect(result.ok).toBe(false); expect(result.error).toContain('Answer target does not match');
+         |                    ^
+      55 |  await expect(page.locator('#project')).toHaveValue(''); await expect(page.locator('#project-two')).toHaveValue('');
+      56 |  await expect(page.locator('input').first()).toHaveValue(''); await expect(page.locator('#submitted')).toHaveText('Not submitted');
+      57 |  const after = await state(ui, tabId); expect(after.library).toEqual(original.library); expect(after.plan.state).toBe('preview'); expect(after.plan.outcomes).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-4.spec.ts:54:20
+
+    Error Context: test-results/audit-cycle-4-C4-1-privile-5ece1-fused-at-fill-before-writes/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-4-C4-1-privile-5ece1-fused-at-fill-before-writes/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-4-C4-1-privile-5ece1-fused-at-fill-before-writes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at fill before writes
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      52 |  }, { tabId, session, plan: next.plan });
+      53 |  const result = await ui.evaluate(async ({ tabId, planId, stage }) => (globalThis as any).chrome.runtime.sendMessage({ type: stage === 'preview' ? 'answer-preview' : 'fill', tabId, planId }), { tabId, planId: next.plan.id, stage });
+    > 54 |  expect(result.ok).toBe(false); expect(result.error).toContain('Answer target does not match');
+         |                    ^
+      55 |  await expect(page.locator('#project')).toHaveValue(''); await expect(page.locator('#project-two')).toHaveValue('');
+      56 |  await expect(page.locator('input').first()).toHaveValue(''); await expect(page.locator('#submitted')).toHaveText('Not submitted');
+      57 |  const after = await state(ui, tabId); expect(after.library).toEqual(original.library); expect(after.plan.state).toBe('preview'); expect(after.plan.outcomes).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-4.spec.ts:54:20
+
+    Error Context: test-results/audit-cycle-4-C4-1-privile-66ae2-fused-at-fill-before-writes/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-4-C4-1-privile-66ae2-fused-at-fill-before-writes/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-4-C4-1-privile-66ae2-fused-at-fill-before-writes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at preview before writes
+    tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at preview before writes
+    tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at fill before writes
+    tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at fill before writes
+  3 passed (37.9s)

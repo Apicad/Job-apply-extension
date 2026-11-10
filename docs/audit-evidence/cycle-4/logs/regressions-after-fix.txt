@@ -1,0 +1,22 @@
+[WebServer] (node:3677) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 7 tests using 4 workers
+
+(node:3681) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3678) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3679) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at preview before writes (6.4s)
+  ✓  4 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at fill before writes (6.4s)
+  ✓  1 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged application target desynchronization is refused at preview before writes (6.4s)
+  ✓  2 tests/e2e/audit-cycle-4.spec.ts:33:110 › C4-1: privileged question target desynchronization is refused at fill before writes (6.4s)
+  ✓  7 tests/e2e/audit-cycle-4.spec.ts:60:68 › C4-1 positive: explicit application reuse/review/save retains target and source record semantics (6.0s)
+  ✓  5 tests/e2e/audit-cycle-4.spec.ts:60:68 › C4-1 positive: explicit same reuse/review/save retains target and source record semantics (6.0s)
+  ✓  6 tests/e2e/audit-cycle-4.spec.ts:60:68 › C4-1 positive: explicit question reuse/review/save retains target and source record semantics (6.0s)
+
+  7 passed (13.8s)

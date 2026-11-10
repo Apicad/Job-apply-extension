@@ -1,0 +1,20 @@
+{
+  "PRODUCTION-FILES-SHA256.json": "bd3d77657f4e53b3f47fb4baa8bd801e7dae4f875424bc1e55e78daee3332cae",
+  "README.md": "c70a843c052bcae5f988e15848deab744ad5bc7b835a50afb0b4f78d45d1a252",
+  "SOURCE-FILES-SHA256.json": "2897cd08e5665062536d6fb26f91f0e5f60d17c6f42da4a2e3fbdf18380adf24",
+  "browser-results.json": "92309d656859d9757533b69eaaa0d48d8f7bbe09403ac03caf8fc157a1226857",
+  "logs/build.txt": "5d1376469f8e438aae92123b62efdf6c1878314636c7c159fcfe3f6cb9fbc073",
+  "logs/check.txt": "0c09852a03b93ec3a243efa15e78d6e222185ea606941c04b9de6a9e49f8a6b0",
+  "logs/install.txt": "f4d866ade04c49df747c5561491316da08f1468e483cf1ee6b77d52d792854f2",
+  "logs/regressions-after-fix.txt": "b45fc9f55f18b1b0a04ec4bf63117132dc13bf07275450c6284a27510ade5798",
+  "logs/regressions-before-fix.txt": "153691b705ff080caed7a18c7ea61dce5bb1c4577776230b2aac527ac790e9d7",
+  "logs/smoke.txt": "ab1b8360aa01ce84dab5ab61d14a5554982b06c50e5137b5472be22cdcc7258a",
+  "smoke/filled-sample.png": "dae6d0a7c3ffef1a35f8f0c272eed34339fd4a5146a83b87708269ef439a2e01",
+  "smoke/request.json": "e7a17774e66eea92373805c0983b9ce5d678f7555721adc7fa9b7af0505c8a3b",
+  "smoke/request.txt": "9261b3613499bbf3cdb7252262cc924198d80c89ed2f55522b7a14abcf5fa62b",
+  "smoke/response.json": "62fa86afa53c25fb72506b1358021b03a5ff8ccc4238b37b3a5ce58c92b924a8",
+  "smoke/result.json": "c71a290c783280da02439bdcfbde97442dfa30f1493952cb5f38cf18cce35e27",
+  "smoke/source-review.png": "4c3237f40a28be6c966d80e7601b285480df159a47785ca89fea9f9722d5fb36",
+  "smoke/validated-draft.json": "f61f8fb4be549c796499ace82079762f6a8b4225b9b4f98d48fd89fc3c05278d",
+  "verification.json": "36cbc66b29b7beca92ba71f91b0989ac96ad4cac9d5ca3cbc075a5c4e52d6bcf"
+}

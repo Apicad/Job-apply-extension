@@ -1,0 +1,58 @@
+{
+  "sourceSha": "f3b7ef0d5dd3f1be9a16753a643e209665797b60",
+  "sourceTree": "430532932d2fa0e08034c5c3eacaddb27c290f0e",
+  "parentSourceSha": "a59c71bca9860e2e2938feedc9ad7e6afc545d21",
+  "clean": true,
+  "exportBase": "949c96ab064fff73c638d9c8e73b45f12f66a453",
+  "exportBaseIsAncestor": true,
+  "node": "24.15.0",
+  "playwright": "1.65.0",
+  "chromium": "158.0.8127.18",
+  "wxt": "0.21.5",
+  "checks": [
+    {
+      "command": "npm ci",
+      "status": "passed"
+    },
+    {
+      "command": "JAA_REQUIRE_CLEAN=1 npm run check",
+      "status": "passed",
+      "unitFiles": 19,
+      "unitTests": 4154,
+      "browserTests": 44
+    },
+    {
+      "command": "npm run build",
+      "status": "passed",
+      "reportedSizeKB": 450.3
+    },
+    {
+      "command": "node scripts/export-candidate.mjs (external directory)",
+      "status": "passed",
+      "sourceFilesCompared": 140
+    },
+    {
+      "command": "node scripts/manual-ai-smoke.mjs (empty external JAA_SMOKE_DIR)",
+      "status": "passed",
+      "verifiedWrites": 6,
+      "savedCount": 1,
+      "reopened": true,
+      "textareaExact": true,
+      "submitted": false
+    }
+  ],
+  "productionPermissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "productionHostPermissions": [],
+  "productionContentScripts": [],
+  "sourceZipSHA256": "0ec3b1f806fb166f2e2e5d24875cc9556e1668da030fe33c946de8cb281cc4b2",
+  "regressionEvidence": {
+    "before": "Four privileged-state redirection cases were accepted by the baseline and failed rejection assertions; three legitimate reuse controls passed.",
+    "after": "All seven new cases passed. Full pre-commit and fresh clean-source runs each passed 44 browser tests. An earlier pre-commit run was interrupted and is not counted."
+  },
+  "reachability": "Privileged extension storage.session injection only. No page-content or normal UI/message exploit path demonstrated.",
+  "smokeProvenance": "Actual active Codex session authored response to the fresh exported request after comparing both claims with original synthetic facts. No replay or paid provider API; exact backend and independent auditor execution are not attested."
+}
