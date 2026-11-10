@@ -57,7 +57,7 @@ function isRendered(el: Element): boolean {
  * What one ancestor leaves of the box. An ancestor with `overflow: hidden` or `clip` cuts off
  * whatever sticks out of it. One that scrolls (`auto`, `scroll`) hides nothing that lies inside its
  * scrollable area, so from there on the question becomes whether the scrolling ancestor itself can
- * be seen: its own box takes over. null means scrolling can never bring the box into view.
+ * be seen: its own box takes over. null means scrolling can never bring enough of the box into view.
  */
 function cutByAncestor(box: Box, ancestor: Element, style: CSSStyleDeclaration): Box | null {
   // overflow has no effect on inline boxes (a <label>) or on display:contents
@@ -67,9 +67,9 @@ function cutByAncestor(box: Box, ancestor: Element, style: CSSStyleDeclaration):
   const cut = { ...box };
 
   if (scrolls(style.overflowX)) {
-    const start = box.left - frame.left + ancestor.scrollLeft;
-    const end = box.right - frame.left + ancestor.scrollLeft;
-    if (end <= 0 || start >= ancestor.scrollWidth) return null;
+    if (!canScrollIntoView(box.left - frame.left + ancestor.scrollLeft, box.right - frame.left + ancestor.scrollLeft, ancestor.scrollWidth)) {
+      return null;
+    }
     cut.left = frame.left;
     cut.right = frame.right;
   } else if (style.overflowX !== 'visible') {
@@ -78,9 +78,9 @@ function cutByAncestor(box: Box, ancestor: Element, style: CSSStyleDeclaration):
   }
 
   if (scrolls(style.overflowY)) {
-    const start = box.top - frame.top + ancestor.scrollTop;
-    const end = box.bottom - frame.top + ancestor.scrollTop;
-    if (end <= 0 || start >= ancestor.scrollHeight) return null;
+    if (!canScrollIntoView(box.top - frame.top + ancestor.scrollTop, box.bottom - frame.top + ancestor.scrollTop, ancestor.scrollHeight)) {
+      return null;
+    }
     cut.top = frame.top;
     cut.bottom = frame.bottom;
   } else if (style.overflowY !== 'visible') {
@@ -89,6 +89,16 @@ function cutByAncestor(box: Box, ancestor: Element, style: CSSStyleDeclaration):
   }
 
   return cut;
+}
+
+/**
+ * True when scrolling can show at least the smallest visible side of a box along one direction.
+ * `start` and `end` are the box's edges measured from the start of the scrollable area, which is
+ * `size` long. What lies in front of that area or beyond its end is cut off for good: a box at
+ * left: -195px in a panel shows 5 of its 200 pixels however far the panel is scrolled.
+ */
+function canScrollIntoView(start: number, end: number, size: number): boolean {
+  return Math.min(end, size) - Math.max(start, 0) >= MIN_SIDE;
 }
 
 /** The part of the box that lies inside the document, which runs from its top left corner to its scroll size. */

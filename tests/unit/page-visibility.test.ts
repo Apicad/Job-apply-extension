@@ -741,6 +741,50 @@ describe('browserEnv.isRendered with the geometry a browser would report', () =>
       boxes: { '#panel': box(0, 0, 500, 400, { scrollHeight: 2000 }), '#target': box(100, 2500, 200, 30) },
       want: false,
     },
+    // What a panel can never scroll into view is cut off for good, so the 8 by 8 rule holds for
+    // what is left, exactly as it does at the edge of the page or of an overflow:hidden box.
+    {
+      name: 'sticking 5px into a scrolling panel from its left edge',
+      html: `<div id="panel" style="overflow:auto">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 0, 500, 400), '#target': box(-195, 100, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'sticking 10px into a scrolling panel from its left edge',
+      html: `<div id="panel" style="overflow:auto">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 0, 500, 400), '#target': box(-190, 100, 200, 30) },
+      want: true,
+    },
+    {
+      name: 'sticking 5px into a scrolling panel from its top edge',
+      html: `<div id="panel" style="overflow:scroll">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 0, 500, 400), '#target': box(100, -25, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'reaching only 5px into the end of what a panel can scroll to',
+      html: `<div id="panel" style="overflow:auto">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 0, 500, 400, { scrollHeight: 2000 }), '#target': box(100, 1995, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'a panel that scrolls sideways only still cuts what sticks out above it',
+      html: `<div id="panel" style="overflow-x:auto;overflow-y:hidden">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 100, 500, 400, { scrollWidth: 2000 }), '#target': box(900, 75, 200, 30) },
+      want: false,
+    },
+    {
+      name: 'scrolled half out of a panel at its top, where scrolling brings it back whole',
+      html: `<div id="panel" style="overflow:auto">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 0, 500, 400, { scrollHeight: 2000, scrollTop: 300 }), '#target': box(100, -20, 200, 30) },
+      want: true,
+    },
+    {
+      name: 'at the very end of what a panel can scroll to',
+      html: `<div id="panel" style="overflow:auto">${FIELD}</div>`,
+      boxes: { '#panel': box(0, 0, 500, 400, { scrollHeight: 2000 }), '#target': box(100, 1970, 200, 30) },
+      want: true,
+    },
     {
       name: 'inside a scrolling panel that has no height itself',
       html: `<div id="panel" style="overflow:auto">${FIELD}</div>`,
