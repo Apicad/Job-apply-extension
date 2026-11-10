@@ -176,14 +176,21 @@ export interface FieldDescriptor {
    * radio group this is the question, never an option label. '' when none.
    */
   label: string;
-  /** Legend of the closest fieldset, or the name of the closest role=group / radiogroup ('' when none). */
+  /**
+   * Name of the closest group around the control that has one: the legend of
+   * a fieldset, or what aria-labelledby / aria-label call a fieldset,
+   * role=group or role=radiogroup. Cleaned like a label. '' when none.
+   */
   groupLabel: string;
   name: string;
   id: string;
   placeholder: string;
   /** The control's own data-automation-id, data-qa, data-testid, data-test, data-field, data-name values, space-joined. */
   hints: string;
-  /** required attribute or aria-required="true". */
+  /**
+   * required attribute or aria-required="true": on the control, on any radio
+   * of a group, or on a group that holds this control and no other field.
+   */
   required: boolean;
   /** Choices of a select or radio group, index-aligned with the DOM ([] otherwise). */
   options: ChoiceOption[];

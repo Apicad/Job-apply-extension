@@ -65,7 +65,8 @@ popup ◀─ result ──┘                                              ◀�
     types and `ats.ts`): `collect.ts` (find controls, forms, comboboxes),
     `describe.ts` (labels, options, emptiness), `visibility.ts` (markup
     checks) and `layout.ts` (the real-browser `PageEnv`), `refs.ts` (the
-    handle table shared by scan and fill), `job.ts`, `scan.ts`, `apply.ts`.
+    handle table shared by scan and fill), `fill.ts` (the four ways of
+    writing), `job.ts`, `scan.ts`, `apply.ts`.
   - `storage.ts` — the only module that touches extension storage. Only the
     background, popup and options page import it.
 - `tests/unit/` — Vitest. `tests/e2e/` — Playwright. `tests/fixtures/` — local
@@ -99,6 +100,14 @@ popup ◀─ result ──┘                                              ◀�
 - **The résumé is recognised on a file input only**, by its label ("Resume",
   "CV", "Resume/CV") or, when the label says nothing ("Attach"), by its name or
   id. A cover letter is never taken for it.
+- **Where a label comes from**, first hit wins: `aria-labelledby`, `aria-label`,
+  the control's `<label>` elements, then the text in front of the control
+  inside a wrapper that holds no other field (at most four levels up; Lever's
+  custom questions have no `<label>`). Text behind a control counts only
+  inside a `<label>` with nothing in front (floating labels). A radio group's
+  label is its question: the name of a group that holds only its radios, or
+  the text in front of the options; never the text of an option. Option
+  lists, button captions and anything hidden by markup are never label text.
 - **Labels decide.** Identity, contact, address and education kinds match only
   short field-name-like labels (no question mark, at most six words, anchored
   patterns). `autocomplete`, `name`, `id` and data hints may confirm a label or
@@ -121,7 +130,9 @@ popup ◀─ result ──┘                                              ◀�
   selected, or the selected option has value `''`, is disabled, or is the
   first option reading like a placeholder ("Select…", "Choose…", dashes);
   radio group — none checked; file input — no file and no file name or
-  Replace/Remove control shown beside it.
+  Replace/Remove control shown beside it; custom dropdown — its text box is
+  empty and no chosen value is printed beside it (a React-Select never puts
+  the choice into its text box).
 - **Writing**: the prototype `value` setter, then `input` (bubbles, composed)
   and `change` (bubbles). Select by `selectedIndex`. Radio by `.click()`, never
   on a checked one. No `focus()`, `blur()`, `select()` or `scrollIntoView()`.

@@ -107,8 +107,7 @@ forms.
 | Choosing an option in a dropdown or radio group (`lib/choices.ts`, `lib/regions.ts`) | Built for yes/no and self-identification questions. Choosing a state, country or school from a list is not built yet |
 | The profile: validation, and the text for each field (`lib/profile.ts`) | Built, tested |
 | The résumé file: format, size and type checks (`lib/resume.ts`) | Built, tested |
-| On the page: finding controls, checking visibility, writing values (`lib/page/`) | Built, tested |
-| On the page: describing a control — its label, options, whether it is answered (`lib/page/describe.ts`) | In progress |
+| On the page: finding controls, describing them, checking visibility, writing values (`lib/page/`) | Built, tested |
 | Guards for data coming back from a page (`lib/report.ts`), job-site detection (`lib/ats.ts`) | Built, tested |
 | The planner that turns a scan into a preview and instructions (`lib/plan.ts`) | Not built |
 | The injected scan and fill scripts, and the background worker's side of them | Not built |
