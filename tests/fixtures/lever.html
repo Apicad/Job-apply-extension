@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Analytical Engines - Analyst</title>
+    <style>
+      /* The page around the form: only enough to lay it out like a form. */
+      body {
+        font: 16px/1.5 system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .application-question {
+        margin: 1rem 0;
+      }
+      .application-label {
+        font-weight: 600;
+      }
+      .application-field input[type='text'],
+      .application-field input[type='email'],
+      .application-field select,
+      textarea {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0.5rem;
+        font: inherit;
+      }
+
+      /*
+       * Shaped like Lever's own style sheet, reduced to the rules that decide who can see what.
+       * The upload is a link with the real file input stretched over it, fully transparent.
+       */
+      .postings-btn {
+        position: relative;
+        display: inline-block;
+        overflow: hidden;
+        padding: 0.5rem 1rem;
+        border: 1px solid rgb(87, 158, 238);
+        border-radius: 3px;
+        text-decoration: none;
+      }
+      .invisible-resume-upload {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
+      /* Messages and lists that Lever only shows once there is something to say. */
+      .resume-upload-failure,
+      .resume-upload-working,
+      .resume-upload-success,
+      .resume-upload-oversize,
+      .dropdown-container,
+      button.hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Analyst</h1>
+    <!-- The form of tests/fixtures/real-forms.ts goes here: one copy of the markup for every test. -->
+    <main id="form"></main>
+    <script type="module">
+      import { LEVER } from './real-forms.ts';
+
+      document.querySelector('#form').innerHTML = LEVER;
+      document.documentElement.setAttribute('data-ready', '');
+    </script>
+  </body>
+</html>

@@ -3,7 +3,7 @@ import { classifyField } from '../../lib/classify';
 import { collectControls } from '../../lib/page/collect';
 import { describeControl, isEmpty } from '../../lib/page/describe';
 import type { FieldDescriptor, FieldKind } from '../../lib/types';
-import { GREENHOUSE, LEVER } from './real-forms';
+import { GREENHOUSE, LEVER } from '../fixtures/real-forms';
 
 // What a scan makes of a whole application form: every control found on the page, described by
 // the page side and then classified by the trusted side. The two halves are tested apart

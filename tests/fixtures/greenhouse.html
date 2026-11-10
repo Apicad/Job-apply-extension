@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Job Application for Analyst at Analytical Engines</title>
+    <style>
+      /* The page around the form: only enough to lay it out like a form. */
+      body {
+        font: 16px/1.5 system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      .field-wrapper,
+      .select,
+      .phone-input,
+      .eeoc__question__wrapper {
+        margin: 1rem 0;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+      }
+      .label {
+        display: block;
+        font-weight: 600;
+      }
+      .input {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0.5rem;
+        font: inherit;
+      }
+      .button-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        position: relative;
+      }
+      .secondary-button > div {
+        position: relative;
+      }
+
+      /* Greenhouse's helper for text and inputs meant for screen readers only: a 1px clipped box. */
+      .visually-hidden {
+        border: 0;
+        clip: rect(0 0 0 0);
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        padding: 0;
+        position: absolute;
+        width: 1px;
+        white-space: nowrap;
+      }
+
+      /*
+       * The rules React-Select 5 injects for a dropdown, as read back from its style sheet in
+       * Chromium (react-select 5.10.2). Greenhouse prefixes the generated class names with "remix-".
+       * These decide what can be seen: the search box ends up 4px wide inside a 38px high box.
+       */
+      .remix-css-b62m3t-container {
+        position: relative;
+        box-sizing: border-box;
+      }
+      .remix-css-7pg0cj-a11yText {
+        z-index: 9999;
+        border: 0;
+        clip: rect(1px, 1px, 1px, 1px);
+        height: 1px;
+        width: 1px;
+        position: absolute;
+        overflow: hidden;
+        padding: 0;
+        white-space: nowrap;
+      }
+      .remix-css-13cymwt-control {
+        align-items: center;
+        cursor: default;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        min-height: 38px;
+        position: relative;
+        background-color: rgb(255, 255, 255);
+        border: 1px solid rgb(204, 204, 204);
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      .remix-css-hlgwow {
+        align-items: center;
+        display: grid;
+        flex: 1 1 0%;
+        flex-wrap: wrap;
+        position: relative;
+        overflow: hidden;
+        padding: 2px 8px;
+        box-sizing: border-box;
+      }
+      .remix-css-1jqq78o-placeholder {
+        grid-area: 1 / 1 / 2 / 3;
+        color: rgb(128, 128, 128);
+        margin-left: 2px;
+        margin-right: 2px;
+        box-sizing: border-box;
+      }
+      .remix-css-19bb58m {
+        visibility: visible;
+        flex: 1 1 auto;
+        display: inline-grid;
+        grid-area: 1 / 1 / 2 / 3;
+        grid-template-columns: 0px min-content;
+        margin: 2px;
+        padding-bottom: 2px;
+        padding-top: 2px;
+        color: rgb(51, 51, 51);
+        box-sizing: border-box;
+      }
+      .remix-css-19bb58m::after {
+        content: attr(data-value) ' ';
+        visibility: hidden;
+        white-space: pre;
+        grid-area: 1 / 2;
+        font: inherit;
+        min-width: 2px;
+        border: 0;
+        margin: 0;
+        outline: 0;
+        padding: 0;
+      }
+      .remix-css-1wy0on6 {
+        align-items: center;
+        align-self: stretch;
+        display: flex;
+        flex-shrink: 0;
+        box-sizing: border-box;
+      }
+      /* The helper that makes the browser complain about an empty required dropdown. */
+      .remix-css-1a0ro4n-requiredInput {
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Analyst</h1>
+    <!-- The form of tests/fixtures/real-forms.ts goes here: one copy of the markup for every test. -->
+    <main id="form"></main>
+    <script type="module">
+      import { GREENHOUSE } from './real-forms.ts';
+
+      document.querySelector('#form').innerHTML = GREENHOUSE;
+      document.documentElement.setAttribute('data-ready', '');
+    </script>
+  </body>
+</html>

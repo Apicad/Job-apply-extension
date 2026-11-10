@@ -70,7 +70,13 @@ popup ◀─ result ──┘                                              ◀�
   - `storage.ts` — the only module that touches extension storage. Only the
     background, popup and options page import it.
 - `tests/unit/` — Vitest. `tests/e2e/` — Playwright. `tests/fixtures/` — local
-  pages copied from the shape of real application forms.
+  pages copied from the shape of real application forms;
+  `tests/fixtures/real-forms.ts` holds the markup of a real Greenhouse and a
+  real Lever form, one copy for the unit tests and the fixture pages alike.
+  Until the scan and fill entrypoints exist, the e2e tests put the page-side
+  code into a fixture page themselves: `openFixture` in
+  `tests/e2e/extension.ts` adds the bundle of `tests/e2e/page-side.ts` as
+  `window.__pageSide`.
 - `research_notes/`, `reports/` — background research. The technical notes and
   their `_verification.md` corrections describe real Greenhouse, Lever, Ashby
   and Workday markup.

@@ -184,9 +184,11 @@ application forms.
 - **Unit tests** (`npm test`) — more than 2,800 of them. They exercise the
   real code against a real DOM (jsdom); none of the project's own modules is
   mocked.
-- **End-to-end tests** (`npm run test:e2e`) — Playwright drives real Chromium,
-  for what jsdom cannot show: layout, visibility and the extension platform.
-  The harness is set up; the specs themselves are still to be written.
+- **End-to-end tests** (`npm run test:e2e`) — Playwright drives real Chromium
+  with the built extension loaded, for what jsdom cannot show: layout,
+  visibility and the extension platform. They lay out the real Greenhouse and
+  Lever forms with the style rules that decide what can be seen, write into a
+  real React 19 form, and check the built manifest.
 
 Everyone in the tests is made up (Ada Lovelace, `ada@example.com`, `555-0100`
 phone numbers). No real personal data belongs in this repository.

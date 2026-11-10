@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A form made with React</title>
+    <style>
+      body {
+        font: 16px/1.5 system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      form > * {
+        display: block;
+        margin: 1rem 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>A form made with React</h1>
+    <p>
+      Every control here is a controlled component, the way Greenhouse builds its form: what counts is the state
+      React holds, which the form prints below.
+    </p>
+    <div id="root"></div>
+    <script type="module" src="./react-form.ts"></script>
+  </body>
+</html>
