@@ -29,8 +29,39 @@ type KeptControl =
   | { control: 'select'; el: Kept<HTMLSelectElement> }
   | { control: 'radio'; el: Kept<HTMLInputElement>; radios: Kept<HTMLInputElement>[] };
 
-type WorldGlobals = typeof globalThis & { [TABLE_KEY]?: KeptControl[] };
+/**
+ * What is found under the table's name is `unknown` until checked. A browser
+ * lets every script, this world included, reach the elements of the page by
+ * their id as properties of the global object. Until a scan has put its table
+ * here, a page with <form id="__jobApplyAssistantControls"> decides what the
+ * name leads to, and `form[0]` is that form's first control.
+ */
+type WorldGlobals = typeof globalThis & { [TABLE_KEY]?: unknown };
 const world: WorldGlobals = globalThis;
+
+function isKept(value: unknown): value is Kept<Element> {
+  if (typeof value !== 'object' || value === null) return false;
+  const { el, home } = value as Record<string, unknown>;
+  return el instanceof WeakRef && home instanceof WeakRef;
+}
+
+/** True for an entry that `keepControl` made: nothing else is ever turned back into a control. */
+function isKeptControl(value: unknown): value is KeptControl {
+  if (typeof value !== 'object' || value === null) return false;
+  const { control, el, radios } = value as Record<string, unknown>;
+  switch (control) {
+    case 'text':
+    case 'combobox':
+    case 'file':
+    case 'textarea':
+    case 'select':
+      return isKept(el);
+    case 'radio':
+      return isKept(el) && Array.isArray(radios) && radios.every(isKept);
+    default:
+      return false;
+  }
+}
 
 function keep<E extends Element>(el: E): Kept<E> {
   return { el: new WeakRef(el), home: new WeakRef(el.ownerDocument) };
@@ -104,7 +135,10 @@ export const rememberControls: RememberControls = (controls) => {
 
 /** The control a handle stands for, or null when the handle is unknown or the control has left the page. */
 export const recallControl: RecallControl = (ref) => {
-  // Handles are positions in the table; anything else ("length", 0.5) names no control.
-  const kept = Number.isInteger(ref) ? world[TABLE_KEY]?.[ref] : undefined;
-  return kept === undefined ? null : controlOnPage(kept);
+  const table = world[TABLE_KEY];
+  // Only a list can be the table: before the first scan the name may lead to an element of the page.
+  // Handles are positions in it; anything else ("length", 0.5) names no control.
+  if (!Array.isArray(table) || !Number.isInteger(ref)) return null;
+  const kept: unknown = table[ref];
+  return isKeptControl(kept) ? controlOnPage(kept) : null;
 };

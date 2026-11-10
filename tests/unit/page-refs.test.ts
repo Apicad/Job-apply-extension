@@ -252,6 +252,53 @@ describe('recallControl', () => {
 
     expect(recallControl(0)).toBeNull();
   });
+
+  // A browser lets every script reach the elements of the page by their id, as properties of the
+  // global object, and an extension's own world is no exception (checked in Chromium). So until a
+  // scan has put its table there, the page decides what is found under the table's name.
+  describe('when the page has an element whose id is the name of the table', () => {
+    const TABLE_NAME = '__jobApplyAssistantControls';
+
+    /** What the global object answers until the first scan: the page's element with that id. */
+    function plant(html: string, selector: string): void {
+      for (const name of globalsAddedSinceStart()) Reflect.deleteProperty(globalThis, name);
+      const planted = first(mount<Element>(html, selector));
+      Object.defineProperty(globalThis, TABLE_NAME, { configurable: true, writable: true, value: planted });
+    }
+
+    afterEach(() => {
+      Reflect.deleteProperty(globalThis, TABLE_NAME);
+    });
+
+    it.each<[string, string, string]>([
+      // `form[0]` is the form's first control, so a form stands in for a list quite well.
+      ['a form', `<form id="${TABLE_NAME}"><input name="control" value="text"><input name="el"></form>`, 'form'],
+      ['a dropdown, whose [0] is its first option', `<select id="${TABLE_NAME}"><option>text</option></select>`, 'select'],
+      ['a plain block', `<div id="${TABLE_NAME}"></div>`, 'div'],
+    ])('gives null for every handle when it is %s', (_name, html, selector) => {
+      plant(html, selector);
+
+      expect([recallControl(0), recallControl(1), recallControl(-1)]).toEqual([null, null, null]);
+    });
+
+    it('gives null when the table holds something that is not an entry of ours', () => {
+      for (const name of globalsAddedSinceStart()) Reflect.deleteProperty(globalThis, name);
+      const input = first(mount('<input id="first_name">'));
+      const notOurs = [input, null, 'text', { control: 'text' }, { control: 'bogus', el: {} }, { control: 'radio', el: {}, radios: 'no list' }];
+      Object.defineProperty(globalThis, TABLE_NAME, { configurable: true, writable: true, value: notOurs });
+
+      expect(notOurs.map((_entry, handle) => recallControl(handle))).toEqual([null, null, null, null, null, null]);
+    });
+
+    it('puts its own table in the place of the planted element at the next scan', () => {
+      plant(`<form id="${TABLE_NAME}"><input name="control"></form><input id="first_name">`, 'form');
+      const input = first(mount('<input id="first_name">'));
+
+      const handle = first(rememberControls([{ control: 'text', el: input }]));
+
+      expect(recallControl(handle)?.el).toBe(input);
+    });
+  });
 });
 
 describe('remembering again', () => {

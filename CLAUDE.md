@@ -180,6 +180,12 @@ Re-check them if a major version changes.
   page, with a `change` event. Job sites upload it immediately.
 - `Element.checkVisibility()` and `chrome.dom.openOrClosedShadowRoot()` exist
   in content scripts. Only open shadow roots are walked.
+- A page's elements are reachable by their `id` as properties of the global
+  object in the extension's isolated world too: with
+  `<form id="x">` on the page, `globalThis.x` is that form there, and `x[0]`
+  its first control, until the script assigns a value of its own to that
+  name. Anything read from a global must be checked before it is trusted.
+  Checked through `chrome.scripting.executeScript` in Chromium 153.
 - The search box of a React-Select 5 (stock styles, as on Greenhouse) measures
   4 by 18 CSS pixels while empty; its `select__input-container` wrapper is
   as wide as the dropdown. With `isSearchable: false` the input is a
