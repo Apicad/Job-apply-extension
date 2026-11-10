@@ -91,3 +91,7 @@ The release handoff supplies separate immutable links for the exact **tested sou
 [Cycle 3 dispositions](docs/hackathon/AUDIT-CYCLE-3.md) cover explicit save enforcement and visible reuse provenance. Both preview and execution require the exact saved record and current approval, independently of coincidentally matching revision numbers. Reuse always requires a fresh review, approval and explicit save. The current job context is separate from the original AI request context displayed in the trace.
 
 Edited wording is not verified against sentence-level sources. Original warnings stay visible for review even if a paraphrase no longer triggers the bounded checks. They may have been addressed by an edit, but the extension cannot determine that automatically; compare the exact answer with the original facts.
+
+## Audit cycle 4
+
+[Cycle 4 disposition](docs/hackathon/AUDIT-CYCLE-4.md) covers one bounded persisted-state consistency repair. Preview and execution rederive the approved application/question identity from the current plan and target row. A privileged session edit cannot redirect an otherwise valid saved approval to a different target merely by changing row/plan references. No page or normal UI reachability was demonstrated. Legitimate explicit reuse, review, approval and save remain supported; this does not claim protection from arbitrary modification of all trusted extension state.

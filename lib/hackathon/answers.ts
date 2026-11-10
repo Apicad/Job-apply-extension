@@ -1,6 +1,6 @@
 import { assertLiveRow } from './live';
 import { readLibrary, saveAnswer, deleteAnswer, libraryState } from './library';
-import { currentApproval, reusableDraft, resolveMissing, answerGaps, sameAnswerTarget } from './contracts';
+import { currentApproval, reusableDraft, resolveMissing, answerGaps, sameAnswerTarget, sameContext } from './contracts';
 import { fieldSignature } from './engine';
 import { browser } from 'wxt/browser';
 import { readHackathon, writeHackathon } from '../storage';
@@ -9,6 +9,21 @@ import type { Answer, Context, Fact, Request } from './contracts';
 import type { NativePlan, Row } from './engine';
 export interface AnswerSession { planId: string; rowKey: string; context: Context; request: Request | null; sent: boolean; answer: Answer | null; savedId?: string; savedRevision?: number }
 export const rowKey = (row: Row): string => `${row.documentId}:${row.field.ref}`;
+async function digest(value: string): Promise<string> {
+ const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+ return Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('');
+}
+async function contextForRow(plan: NativePlan, row: Row, job: string): Promise<Context> {
+ // Opaque identities avoid sending page URLs/query tokens to AI. Derive them
+ // again at both write gates rather than trusting persisted row/context pairs.
+ const application = await digest(key([plan.url, row.job]));
+ const questionKey = await digest(fieldSignature(row.field.descriptor, row.field.form, row.field.maxLength));
+ return { application, questionKey, question: row.field.descriptor.label, job, control: 'textarea' };
+}
+async function assertAnswerTarget(plan: NativePlan, row: Row, session: AnswerSession, saved: Answer): Promise<void> {
+ const target = await contextForRow(plan, row, session.context.job);
+ if (!sameContext(session.context, target) || !sameContext(saved.context, target)) throw Error('Answer target does not match the approved application and question. Scan and review again.');
+}
 export function supportedQuestion(row: Row): boolean {
  const d = row.field.descriptor;
  return d.control === 'textarea' && row.field.empty && allowedQuestion(d.label) && !/signature|certif|attest|acknowledg|declar|consent|sponsor|visa|disabil|gender|race|salary|citizen|password|social.security/i.test([d.name, d.id, d.groupLabel, d.hints, d.placeholder].join(' '));
@@ -47,12 +62,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
   if (typeof message.job !== 'string' || message.job.length > 4000 || !Array.isArray(message.factIds) || message.factIds.length > 20 || !message.factIds.every(id => typeof id === 'string')) throw Error('Invalid selected facts or reviewed job context.');
   await assertLiveRow(plan, row);
   const selected = message.factIds.map(id => facts.find(f => f.id === id)); if (selected.some(f => !f)) throw Error('Selected fact no longer exists.');
-  // Opaque application identity avoids transmitting URLs, query tokens or contacts to AI.
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key([plan.url, row.job])));
-  const application = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-  const questionDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fieldSignature(row.field.descriptor, row.field.form, row.field.maxLength)));
-  const questionKey = Array.from(new Uint8Array(questionDigest), b => b.toString(16).padStart(2, '0')).join('');
-  const context: Context = { application, questionKey, question: row.field.descriptor.label, job: message.job, control: 'textarea' };
+  const context = await contextForRow(plan, row, message.job);
   const request = makeRequest(context, selected as Fact[]);
   await invalidatePlan(tabId);
   const session: AnswerSession = { planId: plan.id, rowKey: rowKey(row), context, request, sent: false, answer: null };
@@ -97,6 +107,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
   if (!saved || !matchesSavedApproval(saved, session, facts)) throw Error('Save this exact approved revision before previewing. Deleted or stale answers cannot fill.');
   const row = plan.rows.find(r => rowKey(r) === session.rowKey);
   if (!row || !supportedQuestion(row) || (row.field.maxLength >= 0 && saved.text.length > row.field.maxLength)) throw Error('Question is unavailable or answer exceeds its length limit.');
+  await assertAnswerTarget(plan, row, session, saved);
   for (const other of plan.rows) if (other.action?.type === 'answer') { other.action = null; other.status = 'Manual / unsupported'; }
   plan.id = crypto.randomUUID(); plan.state = 'preview'; plan.outcomes = undefined;
   plan.answerBinding = { id: session.answer.id, revision: session.answer.revision, savedId: saved.id };
@@ -119,7 +130,8 @@ export async function validateAnswerBinding(plan: NativePlan): Promise<void> {
  if (!plan.answerBinding) return;
  const session = await getSession(plan.tabId); const a = session.answer;
  const saved = (await readLibrary(libraryStore)).find(s => s.id === plan.answerBinding!.savedId);
- if (!a || session.planId !== plan.id || a.id !== plan.answerBinding.id || a.revision !== plan.answerBinding.revision || !matchesSavedApproval(saved, session, await loadFacts())) throw Error('Answer was edited, deleted, or became stale. Review and preview again.');
+ if (!a || !saved || session.planId !== plan.id || a.id !== plan.answerBinding.id || a.revision !== plan.answerBinding.revision || !matchesSavedApproval(saved, session, await loadFacts())) throw Error('Answer was edited, deleted, or became stale. Review and preview again.');
  const row = plan.rows.find(r => rowKey(r) === session.rowKey);
  if (!row || row.action?.type !== 'answer' || row.action.value !== a.text) throw Error('Answer plan mismatch.');
+ await assertAnswerTarget(plan, row, session, saved);
 }

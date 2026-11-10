@@ -27,3 +27,5 @@ Final concurrency self-review: stale fact editors and stale answer/library edito
 Cycle 2 residuals on `24871723c869f5d5d9207a125e93604e96f327d0` are tracked in [AUDIT-CYCLE-2.md](AUDIT-CYCLE-2.md). The earlier verdicts and counts above are historical, not certification of later SHAs.
 
 Cycle 3 findings on `cb0a1298ba54cfeef100541e42c1c1ba535b3e00` (attribution-corrected, identical-tree source `ebe01d6e01a0b441e7d446515a357c4277a895d1`) are tracked in [AUDIT-CYCLE-3.md](AUDIT-CYCLE-3.md): N7 explicit save, N8 reuse origin, and clearer N1b uncertainty. Safety withdrew O4 after verifying the existing rescan guard. Code fixes are separate from the attribution-only history correction.
+
+Cycle 4 on `a59c71bca9860e2e2938feedc9ad7e6afc545d21`: Kevin found no actionable A+B defects; Safety identified privileged-state target desynchronization C4-1. [AUDIT-CYCLE-4.md](AUDIT-CYCLE-4.md) documents its bounded repair, reproduction preconditions, positive controls and limits. No page or normal UI/message exploit was established.

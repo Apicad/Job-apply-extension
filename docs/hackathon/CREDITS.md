@@ -16,3 +16,5 @@ Runtime dependencies: React / React DOM (MIT), Public Sans font via Fontsource (
 Cycle 2 reviews by Kevin (A+B) and Safety (C+D) independently inspected `24871723c869f5d5d9207a125e93604e96f327d0`; their residuals and evidence limits are documented in [AUDIT-CYCLE-2.md](AUDIT-CYCLE-2.md). Codex implemented the subsequent fixes and tests. Neither reviewer is credited with executing the builder's real-model smoke.
 
 Cycle 3 reviews by Kevin and Safety inspected `cb0a1298ba54cfeef100541e42c1c1ba535b3e00`; [AUDIT-CYCLE-3.md](AUDIT-CYCLE-3.md) records their findings and the subsequent Codex-assisted fixes. The owner's own development-commit attribution was separately corrected to Abdiel Picado / Apicad with source trees preserved. That metadata correction does not change the contributions or historical audit scope described here.
+
+Cycle 4 reviews independently checked `a59c71bca9860e2e2938feedc9ad7e6afc545d21`; Safety's C4-1 finding informed the focused Codex-assisted consistency fix and seven browser regressions in [AUDIT-CYCLE-4.md](AUDIT-CYCLE-4.md). Their passing prior checks do not certify the subsequent source SHA.
