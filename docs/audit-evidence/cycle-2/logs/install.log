@@ -1,0 +1,22 @@
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated eslint@9.39.4: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+> job-apply-extension@0.1.0 postinstall
+> wxt prepare
+
+
+WXT 0.21.5
+ℹ Generating types...
+✔ Finished in 1.695 s
+
+added 480 packages, and audited 481 packages in 5s
+
+145 packages are looking for funding
+  run `npm fund` for details
+
+4 low severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.

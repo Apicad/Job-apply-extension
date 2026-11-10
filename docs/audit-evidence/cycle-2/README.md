@@ -8,7 +8,7 @@ This directory is published in a separate evidence-only commit based on that sou
 
 ## Executed gates
 
-The clean independent validation clone passed `npm ci`, `JAA_REQUIRE_CLEAN=1 npm run check` (typecheck, 19 unit files / 4,154 tests, 27 actual built-extension Chromium tests with zero failures, skips or flaky results), and `npm run build`. Logs are supplied with local filesystem paths redacted. See verification.json and browser-results.json for actual metadata. The production bundle reports 448.74 kB; permissions are storage, activeTab and scripting, with no host permissions or content scripts.
+The clean independent validation clone passed `npm ci`, `JAA_REQUIRE_CLEAN=1 npm run check` (typecheck, 19 unit files / 4,154 tests, 27 actual built-extension Chromium tests with zero failures, skips or flaky results), and `npm run build`. Logs are supplied with local filesystem paths redacted, terminal control codes removed and trailing whitespace trimmed. See verification.json and browser-results.json for actual metadata. The production bundle reports 448.74 kB; permissions are storage, activeTab and scripting, with no host permissions or content scripts.
 
 The source export was compared byte-for-byte against all 136 committed files. SOURCE-FILES-SHA256.json records those files; verification.json records the local git-archive zip checksum. Both authoritative plan documents and the Grok instruction document are in the source commit.
 
