@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Three lines of a form on ballpoint blue; the middle one is highlighted: "this one got filled in". -->
+  <rect width="128" height="128" rx="28" fill="#1f4fd8" />
+  <rect x="26" y="30" width="76" height="16" rx="4" fill="#ffffff" />
+  <rect x="26" y="56" width="76" height="16" rx="4" fill="#ffdd00" />
+  <rect x="26" y="82" width="48" height="16" rx="4" fill="#ffffff" />
+</svg>

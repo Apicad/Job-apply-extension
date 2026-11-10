@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- A drawing sheet: corner marks framing one ruled blank, the way a form field is drawn. -->
+  <rect width="128" height="128" rx="26" fill="#16306b" />
+  <g fill="none" stroke="#f5f7fb" stroke-width="12" stroke-linecap="square">
+    <path d="M30 52V30h22M76 30h22v22M98 76v22H76M52 98H30V76" />
+    <path d="M48 64h32" />
+  </g>
+</svg>

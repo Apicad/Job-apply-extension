@@ -1,0 +1,378 @@
+/*
+  The look borrows from drafting sheets: blue ink on cool paper by day, a cyanotype by night,
+  DIN lettering (the standard hand for technical drawings), a ruled title block at the top,
+  and each form control drawn as a small schematic symbol. Red is the reviewer's pencil: it
+  marks only what needs attention.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  --paper: #f5f7fb;
+  --ink: #16306b;
+  --ink-soft: #55689a;
+  --rule: #c3cee6;
+  --wash: #e7ecf7;
+  --redline: #b5341f;
+
+  --lettering: 'DIN Alternate', Bahnschrift, 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --body: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --code: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0f2a5c;
+    --ink: #eaf1ff;
+    --ink-soft: #a8bbe4;
+    --rule: #35518f;
+    --wash: #17376f;
+    --redline: #ffb09e;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Chrome will not make a popup taller than 600px. Staying inside that keeps the title block
+   and the actions in view while the list scrolls beneath them. */
+body {
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-height: 600px;
+  margin: 0;
+  padding-top: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px/1.45 var(--body);
+}
+
+body > * {
+  flex: none;
+}
+
+h1,
+p,
+ul {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+button {
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.symbols {
+  position: absolute;
+}
+
+/* Title block ------------------------------------------------------------------------------ */
+
+.title-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin: 0 10px 10px;
+  border: 1.5px solid var(--ink);
+}
+
+#page-title {
+  grid-column: 1 / -1;
+  padding: 9px 10px 8px;
+  font: 700 18px/1.2 var(--lettering);
+  overflow-wrap: anywhere;
+}
+
+#page-address,
+#page-size {
+  padding: 5px 10px;
+  border-top: 1px solid var(--ink);
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+#page-address {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#page-size {
+  border-left: 1px solid var(--ink);
+}
+
+#page-address:empty,
+#page-size:empty {
+  display: none;
+}
+
+/* Messages --------------------------------------------------------------------------------- */
+
+#message {
+  margin: 0 10px 10px;
+  overflow-wrap: anywhere;
+}
+
+#message:empty {
+  display: none;
+}
+
+#unread {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+  margin: 0 10px 10px;
+  padding: 8px 10px 9px;
+  border-left: 3px solid var(--redline);
+  background: var(--wash);
+}
+
+#unread[hidden],
+#unread-intro[hidden],
+#unread-note:empty,
+#unread-sites:empty {
+  display: none;
+}
+
+#unread-sites {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+/* These rows sit in the notice, not in a section's schedule. */
+#unread-sites li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+}
+
+.site {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Actions ---------------------------------------------------------------------------------- */
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 0 10px 10px;
+}
+
+.actions button,
+.allow {
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: transparent;
+  font: 700 12.5px/1 var(--lettering);
+  white-space: nowrap;
+}
+
+.actions button:hover {
+  background: var(--wash);
+}
+
+/* The notice already sits on the wash colour, so its buttons invert instead. */
+.allow {
+  flex: none;
+  padding: 6px 12px;
+}
+
+.allow:hover {
+  background: var(--paper);
+}
+
+/* Copy JSON is the usual next step, so it is the one filled in. */
+.actions #copy-json {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.actions #copy-json:hover {
+  opacity: 0.86;
+}
+
+.actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Nothing was captured, so there is nothing to copy or save. */
+body[data-state='error'] .actions {
+  display: none;
+}
+
+/* Sections --------------------------------------------------------------------------------- */
+
+body > main {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 1.5px solid var(--ink);
+}
+
+details + details {
+  border-top: 1px solid var(--rule);
+}
+
+summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--paper);
+  font: 700 13.5px/1.2 var(--lettering);
+  cursor: pointer;
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The chevron sits in the same 22px column as the row symbols below it. */
+summary::before {
+  content: '';
+  box-sizing: border-box;
+  width: 7px;
+  height: 7px;
+  margin: 0 7.5px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+details[open] > summary::before {
+  transform: translateY(-1.5px) rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  summary::before {
+    transition: none;
+  }
+}
+
+.count {
+  margin-left: -3px;
+  color: var(--ink-soft);
+}
+
+.empty,
+.more {
+  padding: 0 10px 10px 42px;
+  color: var(--ink-soft);
+}
+
+/* Rows ------------------------------------------------------------------------------------- */
+
+/* Three columns, like a schedule on a drawing: symbol, description, kind. */
+li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  padding: 6px 10px 7px;
+  border-top: 1px solid var(--rule);
+}
+
+.symbol {
+  width: 22px;
+  height: 14px;
+  margin-top: 3px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+}
+
+.what {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Headings step in by level, so the list reads as the page's outline. */
+.outline {
+  padding-left: calc((var(--level) - 1) * 10px);
+}
+
+/* A guessed label can be a whole question; three lines is enough to recognise it. */
+.label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.options,
+.hint,
+.frame,
+.address {
+  max-width: 100%;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.address {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector {
+  max-width: 100%;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--wash);
+  color: var(--ink-soft);
+  font: 11px/1.4 var(--code);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector:hover {
+  color: var(--ink);
+}
+
+.kind {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 2px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.flag {
+  color: var(--ink-soft);
+}
+
+.flag-required {
+  color: var(--redline);
+}

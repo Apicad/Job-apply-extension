@@ -1,0 +1,25 @@
+# Dependencies and build output
+node_modules
+.output
+.wxt
+stats.html
+stats-*.json
+
+# Personal dev-browser settings for `npm run dev`
+web-ext.config.ts
+
+# Test output
+test-results
+playwright-report
+blob-report
+coverage
+
+# Logs
+*.log
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.sw?

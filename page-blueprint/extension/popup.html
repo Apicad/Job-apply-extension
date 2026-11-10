@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Page Blueprint</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body data-state="loading">
+    <!-- Schematic symbols for each kind of form control, drawn once and reused in the field list. -->
+    <svg class="symbols" width="0" height="0" aria-hidden="true">
+      <symbol id="glyph-line" viewBox="0 0 22 14"><path d="M1 11.5h20M4.5 3.5v5.5" /></symbol>
+      <symbol id="glyph-lines" viewBox="0 0 22 14"><path d="M1 3.5h20M1 7.5h20M1 11.5h12" /></symbol>
+      <symbol id="glyph-select" viewBox="0 0 22 14">
+        <rect x="1" y="2" width="20" height="10" />
+        <path d="M13.5 6l2.5 2.5L18.5 6" />
+      </symbol>
+      <symbol id="glyph-radio" viewBox="0 0 22 14">
+        <circle cx="11" cy="7" r="5" />
+        <circle cx="11" cy="7" r="1.75" fill="currentColor" stroke="none" />
+      </symbol>
+      <symbol id="glyph-check" viewBox="0 0 22 14">
+        <rect x="6" y="2" width="10" height="10" />
+        <path d="M8.5 7.2l1.9 1.9 3.2-3.8" />
+      </symbol>
+      <symbol id="glyph-file" viewBox="0 0 22 14"><path d="M11 9V2M8 4.8L11 2l3 2.8M4 9v3h14V9" /></symbol>
+      <symbol id="glyph-button" viewBox="0 0 22 14">
+        <rect x="1" y="2.5" width="20" height="9" rx="2.5" />
+        <path d="M7.5 7h7" />
+      </symbol>
+      <symbol id="glyph-slider" viewBox="0 0 22 14">
+        <path d="M1 7h4.5M10.5 7H21" />
+        <circle cx="8" cy="7" r="2.5" />
+      </symbol>
+    </svg>
+
+    <header class="title-block">
+      <h1 id="page-title">Reading the page…</h1>
+      <p id="page-address"></p>
+      <p id="page-size"></p>
+    </header>
+
+    <p id="message" role="status"></p>
+
+    <div id="unread" hidden>
+      <p id="unread-intro">
+        Frames from other sites are not read until you allow the site. If the form you want is in one of these, allow
+        it and the page is read again.
+      </p>
+      <ul id="unread-sites"></ul>
+      <p id="unread-note"></p>
+    </div>
+
+    <div class="actions">
+      <button id="copy-json" type="button" disabled>Copy JSON</button>
+      <button id="copy-html" type="button" disabled>Copy HTML</button>
+      <button id="save-json" type="button" disabled>Save JSON</button>
+      <button id="save-html" type="button" disabled>Save HTML</button>
+    </div>
+
+    <main id="sections"></main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

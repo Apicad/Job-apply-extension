@@ -1,0 +1,141 @@
+/*
+ * Shared look for the popup and the options page.
+ *
+ * The idea: a paper form marked up by a careful friend. Ballpoint blue is
+ * "the assistant wrote this", highlighter yellow is "filled in", and the
+ * sticky-flag red is "this one needs you". Flat paper, ruled lines, boxed
+ * fields with small corner radii — no cards, shadows or gradients.
+ *
+ * The typeface (Public Sans, made for government forms) ships inside the
+ * extension; nothing is loaded from the network.
+ */
+@import '@fontsource-variable/public-sans/wght.css';
+
+:root {
+  color-scheme: light dark;
+
+  --paper: #ffffff;
+  --desk: #eef2f7;
+  --ink: #131a2b;
+  --pencil: #5b6474; /* secondary text */
+  --rule: #cfd6e0; /* field boxes and ruled lines */
+  --ballpoint: #1f4fd8; /* what the assistant wrote; the main action */
+  --ballpoint-press: #183fae;
+  --on-ballpoint: #ffffff;
+  --highlighter: #ffdd00; /* filled in */
+  --on-highlighter: #131a2b;
+  --flag: #d92d5c; /* needs you */
+
+  --font: 'Public Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius: 3px;
+  --focus: 0 0 0 2px var(--paper), 0 0 0 4px var(--ballpoint);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1a1f2a;
+    --desk: #11151c;
+    --ink: #e9edf3;
+    --pencil: #a3adbb;
+    --rule: #3a4352;
+    --ballpoint: #86a4ff;
+    --ballpoint-press: #a8beff;
+    --on-ballpoint: #0d1424;
+    --highlighter: #f2d000;
+    --on-highlighter: #131a2b;
+    --flag: #ff7096;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--ballpoint);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: var(--radius);
+}
+
+/* The main action: a solid ballpoint-blue button that says what it will do. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--ballpoint);
+  border-radius: var(--radius);
+  background: var(--ballpoint);
+  color: var(--on-ballpoint);
+  font-weight: 620;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--ballpoint-press);
+  border-color: var(--ballpoint-press);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Secondary actions: an outlined box, like an empty form field. */
+.button--quiet {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--rule);
+  font-weight: 520;
+}
+
+.button--quiet:hover:not(:disabled) {
+  background: transparent;
+  border-color: var(--pencil);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
