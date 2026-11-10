@@ -1,0 +1,36 @@
+
+> job-apply-extension@0.1.0 build
+> wxt build
+
+
+WXT 0.21.5
+ℹ Building chrome-mv3 for production with Vite 8.3.7
+[?25l
+⠋ Preparing...
+⠋ [1/5] background
+⠋ [2/5] fill
+⠙ [2/5] fill
+⠙ [3/5] inspect
+⠙ [4/5] popup
+⠹ [4/5] popup
+⠹ [5/5] scan
+⠸ [5/5] scan
+[?25h
+[?25h✔ Built extension in 339 ms
+  ├─ .output/chrome-mv3/manifest.json                                             565 B
+  ├─ .output/chrome-mv3/popup.html                                                292 B
+  ├─ .output/chrome-mv3/background.js                                             67.06 kB
+  ├─ .output/chrome-mv3/chunks/popup-Cq9xNH9j.js                                  261.06 kB
+  ├─ .output/chrome-mv3/fill.js                                                   21.96 kB
+  ├─ .output/chrome-mv3/inspect.js                                                18.27 kB
+  ├─ .output/chrome-mv3/scan.js                                                   19.00 kB
+  ├─ .output/chrome-mv3/assets/popup-Dnejtplr.css                                 3.89 kB
+  ├─ .output/chrome-mv3/assets/public-sans-latin-ext-wght-normal-MQgHevqp.woff2   18.47 kB
+  ├─ .output/chrome-mv3/assets/public-sans-latin-wght-normal-DdeTHZLK.woff2       26.83 kB
+  ├─ .output/chrome-mv3/assets/public-sans-vietnamese-wght-normal-CtlIRbEm.woff2  7.72 kB
+  ├─ .output/chrome-mv3/icon/128.png                                              1.85 kB
+  ├─ .output/chrome-mv3/icon/16.png                                               386 B
+  ├─ .output/chrome-mv3/icon/32.png                                               518 B
+  └─ .output/chrome-mv3/icon/48.png                                               872 B
+Σ Total size: 448.74 kB
+✔ Finished in 865 ms

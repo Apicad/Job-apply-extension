@@ -1,0 +1,107 @@
+
+> job-apply-extension@0.1.0 check
+> npm run compile && npm run test && npm run test:e2e
+
+
+> job-apply-extension@0.1.0 compile
+> tsc --noEmit
+
+
+> job-apply-extension@0.1.0 test
+> vitest run
+
+
+ RUN  v5.1.0 <validation-checkout>
+
+
+ Test Files  19 passed (19)
+      Tests  4154 passed (4154)
+   Start at  22:42:49
+   Duration  2.49s (environment 64%, tests 27%, import 3%, setup 3%, transform 2%, worker 1%)
+
+Environment  jsdom was created 19 times · 8.38s total, 64% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+
+> job-apply-extension@0.1.0 test:e2e
+> npm run build:e2e && node scripts/e2e.mjs
+
+
+> job-apply-extension@0.1.0 build:e2e
+> wxt build --mode e2e
+
+
+WXT 0.21.5
+ℹ Building chrome-mv3 for e2e with Vite 8.3.7
+[?25l
+⠋ Preparing...
+⠋ [1/5] background
+⠋ [2/5] fill
+⠋ [3/5] inspect
+⠙ [3/5] inspect
+⠙ [4/5] popup
+⠹ [4/5] popup
+⠹ [5/5] scan
+⠸ [5/5] scan
+[?25h
+[?25h✔ Built extension in 328 ms
+  ├─ .output/chrome-mv3-e2e/manifest.json                                             776 B
+  ├─ .output/chrome-mv3-e2e/popup.html                                                292 B
+  ├─ .output/chrome-mv3-e2e/background.js                                             67.17 kB
+  ├─ .output/chrome-mv3-e2e/chunks/popup-CLVxNsqf.js                                  475.14 kB
+  ├─ .output/chrome-mv3-e2e/fill.js                                                   22.08 kB
+  ├─ .output/chrome-mv3-e2e/inspect.js                                                18.38 kB
+  ├─ .output/chrome-mv3-e2e/scan.js                                                   19.11 kB
+  ├─ .output/chrome-mv3-e2e/assets/popup-Dnejtplr.css                                 3.89 kB
+  ├─ .output/chrome-mv3-e2e/assets/public-sans-latin-ext-wght-normal-MQgHevqp.woff2   18.47 kB
+  ├─ .output/chrome-mv3-e2e/assets/public-sans-latin-wght-normal-DdeTHZLK.woff2       26.83 kB
+  ├─ .output/chrome-mv3-e2e/assets/public-sans-vietnamese-wght-normal-CtlIRbEm.woff2  7.72 kB
+  ├─ .output/chrome-mv3-e2e/icon/128.png                                              1.85 kB
+  ├─ .output/chrome-mv3-e2e/icon/16.png                                               386 B
+  ├─ .output/chrome-mv3-e2e/icon/32.png                                               518 B
+  └─ .output/chrome-mv3-e2e/icon/48.png                                               872 B
+Σ Total size: 663.49 kB
+✔ Finished in 513 ms
+[WebServer] (node:92240) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 27 tests using 4 workers
+
+(node:92243) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:92244) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:92242) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:92241) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 tests/e2e/audit-cycle-1.spec.ts:47:1 › C-1/C-3: interrupted plan stays unknown through preview and answer invalidation (5.7s)
+  ✓   2 tests/e2e/audit-cycle-1.spec.ts:62:1 › C-2: CRLF and CR normalize before exact approval, save and textarea readback (5.7s)
+  ✓   1 tests/e2e/audit-cycle-1.spec.ts:72:1 › C-3: UI distinguishes refused, written-unverified and unreachable outcomes (5.8s)
+  ✓   4 tests/e2e/audit-cycle-1.spec.ts:26:1 › C-1: completed native fill retains its outcomes and cannot be revived by answer preview (5.9s)
+  ✓   8 tests/e2e/audit-cycle-1.spec.ts:154:1 › AB-5: synthetic loading preserves raw profiles and facts even when malformed or overlong (4.3s)
+  ✓   5 tests/e2e/audit-cycle-1.spec.ts:91:1 › C-4: canonical labels match execution without hiding safety cues or mutations (5.1s)
+  ✓   7 tests/e2e/audit-cycle-1.spec.ts:135:1 › AB-2: cross-job saves fork records and preserve source scope, approval and concurrent previews (5.5s)
+  ✓   6 tests/e2e/audit-cycle-1.spec.ts:106:1 › AB-1: real popup no-op keystrokes cannot hide unsupported claims; correction and new claims are rechecked (5.7s)
+  ✓   9 tests/e2e/audit-cycle-1.spec.ts:166:1 › AB-6: damaged library remains inspectable and explicit recovery preserves raw data and valid answers (6.0s)
+  ✓  12 tests/e2e/audit-cycle-2.spec.ts:48:1 › N3: ordinary one-part prose passes review while an unsupported quantity stays blocked (5.2s)
+  ✓  10 tests/e2e/audit-cycle-2.spec.ts:27:1 › N1: real no-op keystrokes retain per-sentence warnings with all facts selected (6.6s)
+  ✓  11 tests/e2e/audit-cycle-2.spec.ts:37:1 › N2: UI reuse on another question preserves original record and concurrent preview in the same application (7.9s)
+  ✓  16 tests/e2e/hackathon.spec.ts:11:1 › actual extension: scan, preview, native React fills, no replay or submit (5.8s)
+  ✓  14 tests/e2e/audit-cycle-2.spec.ts:53:38 › N6: legacy CRLF reuse with exact approval, changed readback=true (13.7s)
+  ✓  13 tests/e2e/audit-cycle-2.spec.ts:53:38 › N6: legacy CRLF reuse with exact approval, changed readback=false (14.8s)
+  ✓  15 tests/e2e/audit-cycle-2.spec.ts:69:1 › demo cross-check: native fill then explicit rescan and saved-answer review fills only the textarea (13.6s)
+  ✓  19 tests/e2e/hackathon.spec.ts:107:1 › context changes and changing selected question revoke previous approval and plan (5.1s)
+  ✓  18 tests/e2e/hackathon.spec.ts:72:1 › explicit save, reopen, renewed reuse, exact textarea readback and deleted-plan rejection (6.0s)
+  ✓  20 tests/e2e/hackathon.spec.ts:117:1 › two tabs, rescans, changed question, cancelled AI and native fallback (5.6s)
+  ✓  17 tests/e2e/hackathon.spec.ts:30:1 › copy/paste boundary validates identity, shows original sources and revokes edited approval (11.9s)
+  ✓  23 tests/e2e/hackathon.spec.ts:170:1 › storage quota error reaches UI without a saved-success message (3.8s)
+  ✓  22 tests/e2e/hackathon.spec.ts:159:1 › source change and malformed library, no storage success or unsafe fill (3.9s)
+  ✓  21 tests/e2e/hackathon.spec.ts:145:1 › worker restart restores preview; interrupted execution marker prevents replay (4.4s)
+  ✓  24 tests/e2e/hackathon.spec.ts:181:1 › native descriptor/options mutations, prefilled files, overlength and delayed rewrite are not reported as verified (3.6s)
+  ✓  26 tests/e2e/hackathon.spec.ts:230:1 › stale fact and answer editors cannot replace newer revisions (2.7s)
+  ✓  25 tests/e2e/hackathon.spec.ts:221:1 › persistent review workspace remains bound to the application tab (2.9s)
+  ✓  27 tests/e2e/hackathon.spec.ts:196:1 › all maintained sample fixtures execute through the actual extension without arbitrary actions (5.7s)
+
+  27 passed (48.7s)

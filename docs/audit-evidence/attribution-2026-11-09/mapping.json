@@ -1,0 +1,315 @@
+{
+  "remoteMain": "a7b01ff0d74fa82dd5ca851ff87cbd52a05e97c9",
+  "oldIdentity": "liam <82913243+abythenice@users.noreply.github.com>",
+  "newIdentity": "Abdiel Picado <91150136+Apicad@users.noreply.github.com>",
+  "commits": [
+    {
+      "old": "9540d64ccbfa8f04d2c6c0503cceba3a90bc5fff",
+      "new": "949c96ab064fff73c638d9c8e73b45f12f66a453",
+      "tree": "b7356f66fa791b44c36d7b02d38e0d9fd2d451fa",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "111de8f2f105eaaddf5a1c7504d035f6aef2e711"
+      ],
+      "newParents": [
+        "111de8f2f105eaaddf5a1c7504d035f6aef2e711"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "0f74e08df35c37d298960e960fc0828fbb56625a",
+      "new": "082e5e71917ec2113178fc35f371335a7873f064",
+      "tree": "067efe218e3981c41c136bbe5da33008ec409bfe",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "9540d64ccbfa8f04d2c6c0503cceba3a90bc5fff"
+      ],
+      "newParents": [
+        "949c96ab064fff73c638d9c8e73b45f12f66a453"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "7c799829808ed37a89511b8ad8aa336c8f7f41b3",
+      "new": "0552e86a4cec680df4a5b515706d270bdab328fb",
+      "tree": "503aeab61244be615e706c7e0b802127257dcd40",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "0f74e08df35c37d298960e960fc0828fbb56625a"
+      ],
+      "newParents": [
+        "082e5e71917ec2113178fc35f371335a7873f064"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "30eaca55d61e670374623233b93f45b8eee6d2b5",
+      "new": "0862fd07d4583cbd7c08a20b21d2584b1c747fa0",
+      "tree": "ab9380f9934027d0ff5d452afb92d001ce8a7e0c",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "7c799829808ed37a89511b8ad8aa336c8f7f41b3"
+      ],
+      "newParents": [
+        "0552e86a4cec680df4a5b515706d270bdab328fb"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "f5f77935f540da0c4d29600e795b2c1f47bdf56a",
+      "new": "1ad7163337d71b3d75cc9d54fe29a45c2ddc1db7",
+      "tree": "f0aa2de2ab83b5165e4911f80ebf4d905f826f06",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "30eaca55d61e670374623233b93f45b8eee6d2b5"
+      ],
+      "newParents": [
+        "0862fd07d4583cbd7c08a20b21d2584b1c747fa0"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "96af47631494a9292db430e60c520546fb06b4d7",
+      "new": "e95dc18c7eaded8aa24be1534374e2d6b260af27",
+      "tree": "dfcab6777a0423d76cce82ce74a8828faa468c98",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "f5f77935f540da0c4d29600e795b2c1f47bdf56a"
+      ],
+      "newParents": [
+        "1ad7163337d71b3d75cc9d54fe29a45c2ddc1db7"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "a48e4e845ff7763560e9aa45d58f4b0b9d145cf9",
+      "new": "d2a3bebf83ee6ec85c1349dc94d00ae339d2bf0e",
+      "tree": "812b85f54674ed3db19e36a2995eeb67a1faceda",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "96af47631494a9292db430e60c520546fb06b4d7"
+      ],
+      "newParents": [
+        "e95dc18c7eaded8aa24be1534374e2d6b260af27"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "764b27149a80e54043ff184bfbb80273512ee2fe",
+      "new": "0941c9c372f96f1088d11d098dd401a535970b8b",
+      "tree": "5c40870f4d593dcf7cae331da15fd264751c2d3c",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "a48e4e845ff7763560e9aa45d58f4b0b9d145cf9"
+      ],
+      "newParents": [
+        "d2a3bebf83ee6ec85c1349dc94d00ae339d2bf0e"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "5985c2331e357ae57da25fad0eacab0b32db0a2d",
+      "new": "13113c7bf5ac3e960ba79ebecd66aa837ce90bf7",
+      "tree": "24537575d1d66d54d790d918d34f604a9ab23c80",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "764b27149a80e54043ff184bfbb80273512ee2fe"
+      ],
+      "newParents": [
+        "0941c9c372f96f1088d11d098dd401a535970b8b"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "24871723c869f5d5d9207a125e93604e96f327d0",
+      "new": "ed4464f8bda53a1eed332c7ce3e890b574bc960a",
+      "tree": "5dff332dd42122f5a8c7e1f9a1b584252fce8a09",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "5985c2331e357ae57da25fad0eacab0b32db0a2d"
+      ],
+      "newParents": [
+        "13113c7bf5ac3e960ba79ebecd66aa837ce90bf7"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+      "new": "ebe01d6e01a0b441e7d446515a357c4277a895d1",
+      "tree": "3e53623c142a22c97f64973c8877bc0e4faac819",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "24871723c869f5d5d9207a125e93604e96f327d0"
+      ],
+      "newParents": [
+        "ed4464f8bda53a1eed332c7ce3e890b574bc960a"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "1e39eb2853afccdc8cc319d52e2fc276f18a27cb",
+      "new": "c0a132396524432b737e2aae6c55ce9c1d736a05",
+      "tree": "d23fef4f75b2b2d0f3ffd413392b030ec1fd971f",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "cb0a1298ba54cfeef100541e42c1c1ba535b3e00"
+      ],
+      "newParents": [
+        "ebe01d6e01a0b441e7d446515a357c4277a895d1"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    },
+    {
+      "old": "6bdcac47448b0645b51340b7f5694b7e45f32ece",
+      "new": "f4adc844cd4e880f60067f79b1fdc48c7188e986",
+      "tree": "6090c8db9c5d1cc364e8f8ce82f940b08179690d",
+      "changedIdentityFields": [
+        "author",
+        "committer"
+      ],
+      "oldParents": [
+        "1e39eb2853afccdc8cc319d52e2fc276f18a27cb"
+      ],
+      "newParents": [
+        "c0a132396524432b737e2aae6c55ce9c1d736a05"
+      ],
+      "treeEqual": true,
+      "messageEqual": true,
+      "datesEqual": true,
+      "otherHeadersEqual": true
+    }
+  ],
+  "refs": [
+    {
+      "ref": "refs/heads/codex/audit/evidence-cycle-2",
+      "old": "6bdcac47448b0645b51340b7f5694b7e45f32ece",
+      "new": "f4adc844cd4e880f60067f79b1fdc48c7188e986"
+    },
+    {
+      "ref": "refs/heads/codex/feature/answer-contracts",
+      "old": "0f74e08df35c37d298960e960fc0828fbb56625a",
+      "new": "082e5e71917ec2113178fc35f371335a7873f064"
+    },
+    {
+      "ref": "refs/heads/codex/feature/answer-provenance",
+      "old": "30eaca55d61e670374623233b93f45b8eee6d2b5",
+      "new": "0862fd07d4583cbd7c08a20b21d2584b1c747fa0"
+    },
+    {
+      "ref": "refs/heads/codex/feature/approved-answers",
+      "old": "f5f77935f540da0c4d29600e795b2c1f47bdf56a",
+      "new": "1ad7163337d71b3d75cc9d54fe29a45c2ddc1db7"
+    },
+    {
+      "ref": "refs/heads/codex/feature/native-autofill",
+      "old": "7c799829808ed37a89511b8ad8aa336c8f7f41b3",
+      "new": "0552e86a4cec680df4a5b515706d270bdab328fb"
+    },
+    {
+      "ref": "refs/heads/codex/fix/audit-cycle-1",
+      "old": "24871723c869f5d5d9207a125e93604e96f327d0",
+      "new": "ed4464f8bda53a1eed332c7ce3e890b574bc960a"
+    },
+    {
+      "ref": "refs/heads/codex/fix/audit-cycle-2",
+      "old": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+      "new": "ebe01d6e01a0b441e7d446515a357c4277a895d1"
+    },
+    {
+      "ref": "refs/heads/codex/integration",
+      "old": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+      "new": "ebe01d6e01a0b441e7d446515a357c4277a895d1"
+    },
+    {
+      "ref": "refs/heads/codex/release/candidate",
+      "old": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+      "new": "ebe01d6e01a0b441e7d446515a357c4277a895d1"
+    },
+    {
+      "ref": "refs/heads/codex/test/integration",
+      "old": "96af47631494a9292db430e60c520546fb06b4d7",
+      "new": "e95dc18c7eaded8aa24be1534374e2d6b260af27"
+    }
+  ],
+  "invariants": {
+    "allTreesEqual": true,
+    "allMessagesEqual": true,
+    "allDatesEqual": true,
+    "topologyPreserved": true,
+    "otherHeadersPreserved": true,
+    "protectedWorktreesUnchanged": true
+  },
+  "backupBundleSHA256": "49e68b186a4b696042ec375f5f0091c54e8595f116a5c334fbb82a6f70abd4b7"
+}

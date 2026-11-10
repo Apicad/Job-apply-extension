@@ -1,0 +1,31 @@
+{
+  "sourceSha": "ebe01d6e01a0b441e7d446515a357c4277a895d1",
+  "previousSourceSha": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+  "metadata": {
+    "sha": "ebe01d6e01a0b441e7d446515a357c4277a895d1",
+    "tree": "3e53623c142a22c97f64973c8877bc0e4faac819",
+    "branch": "HEAD",
+    "dirty": false,
+    "actualWorkers": 4
+  },
+  "browserStats": {
+    "startTime": "2026-11-10T06:42:53.849Z",
+    "duration": 48656.25,
+    "expected": 27,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "checks": {
+    "typecheck": "passed",
+    "unitFiles": 19,
+    "unitTests": 4154,
+    "browserTests": 27,
+    "productionBuild": "passed",
+    "productionSizeKB": 448.74,
+    "sourceExportFilesCompared": 136
+  },
+  "sourceZipSHA256": "b45aa96eb13d481a2bd07ff88821eecfcc0704d4f7b092e1bd9a2c952e5d1b7e",
+  "dependencyNote": "Reused the independent validation clone installation from the prior successful npm ci; lockfile and all source files are byte-identical. No new install was claimed.",
+  "aiSmokeNote": "Historical fresh AI smoke ran at cb0a129; it was not rerun or relabeled for this attribution-only replacement. Identical source tree is proven by mapping.json."
+}
