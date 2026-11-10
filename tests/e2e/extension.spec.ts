@@ -25,6 +25,8 @@ test('the manifest asks for exactly what the design allows', async ({ serviceWor
   // Nothing of the extension can be loaded or messaged by a web page.
   expect(manifest.web_accessible_resources).toBeUndefined();
   expect(manifest.externally_connectable).toBeUndefined();
+  // The shortcut opens the popup, which is not built yet. Nothing in the manifest may offer to fill.
+  expect(manifest.commands).toBeUndefined();
 });
 
 test('nothing runs on a page until the user asks (product rule 7)', async ({ serviceWorker }) => {

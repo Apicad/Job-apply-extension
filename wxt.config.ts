@@ -16,11 +16,8 @@ export default defineConfig({
     // A toolbar click covers the page in the tab. These hosts are for application forms that
     // companies show inside their own pages, in a frame from another origin (see lib/ats.ts).
     host_permissions: mode === 'e2e' ? [...EMBED_HOST_PERMISSIONS, ...E2E_HOSTS] : [...EMBED_HOST_PERMISSIONS],
-    commands: {
-      autofill: {
-        suggested_key: { default: 'Alt+Shift+F' },
-        description: 'Fill the application form on this page',
-      },
-    },
+    // No keyboard command until the popup exists. The shortcut must open that popup and
+    // never fill on its own (see CLAUDE.md). A command described as filling the form would
+    // promise the wrong thing, and there is no popup for `_execute_action` to open yet.
   }),
 });
