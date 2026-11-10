@@ -1,0 +1,380 @@
+[WebServer] (node:95090) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 4 workers
+
+(node:95096) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95094) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95095) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95097) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   1 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=true, must save before preview/fill (7.9s)
+  ✘   4 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=false, must save before preview/fill (7.9s)
+(node:95332) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95333) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   3 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=false, must save before preview/fill (13.2s)
+  ✘   2 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=true, must save before preview/fill (13.2s)
+(node:95412) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95413) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   6 tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-context before any write (8.9s)
+  ✘   5 tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch draft-id before any write (8.9s)
+(node:95505) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95506) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   8 tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-approval before any write (9.8s)
+  ✘   7 tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=false (9.9s)
+  ✘  10 tests/e2e/audit-cycle-3.spec.ts:127:1 › N1b: a small rewrite keeps original warnings visible and edited prose explicitly unverified (9.8s)
+  ✘   9 tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=true (10.1s)
+
+
+  1) tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=false, must save before preview/fill
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      57 |  // Worker enforcement is required even if a stale or alternate extension UI sends the command.
+      58 |  const attempt = await ui.evaluate(async id => (globalThis as any).chrome.runtime.sendMessage({ type: 'answer-preview', tabId: id }), tabId);
+    > 59 |  expect(attempt.ok).toBe(false); expect(attempt.error).toContain('Save this exact approved revision');
+         |                     ^
+      60 |  await expect(ui.getByRole('button', { name: 'Preview approved textarea fill' })).toBeDisabled();
+      61 |  const beforeSave = await state(ui, tabId); expect(beforeSave.library[0]).toEqual(original);
+      62 |  expect(beforeSave.session.answer.id).not.toBe(original.id); expect(beforeSave.plan.answerBinding).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:59:21
+
+    Error Context: test-results/audit-cycle-3-N7-reused-re-1880d-st-save-before-preview-fill/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N7-reused-re-1880d-st-save-before-preview-fill/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N7-reused-re-1880d-st-save-before-preview-fill/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=true, must save before preview/fill
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      57 |  // Worker enforcement is required even if a stale or alternate extension UI sends the command.
+      58 |  const attempt = await ui.evaluate(async id => (globalThis as any).chrome.runtime.sendMessage({ type: 'answer-preview', tabId: id }), tabId);
+    > 59 |  expect(attempt.ok).toBe(false); expect(attempt.error).toContain('Save this exact approved revision');
+         |                     ^
+      60 |  await expect(ui.getByRole('button', { name: 'Preview approved textarea fill' })).toBeDisabled();
+      61 |  const beforeSave = await state(ui, tabId); expect(beforeSave.library[0]).toEqual(original);
+      62 |  expect(beforeSave.session.answer.id).not.toBe(original.id); expect(beforeSave.plan.answerBinding).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:59:21
+
+    Error Context: test-results/audit-cycle-3-N7-reused-re-98ef6-st-save-before-preview-fill/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N7-reused-re-98ef6-st-save-before-preview-fill/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N7-reused-re-98ef6-st-save-before-preview-fill/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=false, must save before preview/fill
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByRole('button', { name: 'Preview approved textarea fill' })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('button', { name: 'Preview approved textarea fill' }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Preview approved textarea fill' })
+        14 × locator resolved to <button>Preview approved textarea fill</button>
+           - unexpected value "enabled"
+
+
+      58 |  const attempt = await ui.evaluate(async id => (globalThis as any).chrome.runtime.sendMessage({ type: 'answer-preview', tabId: id }), tabId);
+      59 |  expect(attempt.ok).toBe(false); expect(attempt.error).toContain('Save this exact approved revision');
+    > 60 |  await expect(ui.getByRole('button', { name: 'Preview approved textarea fill' })).toBeDisabled();
+         |                                                                                   ^
+      61 |  const beforeSave = await state(ui, tabId); expect(beforeSave.library[0]).toEqual(original);
+      62 |  expect(beforeSave.session.answer.id).not.toBe(original.id); expect(beforeSave.plan.answerBinding).toBeUndefined();
+      63 |  await expect(page.locator('#project')).toHaveValue('');
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:60:83
+
+    Error Context: test-results/audit-cycle-3-N7-reused-re-6c99a-st-save-before-preview-fill/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N7-reused-re-6c99a-st-save-before-preview-fill/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N7-reused-re-6c99a-st-save-before-preview-fill/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=true, must save before preview/fill
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByRole('button', { name: 'Preview approved textarea fill' })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('button', { name: 'Preview approved textarea fill' }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Preview approved textarea fill' })
+        14 × locator resolved to <button>Preview approved textarea fill</button>
+           - unexpected value "enabled"
+
+
+      58 |  const attempt = await ui.evaluate(async id => (globalThis as any).chrome.runtime.sendMessage({ type: 'answer-preview', tabId: id }), tabId);
+      59 |  expect(attempt.ok).toBe(false); expect(attempt.error).toContain('Save this exact approved revision');
+    > 60 |  await expect(ui.getByRole('button', { name: 'Preview approved textarea fill' })).toBeDisabled();
+         |                                                                                   ^
+      61 |  const beforeSave = await state(ui, tabId); expect(beforeSave.library[0]).toEqual(original);
+      62 |  expect(beforeSave.session.answer.id).not.toBe(original.id); expect(beforeSave.plan.answerBinding).toBeUndefined();
+      63 |  await expect(page.locator('#project')).toHaveValue('');
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:60:83
+
+    Error Context: test-results/audit-cycle-3-N7-reused-re-e921c-st-save-before-preview-fill/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N7-reused-re-e921c-st-save-before-preview-fill/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N7-reused-re-e921c-st-save-before-preview-fill/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch draft-id before any write
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('status')
+    Expected substring: "became stale"
+    Received string:    "Fill finished. Check each outcome and inspect the page. You submit manually."
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('status') with timeout 5000ms
+      - waiting for getByRole('status')
+        3 × locator resolved to <p role="status"></p>
+          - unexpected value ""
+        11 × locator resolved to <p role="status">Fill finished. Check each outcome and inspect the…</p>
+           - unexpected value "Fill finished. Check each outcome and inspect the page. You submit manually."
+
+
+      89 |  }, { tabId, data, mismatch });
+      90 |  await ui.getByRole('button', { name: 'Fill previewed fields' }).click();
+    > 91 |  await expect(ui.getByRole('status')).toContainText('became stale');
+         |                                       ^
+      92 |  await expect(page.locator('#project')).toHaveValue(''); await expect(page.locator('input').first()).toHaveValue('');
+      93 |  await expect(page.locator('#submitted')).toHaveText('Not submitted');
+      94 |  const after = await state(ui, tabId); expect(after.plan.state).toBe('preview'); expect(after.plan.outcomes).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:91:39
+
+    Error Context: test-results/audit-cycle-3-N7-execution-e6e6f-h-draft-id-before-any-write/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N7-execution-e6e6f-h-draft-id-before-any-write/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N7-execution-e6e6f-h-draft-id-before-any-write/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-context before any write
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('status')
+    Expected substring: "became stale"
+    Received string:    "Fill finished. Check each outcome and inspect the page. You submit manually."
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('status') with timeout 5000ms
+      - waiting for getByRole('status')
+        3 × locator resolved to <p role="status"></p>
+          - unexpected value ""
+        11 × locator resolved to <p role="status">Fill finished. Check each outcome and inspect the…</p>
+           - unexpected value "Fill finished. Check each outcome and inspect the page. You submit manually."
+
+
+      89 |  }, { tabId, data, mismatch });
+      90 |  await ui.getByRole('button', { name: 'Fill previewed fields' }).click();
+    > 91 |  await expect(ui.getByRole('status')).toContainText('became stale');
+         |                                       ^
+      92 |  await expect(page.locator('#project')).toHaveValue(''); await expect(page.locator('input').first()).toHaveValue('');
+      93 |  await expect(page.locator('#submitted')).toHaveText('Not submitted');
+      94 |  const after = await state(ui, tabId); expect(after.plan.state).toBe('preview'); expect(after.plan.outcomes).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:91:39
+
+    Error Context: test-results/audit-cycle-3-N7-execution-ddd23-ed-context-before-any-write/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N7-execution-ddd23-ed-context-before-any-write/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N7-execution-ddd23-ed-context-before-any-write/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-approval before any write
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('status')
+    Expected substring: "became stale"
+    Received string:    "Fill finished. Check each outcome and inspect the page. You submit manually."
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('status') with timeout 5000ms
+      - waiting for getByRole('status')
+        3 × locator resolved to <p role="status"></p>
+          - unexpected value ""
+        11 × locator resolved to <p role="status">Fill finished. Check each outcome and inspect the…</p>
+           - unexpected value "Fill finished. Check each outcome and inspect the page. You submit manually."
+
+
+      89 |  }, { tabId, data, mismatch });
+      90 |  await ui.getByRole('button', { name: 'Fill previewed fields' }).click();
+    > 91 |  await expect(ui.getByRole('status')).toContainText('became stale');
+         |                                       ^
+      92 |  await expect(page.locator('#project')).toHaveValue(''); await expect(page.locator('input').first()).toHaveValue('');
+      93 |  await expect(page.locator('#submitted')).toHaveText('Not submitted');
+      94 |  const after = await state(ui, tabId); expect(after.plan.state).toBe('preview'); expect(after.plan.outcomes).toBeUndefined();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:91:39
+
+    Error Context: test-results/audit-cycle-3-N7-execution-8dd24-d-approval-before-any-write/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N7-execution-8dd24-d-approval-before-any-write/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N7-execution-8dd24-d-approval-before-any-write/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=false
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('reuse-origin')
+    Expected substring: "Reused from saved answer"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByTestId('reuse-origin') with timeout 5000ms
+      - waiting for getByTestId('reuse-origin')
+
+
+      105 |  await ui.getByRole('button', { name: 'Open for review', exact: true }).click(); await expect(ui.getByRole('status')).toContainText('Updated');
+      106 |  const origin = ui.getByTestId('reuse-origin');
+    > 107 |  await expect(origin).toContainText('Reused from saved answer'); await expect(origin).toContainText(original.id); await expect(origin).toContainText('revision 1');
+          |                       ^
+      108 |  await expect(origin).toContainText('No new AI response');
+      109 |  await expect(ui.getByText('Current reviewed job context: Job B context: synthetic frontend role.', { exact: true })).toBeVisible();
+      110 |  const trace = ui.locator('details').filter({ has: ui.locator('summary', { hasText: 'Original generation trace' }) }).first();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:107:23
+
+    Error Context: test-results/audit-cycle-3-N8-reuse-ori-0ad15-pen-cross-application-false/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N8-reuse-ori-0ad15-pen-cross-application-false/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N8-reuse-ori-0ad15-pen-cross-application-false/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=true
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('reuse-origin')
+    Expected substring: "Reused from saved answer"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByTestId('reuse-origin') with timeout 5000ms
+      - waiting for getByTestId('reuse-origin')
+
+
+      105 |  await ui.getByRole('button', { name: 'Open for review', exact: true }).click(); await expect(ui.getByRole('status')).toContainText('Updated');
+      106 |  const origin = ui.getByTestId('reuse-origin');
+    > 107 |  await expect(origin).toContainText('Reused from saved answer'); await expect(origin).toContainText(original.id); await expect(origin).toContainText('revision 1');
+          |                       ^
+      108 |  await expect(origin).toContainText('No new AI response');
+      109 |  await expect(ui.getByText('Current reviewed job context: Job B context: synthetic frontend role.', { exact: true })).toBeVisible();
+      110 |  const trace = ui.locator('details').filter({ has: ui.locator('summary', { hasText: 'Original generation trace' }) }).first();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:107:23
+
+    Error Context: test-results/audit-cycle-3-N8-reuse-ori-d8446-open-cross-application-true/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N8-reuse-ori-d8446-open-cross-application-true/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N8-reuse-ori-d8446-open-cross-application-true/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) tests/e2e/audit-cycle-3.spec.ts:127:1 › N1b: a small rewrite keeps original warnings visible and edited prose explicitly unverified
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('edited-provenance')
+    Expected substring: "not verified"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByTestId('edited-provenance') with timeout 5000ms
+      - waiting for getByTestId('edited-provenance')
+
+
+      132 |  await ui.getByRole('button', { name: 'Apply edits for review' }).click();
+      133 |  await expect(ui.getByRole('button', { name: 'Apply edits for review' })).toHaveCount(0);
+    > 134 |  await expect(ui.getByTestId('edited-provenance')).toContainText('not verified');
+          |                                                    ^
+      135 |  await expect(ui.getByTestId('original-warning-review')).toContainText('Python');
+      136 |  await expect(ui.getByTestId('original-warning-review')).toContainText('two');
+      137 |  await expect(ui.getByTestId('original-warning-review')).toBeVisible();
+        at <development-checkout>/tests/e2e/audit-cycle-3.spec.ts:134:52
+
+    Error Context: test-results/audit-cycle-3-N1b-a-small--18071-prose-explicitly-unverified/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/audit-cycle-3-N1b-a-small--18071-prose-explicitly-unverified/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/audit-cycle-3-N1b-a-small--18071-prose-explicitly-unverified/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10 failed
+    tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=false, must save before preview/fill
+    tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=true, must save before preview/fill
+    tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=false, must save before preview/fill
+    tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=true, must save before preview/fill
+    tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch draft-id before any write
+    tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-context before any write
+    tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-approval before any write
+    tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=false
+    tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=true
+    tests/e2e/audit-cycle-3.spec.ts:127:1 › N1b: a small rewrite keeps original warnings visible and edited prose explicitly unverified

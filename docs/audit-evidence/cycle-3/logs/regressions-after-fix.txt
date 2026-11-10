@@ -1,0 +1,25 @@
+[WebServer] (node:96214) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 4 workers
+
+(node:96217) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:96215) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:96218) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:96216) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=true, must save before preview/fill (7.8s)
+  ✓   3 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=false, must save before preview/fill (7.7s)
+  ✓   4 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 2, changed context=false, must save before preview/fill (7.7s)
+  ✓   2 tests/e2e/audit-cycle-3.spec.ts:48:76 › N7: reused revision 1, changed context=true, must save before preview/fill (7.7s)
+  ✓   6 tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch draft-id before any write (5.2s)
+  ✓   5 tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-approval before any write (5.2s)
+  ✓   7 tests/e2e/audit-cycle-3.spec.ts:72:82 › N7: execution rejects persisted binding mismatch saved-context before any write (5.2s)
+  ✓   8 tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=false (7.4s)
+  ✓  10 tests/e2e/audit-cycle-3.spec.ts:127:1 › N1b: a small rewrite keeps original warnings visible and edited prose explicitly unverified (3.0s)
+  ✓   9 tests/e2e/audit-cycle-3.spec.ts:97:47 › N8: reuse origin and original context remain visible across save/reopen, cross-application=true (3.9s)
+
+  10 passed (18.2s)

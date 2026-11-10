@@ -1,0 +1,55 @@
+{
+  "sourceSha": "a59c71bca9860e2e2938feedc9ad7e6afc545d21",
+  "sourceTree": "722bb583514baa6c92877e1ba6c3b71a335e6292",
+  "parentSourceSha": "ebe01d6e01a0b441e7d446515a357c4277a895d1",
+  "auditedTreeEquivalentSha": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+  "exportBase": "949c96ab064fff73c638d9c8e73b45f12f66a453",
+  "exportBaseIsAncestor": true,
+  "clean": true,
+  "node": "24.15.0",
+  "playwright": "1.65.0",
+  "chromium": "158.0.8127.18",
+  "wxt": "0.21.5",
+  "checks": [
+    {
+      "command": "npm ci",
+      "status": "passed"
+    },
+    {
+      "command": "JAA_REQUIRE_CLEAN=1 npm run check",
+      "status": "passed",
+      "unitFiles": 19,
+      "unitTests": 4154,
+      "browserTests": 37
+    },
+    {
+      "command": "npm run build",
+      "status": "passed",
+      "reportedSizeKB": 450.09
+    },
+    {
+      "command": "node scripts/export-candidate.mjs (external directory)",
+      "status": "passed",
+      "sourceFilesCompared": 138
+    },
+    {
+      "command": "node scripts/manual-ai-smoke.mjs (empty external JAA_SMOKE_DIR)",
+      "status": "passed",
+      "verifiedWrites": 6,
+      "submitted": false
+    }
+  ],
+  "productionPermissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "productionHostPermissions": [],
+  "productionContentScripts": [],
+  "sourceZipSHA256": "45a08135202e59f81a5ccbfc50857e4889d9f498a5181d5265690ce26fbfd55b",
+  "regressionEvidence": {
+    "before": "All 10 new cases failed at the expected boundaries on the unchanged ebe01d6 implementation. Two revision-2 cases already rejected the worker command but failed the enabled preview-button assertion.",
+    "after": "All 10 cases passed; the complete final clean-source suite passed 37 browser tests."
+  },
+  "smokeProvenance": "Actual active Codex session read fresh exported request and authored the response. Two synthetic claims compared to original snippets before automated review/approval/save/fill. No paid provider API, no replay, no independent auditor model execution or fresh judge-account proof."
+}

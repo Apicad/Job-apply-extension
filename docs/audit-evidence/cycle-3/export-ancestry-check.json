@@ -1,0 +1,13 @@
+{
+  "positive": {
+    "candidate": "ebe01d6e01a0b441e7d446515a357c4277a895d1",
+    "base": "949c96ab064fff73c638d9c8e73b45f12f66a453",
+    "exported": true,
+    "baseIsAncestor": true
+  },
+  "negative": {
+    "candidate": "cb0a1298ba54cfeef100541e42c1c1ba535b3e00",
+    "refusedNonAncestorBase": true,
+    "noArtifactsCreated": true
+  }
+}
