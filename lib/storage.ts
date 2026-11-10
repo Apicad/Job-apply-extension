@@ -60,3 +60,16 @@ export async function forgetPlan(tabId: number): Promise<void> {
 export async function keepStorageAwayFromPages(): Promise<void> {
   await browser.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 }
+
+/** Hackathon state: only the trusted worker writes; each operation awaits acknowledgement. */
+export async function readHackathon<T>(key: string, session = false): Promise<T | null> {
+ return await storage.getItem<T>(`${session ? 'session' : 'local'}:hackathon:${key}`) ?? null;
+}
+export async function writeHackathon(key: string, value: unknown, session = false): Promise<void> {
+ await storage.setItem(`${session ? 'session' : 'local'}:hackathon:${key}`, value);
+}
+export async function saveSyntheticProfile(profile: unknown): Promise<void> {
+ const current = await loadProfile();
+ if (Object.values(current).some(value => value !== '')) throw Error('A profile already exists. Synthetic loading will not replace it. Use a fresh browser profile for the demo.');
+ await storage.setItem(PROFILE_KEY, normalizeProfile(profile));
+}

@@ -12,7 +12,8 @@ export interface Answer {
  origin: 'ai' | 'edited'; gaps: string[]; approval: Approval | null;
  createdAt: number; updatedAt: number;
 }
-export const key = (value: unknown): string => JSON.stringify(value);
+export { stableKey as key } from './identity';
+import { stableKey as key } from './identity';
 export const sameContext = (a: Context, b: Context): boolean => a.application === b.application && a.question === b.question && a.job === b.job && a.control === b.control;
 export const allowedQuestion = (question: string): boolean => /^(describe a relevant project|tell us about a project you built)[.!?]?$/i.test(question.trim());
 export const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
