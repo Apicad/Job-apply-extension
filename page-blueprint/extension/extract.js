@@ -490,12 +490,25 @@ export function extractPageInfo() {
     } else {
       html = root.outerHTML;
     }
-    // Some frameworks mirror what is typed into the value attribute. A password has no
-    // business in a copy of the page, including one switched to plain text by a "show" toggle.
-    for (const input of query('input[type="password" i][value], input[autocomplete*="password" i][value]')) {
-      const blanked = input.cloneNode(false);
-      blanked.setAttribute('value', '');
-      html = html.split(input.outerHTML).join(blanked.outerHTML);
+    // A password has no business in a copy of the page. The value attribute is what a framework
+    // mirrors into the markup. The value property is what the person typed, or what a script set,
+    // and it may appear in the copy even when the attribute was never written (a script on the
+    // page, a serializer that records the property). Neither is left in. The live control is not
+    // touched. A field switched to plain text by a "show" toggle counts when it is marked as a
+    // password field.
+    const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    for (const input of query('input[type="password" i], input[autocomplete*="password" i]')) {
+      if (input.hasAttribute('value')) {
+        const blanked = input.cloneNode(false);
+        blanked.setAttribute('value', '');
+        html = html.split(input.outerHTML).join(blanked.outerHTML);
+      }
+      const typed = input.value;
+      if (typed) {
+        html = html.split(typed).join('');
+        const escaped = escapeHtml(typed);
+        if (escaped !== typed) html = html.split(escaped).join('');
+      }
     }
     const doctype = document.doctype ? `${new XMLSerializer().serializeToString(document.doctype)}\n` : '';
     return doctype + html;

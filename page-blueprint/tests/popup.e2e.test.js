@@ -20,13 +20,27 @@ let extensionId;
 let scratchDir;
 
 before(async () => {
-  [browser, site, otherSite, scratchDir] = await Promise.all([
-    launchBrowser(),
-    startServer(),
-    startServer(),
-    mkdtemp(path.join(tmpdir(), 'page-blueprint-e2e-')),
-  ]);
-  ({ id: extensionId } = await browser.send('Extensions.loadUnpacked', { path: EXTENSION_DIR }));
+  let ready = false;
+  try {
+    site = await startServer();
+    otherSite = await startServer();
+    scratchDir = await mkdtemp(path.join(tmpdir(), 'page-blueprint-e2e-'));
+    browser = await launchBrowser();
+    ({ id: extensionId } = await browser.send('Extensions.loadUnpacked', { path: EXTENSION_DIR }));
+    ready = true;
+  } finally {
+    // Same as the extractor tests: a browser that fails to launch must not leave the servers up.
+    if (!ready) {
+      await browser?.close();
+      await site?.close();
+      await otherSite?.close();
+      if (scratchDir) await rm(scratchDir, { recursive: true, force: true });
+      browser = undefined;
+      site = undefined;
+      otherSite = undefined;
+      scratchDir = undefined;
+    }
+  }
 });
 
 after(async () => {

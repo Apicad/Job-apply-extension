@@ -12,8 +12,22 @@ let server;
 let tab;
 
 before(async () => {
-  [browser, server] = await Promise.all([launchBrowser(), startServer()]);
-  tab = await browser.openPage();
+  let ready = false;
+  try {
+    server = await startServer();
+    browser = await launchBrowser();
+    tab = await browser.openPage();
+    ready = true;
+  } finally {
+    // launchBrowser() throws when no Chromium is installed. The server is already listening
+    // then, and nothing else closes it, so the test run would wait forever.
+    if (!ready) {
+      await browser?.close();
+      await server?.close();
+      browser = undefined;
+      server = undefined;
+    }
+  }
 });
 
 after(async () => {
@@ -1109,6 +1123,21 @@ test('blanks passwords on a page that has shadow roots, inside them and out', as
 
   assert.ok(!info.html.includes('s3cret-outside'), `password found in: ${info.html}`);
   assert.ok(!info.html.includes('s3cret-inside'), `password found in: ${info.html}`);
+});
+
+test('blanks a password that was only assigned to the control, not written into the markup', async () => {
+  const info = await extract(
+    page(
+      `<input type="password" id="pw"><input id="user">
+       <script>
+         document.querySelector('#pw').value = 'typed-secret';
+         document.querySelector('#user').value = 'ada-typed';
+       </script>`,
+    ),
+  );
+
+  assert.ok(!info.html.includes('typed-secret'), `password found in: ${info.html}`);
+  assert.ok(info.html.includes('ada-typed'), `other value missing from: ${info.html}`);
 });
 
 test('blanks a password that has been switched to plain text by a show-password toggle', async () => {

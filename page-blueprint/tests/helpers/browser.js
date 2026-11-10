@@ -17,6 +17,8 @@ const BINARIES = [
   'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
   'chrome-mac/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
   'chrome-mac/Chromium.app/Contents/MacOS/Chromium',
+  // Playwright 1.49 and later unpack Linux Chrome for Testing here. Older builds used chrome-linux.
+  'chrome-linux64/chrome',
   'chrome-linux/chrome',
 ];
 
