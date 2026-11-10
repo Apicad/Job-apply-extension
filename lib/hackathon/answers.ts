@@ -1,6 +1,6 @@
 import { assertLiveRow } from './live';
 import { readLibrary, saveAnswer, deleteAnswer, libraryState } from './library';
-import { currentApproval, reusableDraft, resolveMissing, answerGaps } from './contracts';
+import { currentApproval, reusableDraft, resolveMissing, answerGaps, sameAnswerTarget } from './contracts';
 import { fieldSignature } from './engine';
 import { browser } from 'wxt/browser';
 import { readHackathon, writeHackathon } from '../storage';
@@ -79,7 +79,7 @@ export async function answerCommand(message: Record<string, unknown>, plan: Nati
  if (message.type === 'reuse') {
   const saved = (await readLibrary(libraryStore)).find(a => a.id === message.id);
   if (!saved) throw Error('Saved answer was deleted.');
-  await invalidatePlan(tabId); session.answer = reusableDraft(saved, session.context, facts); session.savedId = saved.context.application === session.context.application ? saved.id : undefined; session.savedRevision = session.savedId ? saved.revision : undefined; session.request = null; session.sent = false;
+  await invalidatePlan(tabId); session.answer = reusableDraft(saved, session.context, facts); session.savedId = sameAnswerTarget(saved.context, session.context) ? saved.id : undefined; session.savedRevision = session.savedId ? saved.revision : undefined; session.request = null; session.sent = false;
   await writeHackathon(sessionKey(tabId), session, true); return { session };
  }
  if (!session.answer) throw Error('Generate or open an answer first.');

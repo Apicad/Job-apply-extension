@@ -1,4 +1,4 @@
-import { allowedQuestion, currentApproval, isAnswer, record } from './contracts';
+import { allowedQuestion, currentApproval, isAnswer, record, sameAnswerTarget } from './contracts';
 import type { Answer, Fact } from './contracts';
 /** Storage is an external boundary; caller serializes mutations in the worker. */
 export interface LibraryStore { read(): Promise<unknown>; write(value: unknown): Promise<void> }
@@ -10,7 +10,7 @@ export async function readLibrary(store: LibraryStore): Promise<Answer[]> {
 export async function saveAnswer(store: LibraryStore, a: Answer, facts: Fact[], scope: unknown, replaceId?: string, expectedRevision?: number): Promise<Answer> {
  if (!isAnswer(a) || !currentApproval(a, a.context, facts) || (scope !== 'application' && scope !== 'factual') || (scope === 'factual' && !allowedQuestion(a.context.question))) throw Error('Only a current, reviewed, approved answer can be saved with this scope.');
  const answers = await readLibrary(store); const existing = replaceId ? answers.find(item => item.id === replaceId) : answers.find(item => item.id === a.id);
- if (existing && existing.context.application !== a.context.application) throw Error('Save cross-application reuse as a new record.');
+ if (existing && !sameAnswerTarget(existing.context, a.context)) throw Error('Save reuse across applications or questions as a new record.');
  if (replaceId && existing && existing.revision !== expectedRevision) throw Error('Saved answer changed in another editor. Reopen and review the latest revision.');
  if (replaceId && !existing) throw Error('Saved answer was deleted. Generate a new draft.');
  const revision = existing ? Math.max(existing.revision + 1, a.revision) : a.revision;

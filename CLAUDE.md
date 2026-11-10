@@ -73,8 +73,11 @@ popup ◀─ result ──┘                                              ◀�
     lists for the UI), `plan.ts` (scans + profile → preview + instructions),
     `report.ts` (attention rule, guards for untrusted input), `ats.ts`
     (job-site detection and the embed host list), `resume.ts`.
-  - Page side, `lib/page/` (DOM only; never imports the trusted side except
-    types and `ats.ts`): `collect.ts` (find controls, forms, comboboxes),
+  - Page side, `lib/page/` (DOM only; never imports storage/profile access).
+    The `lib/hackathon/page.ts` wrapper also imports the pure descriptor/job
+    sanitizers in `report.ts`, alongside types and `ats.ts`. This explicit
+    shared-sanitizer exception keeps scan/planner/live signatures identical;
+    `report.ts` has only type imports and no storage, profile or extension API access: `collect.ts` (find controls, forms, comboboxes),
     `describe.ts` (labels, options, emptiness), `visibility.ts` (markup
     checks) and `layout.ts` (the real-browser `PageEnv`), `refs.ts` (the
     handle table shared by scan and fill), `job.ts`, `scan.ts`, `apply.ts`.
@@ -130,10 +133,10 @@ popup ◀─ result ──┘                                              ◀�
   on a checked one. No `focus()`, `blur()`, `select()` or `scrollIntoView()`.
   After writing, a control that is still empty is `failed`.
 - **The keyboard shortcut opens the popup**; it never fills on its own.
-- **Embedded forms**: host permission only for hosts verified to serve
-  application forms inside other sites' pages (`job-boards.greenhouse.io`,
-  `job-boards.eu.greenhouse.io`, `jobs.ashbyhq.com`). Top-level pages on any
-  site are covered by the toolbar click.
+- **Embedded forms in this candidate**: production `host_permissions` is
+  empty. Cross-origin embedded application forms remain manual. The older
+  ATS host inventory does not grant access. The toolbar grants `activeTab`
+  for the top-level page; the e2e-only build adds localhost fixture grants.
 
 Not in version 1: operating custom dropdowns and typeaheads, date pickers,
 multi-step forms (Workday), answering free-text questions, LinkedIn or Indeed,

@@ -21,3 +21,7 @@ Use the same manual copy/paste route with an available free chat allowance. Offi
 ## Later candidate evidence
 
 The artifacts above are historical and do not certify the audit-cycle candidate. For a later exact-SHA smoke, run `scripts/manual-ai-smoke.mjs` from a clean committed checkout with `JAA_SMOKE_DIR` pointing outside the repository. Its result includes the tested SHA and clean status; it refuses an existing response file. Store the actual prompt, response, source-review screenshot, result and execution log beside that candidate's external release handoff. This avoids changing the tested commit to record its own hash. A same-session Codex response remains disclosed model evidence, not an independent free-account judge rehearsal.
+
+## Public audit evidence for cycle 2
+
+The previous filesystem-only handoff did not reach the external reviewers. Cycle 2 publishes a separate evidence-only commit on `codex/audit/evidence-cycle-2`. The final handoff supplies its immutable GitHub link and the separate exact tested source SHA. Its sanitized summary, test results and fresh synthetic request/response/result/screenshots identify the tested source commit, not the evidence commit. Historical artifacts in this folder remain historical.

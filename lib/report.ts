@@ -1,5 +1,8 @@
 /**
- * Two jobs, both on the trusted side (background and popup), both pure:
+ * Pure report/validation helpers. Primarily trusted-side (background/popup);
+ * the native page wrapper shares descriptor/job sanitizers for identical
+ * canonical signatures. No storage, profile access or extension APIs here.
+ * Two jobs:
  *
  * 1. `needsAttention` — which rows of a report the user still has to deal with.
  * 2. Guards for everything that reaches the background from outside it: a

@@ -35,7 +35,9 @@ The production manifest has only `storage`, `activeTab`, and `scripting`; no pas
 7. Select a save scope and **Save approved answer**. Default is the current application. Only factual project experience may be marked reusable, and using it elsewhere requires new approval. Approval, saving and filling are separate actions.
 8. Close/reopen the extension. Inspect **Saved answers**. To reuse: scan/select a current question, preview its current context, then **Open for review**; approve and explicitly save the reviewed revision again. The library persists across browser restarts; unsaved review state is session-only.
 9. **Preview approved textarea fill**, inspect the exact text and all other planned values, then **Fill previewed fields**. Review the per-field verification results. Files, existing answers, consent/signatures, hidden controls and custom dropdowns remain untouched.
-10. For a safety demo, prepare a pending answer fill, edit its saved fact, then try that old preview: it is rejected. Changing jobs/questions, rescanning or deleting an answer similarly prevents stale reuse. After navigation or a browser restart, scan again.
+10. For a safety demo, prepare a pending answer fill, edit its saved fact, then try that old preview: it is rejected. Changing jobs/questions or deleting an answer prevents stale reuse. Rescanning replaces the old plan; select the current question/context and open a saved answer for renewed review. After navigation or a browser restart, scan again.
+
+If you fill native fields before drafting the textarea answer, **Scan application** again before selecting the question. Previously filled fields are kept. Then preview the current request/context, open the saved answer or generate a draft, review/approve/save and preview the new textarea fill. A consumed or invalidated preview cannot be reused.
 
 ## AI access and evidence
 
@@ -73,3 +75,13 @@ An executed, interrupted or invalidated fill plan cannot be previewed again. Ins
 Edits rerun the bounded numeric/technology checks against selected applicant facts, keep original missing notes visible, and remove sentence mappings. To resolve missing notes after correcting the answer, explicitly confirm their resolution; this is human review, not automated factual verification. Cross-application reuse creates a new record and preserves the original reusable answer.
 
 Synthetic loading requires absent raw profile and fact storage. If a saved-answer library is damaged, valid records and facts remain visible, while library mutations fail closed. Use **Inspect raw library**, optionally **Export raw library**, then explicitly confirm **Recover saved answers**. Recovery keeps the entire original envelope in local quarantine and restores only valid, unique records of the supported schema. Quarantine is preserved by later saves/deletes; it is not sent anywhere. An unknown schema recovers no records but retains its complete original data.
+
+## Audit cycle 2
+
+[Cycle 2 dispositions](docs/hackathon/AUDIT-CYCLE-2.md) document the residual fixes. Unchanged original claims retain their cited-fact warnings after edits; genuinely changed prose has no inherited sentence citations, and the original warnings remain inspectable. Common “one of” and “one part of” discourse phrasing does not count as a numeric claim. These checks are bounded heuristics, not semantic verification.
+
+Saved answers are replaced only for the same application **and question**. Other targets fork a new saved record after explicit review/approval/save. Legacy saved CR/CRLF text normalizes in a new reuse draft, before approval; its original trace stays unchanged. Exact readback still rejects meaningful page rewrites.
+
+Fields with oversized descriptors, placeholders or option values that cannot be signed whole are excluded from the automatic scan and may not appear in the preview. Inspect the entire application yourself; absence from the preview is not a claim that a field is completed.
+
+The release handoff supplies separate immutable links for the exact **tested source commit** and its **evidence commit**. The evidence commit, on `codex/audit/evidence-cycle-2`, adds only sanitized evidence documents to that source; it is not a replacement source candidate. Its committed summary names the tested SHA, clean-checkout counts, actual smoke provenance and remaining manual gaps, with the fresh request/response/result and screenshots available to reviewers.

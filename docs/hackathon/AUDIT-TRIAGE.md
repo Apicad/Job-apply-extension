@@ -21,3 +21,5 @@ External reports from Kevin and Safety reviewed **1f22cb3f76189001d34703db9a6e96
 Local self-review is not an independent Grok audit. For any subsequent findings, reproduce on the exported final SHA, fix in an owned branch and create a new tested candidate/export.
 
 Final concurrency self-review: stale fact editors and stale answer/library editors could replace a newer revision. Added explicit expected revisions at UI/worker/library boundaries. Regressions cover stale library replacement, stale same-tab answer editing and stale fact editing. Targeted tests and all 12 extension browser cases pass. The final export includes this fix and requires its own external review.
+
+Cycle 2 residuals on `24871723c869f5d5d9207a125e93604e96f327d0` are tracked in [AUDIT-CYCLE-2.md](AUDIT-CYCLE-2.md). The earlier verdicts and counts above are historical, not certification of later SHAs.

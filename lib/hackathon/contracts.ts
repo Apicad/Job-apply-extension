@@ -16,6 +16,7 @@ export interface Answer {
 export { stableKey as key } from './identity';
 import { stableKey as key } from './identity';
 export const sameContext = (a: Context, b: Context): boolean => a.application === b.application && a.questionKey === b.questionKey && a.question === b.question && a.job === b.job && a.control === b.control;
+export const sameAnswerTarget = (a: Context, b: Context): boolean => a.application === b.application && a.questionKey === b.questionKey && a.question === b.question && a.control === b.control;
 export const allowedQuestion = (question: string): boolean => /^(describe a relevant project|tell us about a project you built)[.!?]?$/i.test(question.trim());
 export const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 export const bounded = (v: unknown, max: number): v is string => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
@@ -39,7 +40,9 @@ export function promptFor(r: Request): string {
 }
 /** Textarea values use LF; keep all other meaningful whitespace unchanged. */
 export const textareaText = (text: string): string => text.replace(/\r\n?/g, '\n');
-const numericTokens = (text: string): string[] => text.match(/\d+(?:[.,]\d+)*%?|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/gi) ?? [];
+// These discourse phrases do not assert a quantity. Other number tokens remain
+// conservative review flags; matching a token is not proof of its attribution.
+const numericTokens = (text: string): string[] => text.replace(/\bone(?=\s+(?:of\b|part\s+of\b))/gi, '').match(/\d+(?:[.,]\d+)*%?|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/gi) ?? [];
 function unsupportedClaims(text: string, support: string): string[] {
  const gaps: string[] = []; const availableNumbers = new Set(numericTokens(support).map(n => n.toLowerCase()));
  const numbers = numericTokens(text).filter(n => !availableNumbers.has(n.toLowerCase()));
@@ -50,17 +53,22 @@ function unsupportedClaims(text: string, support: string): string[] {
  return gaps;
 }
 const proseKey = (text: string) => textareaText(text).replace(/\s+/g, ' ').trim();
+const claimKey = (text: string) => proseKey(text).toLowerCase().replace(/[.!?]+$/, '');
+function segmentGaps(segment: Segment, facts: Fact[]): string[] {
+ const support = segment.sources.map(ref => facts.find(f => f.id === ref.id && f.revision === ref.revision)?.text ?? '').join(' ');
+ return [...(segment.sources.length ? [] : [`No saved evidence: ${segment.text}`]), ...unsupportedClaims(segment.text, support)];
+}
+export const originalSourceWarnings = (a: Answer): string[] => [...new Set(a.trace.segments.flatMap(s => segmentGaps(s, a.trace.request.facts)))];
 /** Bounded token checks, not semantic verification. Recomputed at approval and save too. */
 export function answerGaps(a: Answer): string[] {
  const gaps = a.missingReviewed && a.origin === 'edited' ? [] : [...a.trace.missing];
  if (a.origin === 'ai') {
-  for (const s of a.segments) {
-   if (!s.sources.length) gaps.push(`No saved evidence: ${s.text}`);
-   gaps.push(...unsupportedClaims(s.text, s.sources.map(ref => a.trace.request.facts.find(f => f.id === ref.id && f.revision === ref.revision)?.text ?? '').join(' ')));
-  }
+  for (const s of a.segments) gaps.push(...segmentGaps(s, a.trace.request.facts));
  } else {
   gaps.push(...unsupportedClaims(a.text, a.trace.request.facts.map(f => f.text).join(' ')));
-  for (const s of a.trace.segments) if (!s.sources.length && proseKey(a.text).includes(proseKey(s.text))) gaps.push(`No saved evidence: ${s.text}`);
+  // An unchanged original claim cannot borrow a token from unrelated selected
+  // facts merely because an edit removed its displayed sentence mappings.
+  for (const s of a.trace.segments) if (claimKey(a.text).includes(claimKey(s.text))) gaps.push(...segmentGaps(s, a.trace.request.facts));
  }
  return [...new Set(gaps)];
 }
@@ -95,17 +103,17 @@ export function editAnswer(a: Answer, text: string): Answer {
  next.gaps = answerGaps(next); return next;
 }
 export function currentApproval(a: Answer, context: Context, facts: Fact[]): boolean {
- return sameContext(a.context, context) && factsCurrent(a.facts, facts) && a.trace.request.facts.every(original => facts.some(f => key(f) === key(original))) && !!a.approval && a.approval.text === a.text && a.approval.revision === a.revision && a.approval.contextKey === key(context) && a.gaps.length === 0 && answerGaps(a).length === 0;
+ return a.text === textareaText(a.text) && sameContext(a.context, context) && factsCurrent(a.facts, facts) && a.trace.request.facts.every(original => facts.some(f => key(f) === key(original))) && !!a.approval && a.approval.text === a.text && a.approval.revision === a.revision && a.approval.contextKey === key(context) && a.gaps.length === 0 && answerGaps(a).length === 0;
 }
 export function approve(a: Answer, context: Context, facts: Fact[], reviewed: boolean, now = Date.now()): Answer {
- if (!reviewed || !sameContext(a.context, context) || !factsCurrent(a.facts, facts) || !a.trace.request.facts.every(original => facts.some(f => key(f) === key(original))) || a.gaps.length || answerGaps(a).length) throw Error('Review the exact wording and sources, resolve gaps, and use current context before approving.');
+ if (a.text !== textareaText(a.text) || !reviewed || !sameContext(a.context, context) || !factsCurrent(a.facts, facts) || !a.trace.request.facts.every(original => facts.some(f => key(f) === key(original))) || a.gaps.length || answerGaps(a).length) throw Error('Review the exact wording and sources, resolve gaps, and use current context before approving.');
  return { ...a, approval: { text: a.text, revision: a.revision, contextKey: key(context), at: now }, updatedAt: now };
 }
 export function reusableDraft(a: Answer, context: Context, facts: Fact[]): Answer {
  if (!factsCurrent(a.facts, facts)) throw Error('Saved sources changed or were deleted. Generate a new answer.');
  if (a.scope !== 'factual' && a.context.application !== context.application) throw Error('This answer is scoped to another application.');
  if (!allowedQuestion(context.question)) throw Error('Question is not supported.');
- const next: Answer = { ...structuredClone(a), derivedFrom: { id: a.id, revision: a.revision }, id: crypto.randomUUID(), revision: 1, context: structuredClone(context), normalizedQuestion: context.question.trim().toLowerCase(), contextFingerprint: key(context), approval: null, createdAt: Date.now(), updatedAt: Date.now() };
+ const next: Answer = { ...structuredClone(a), text: textareaText(a.text), segments: a.segments.map(s => ({ ...structuredClone(s), text: textareaText(s.text) })), derivedFrom: { id: a.id, revision: a.revision }, id: crypto.randomUUID(), revision: 1, context: structuredClone(context), normalizedQuestion: context.question.trim().toLowerCase(), contextFingerprint: key(context), approval: null, createdAt: Date.now(), updatedAt: Date.now() };
  next.gaps = answerGaps(next); return next;
 }
 /** Fail closed on corrupt/unknown library versions; never silently replace them. */
@@ -120,7 +128,10 @@ export function isAnswer(v: unknown): v is Answer {
  if (!validSegments(v.segments) || !validSegments(v.trace.segments) || !v.trace.missing.every(s => bounded(s, 500))) return false;
  if (key(v.facts) !== key(r.facts.map(f => ({ id: f.id, revision: f.revision })))) return false;
  for (const s of [...v.segments, ...v.trace.segments] as Segment[]) if (!factsCurrent(s.sources, r.facts)) return false;
- if (v.origin === 'ai' && (v.text !== (v.segments as Segment[]).map(s => s.text).join(' ') || key(v.segments) !== key(v.trace.segments))) return false;
+ // Legacy AI traces retain their original CR/CRLF bytes. A reused draft may
+ // normalize only line endings in its displayed segments, never source refs.
+ const normalizedTrace = (v.trace.segments as Segment[]).map(s => ({ ...s, text: textareaText(s.text) }));
+ if (v.origin === 'ai' && (v.text !== (v.segments as Segment[]).map(s => s.text).join(' ') || (key(v.segments) !== key(v.trace.segments) && key(v.segments) !== key(normalizedTrace)))) return false;
  if (v.origin === 'edited' && v.segments.length !== 0) return false;
  return v.approval === null || (record(v.approval) && bounded(v.approval.text, 6000) && integer(v.approval.revision) && bounded(v.approval.contextKey, 10_000) && Number.isFinite(v.approval.at));
 }
