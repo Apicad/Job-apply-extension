@@ -8,7 +8,6 @@ stats-*.json
 # Personal dev-browser settings for `npm run dev`
 web-ext.config.ts
 
-# Background research and reports: kept on the owner's machine, never committed
 /research_notes/
 /reports/
 
