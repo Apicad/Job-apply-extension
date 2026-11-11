@@ -15,6 +15,19 @@ test('status validates the actual provider and correlates reply IDs', async () =
 test('missing helper gives a setup state rather than disabling ordinary fill', async () => {
   const pending = checkAI(); onDisconnect(); expect(await pending).toMatchObject({ connected: false });
 });
+test('reports the native connection failure while preserving setup guidance', async () => {
+  vi.spyOn(browser.runtime, 'lastError', 'get').mockReturnValue({ message: 'Specified native messaging host not found.' });
+  const pending = checkAI(); onDisconnect();
+  expect(await pending).toMatchObject({ connected: false, message: expect.stringContaining('Specified native messaging host not found.') });
+});
+test('reports a bounded synchronous native API error instead of hiding it behind setup guidance', async () => {
+  vi.mocked(browser.runtime.connectNative).mockImplementation(() => { throw Error(`Native API unavailable: ${'x'.repeat(800)}`); });
+  const status = await checkAI();
+  expect(status.connected).toBe(false);
+  expect(status.message).toContain('AI connection could not start: Native API unavailable:');
+  expect(status.message.length).toBeLessThan(600);
+  expect(status.message).toContain('Your saved profile still works without AI.');
+});
 test('draft only returns bounded structured raw text, rejecting mismatched response', async () => {
   const pending = draftWithAI(request()); const failure = expect(pending).rejects.toThrow('Unexpected reply'); onMessage({ id: 'wrong-request', ok: true, data: { raw: '{}' } }); await failure;
 });

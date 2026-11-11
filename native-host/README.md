@@ -5,7 +5,9 @@ The helper uses your signed-in **Codex** account by preference, or Claude Code w
 1. Install Codex from its official source and sign in with ChatGPT (or install and sign in to Claude Code if Codex is absent).
 2. Load the production extension in Chrome and copy its extension ID from its sidebar settings.
 3. In this project, run `node scripts/install-ai-host.mjs --extension-id YOUR_EXTENSION_ID`.
-4. Choose **Check connection** under **AI connection** in the sidebar and grant Chrome's native messaging permission if prompted.
+4. Choose **Check connection** under **AI connection** in the sidebar. Chrome's native messaging permission is declared at installation; there is no additional runtime permission prompt. AI stays disabled until you enable it.
+
+Chrome can leave `connectNative` unavailable in an already-running extension worker after an optional permission grant. This release declares the same permission at installation to avoid a first-time setup reload.
 
 The installer supports macOS and Linux Google Chrome. It registers `com.jobapply.ai` for exactly the supplied extension origin. It discovers an installed binary locally; browser messages cannot select an executable, shell command, provider or file path. It installs the helper under `~/.local/share/job-apply-assistant/native-host`, not a web server or background daemon. Chrome starts it only when the extension connects. Re-run the installer after changing the unpacked extension ID or upgrading this helper. Windows is not supported yet.
 

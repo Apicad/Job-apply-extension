@@ -17,7 +17,7 @@ npm run build
 Load `.output/chrome-mv3` using Chrome's **Load unpacked** control. Click the extension icon on the application tab to open the persistent sidebar and grant access to that tab.
 
 1. Open **Your details** and save your profile once. Add a résumé for attachment. Under **Experience for AI**, save up to 20 short factual notes about your work or projects. The résumé file is attached, not automatically parsed into these notes.
-2. Connect an existing signed-in AI tool with the local helper described in [native-host/README.md](native-host/README.md). Enable the optional connection from **AI connection**. Basic autofill works without it.
+2. Connect an existing signed-in AI tool with the local helper described in [native-host/README.md](native-host/README.md). Enable AI from **AI connection**. Basic autofill works without it.
 3. Click **Autofill**. The extension scans the page and fills supported, empty fields from saved information. Existing answers are preserved. It shows filled, kept and needs-attention counts.
 4. Review any drafted project answers, expand the saved facts when useful, and edit if needed. **Use answer** approves, saves and fills that exact answer in one action. Unsupported claims and changed application contexts remain blocked.
 5. Check the employer's form and submit there yourself. The extension never submits or accepts attestations.
@@ -28,7 +28,7 @@ There is no copy/paste JSON step, app credit balance, provider API key or paid f
 
 Profile and résumé stay in browser storage. When AI is enabled, only the saved experience notes, supported question, job title/company and opaque application/question identifiers are sent through a Chrome native-messaging helper to the selected local AI CLI. No browser cookies, complete page HTML, résumé bytes or authentication secrets are sent by the extension. The CLI manages its own existing sign-in. Helper requests have size/time limits and disconnect cancellation. No application-origin page can directly call the helper.
 
-The production manifest uses `storage`, `activeTab`, `scripting` and `sidePanel`, with optional `nativeMessaging`. It has no passive content scripts or broad host permissions. The E2E-only build permits local fixture origins; do not distribute it as the production build.
+The production manifest uses `storage`, `activeTab`, `scripting`, `sidePanel` and `nativeMessaging`. The native connection permission is granted at installation so Chrome exposes its API to the background worker immediately; AI remains opt-in and the helper accepts only the installed extension origin. It has no passive content scripts or broad host permissions. The E2E-only build permits local fixture origins; do not distribute it as the production build. The production toolbar uses the normal action event to grant temporary tab access before opening the sidebar; Chrome's automatic sidebar toggle does not grant it. Validate this path in a real Chrome profile because fixture host grants cannot prove toolbar permission behavior.
 
 ## Checks and scope
 

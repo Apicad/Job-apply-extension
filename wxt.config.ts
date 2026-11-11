@@ -18,8 +18,9 @@ export default defineConfig({
     name: 'Job Apply Assistant',
     description:
       'Fills job application forms from your saved profile. You review and submit.',
-    permissions: ['storage', 'activeTab', 'scripting', 'sidePanel'],
-    optional_permissions: ['nativeMessaging'],
+    // Native messaging must be available when the MV3 worker starts. Optional
+    // runtime grants can leave Chrome's native API absent until an extension reload.
+    permissions: ['storage', 'activeTab', 'scripting', 'sidePanel', 'nativeMessaging'],
     side_panel: { default_path: 'sidepanel.html' },
     host_permissions: mode === 'e2e' ? E2E_HOSTS : [],
     commands: {

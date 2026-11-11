@@ -175,7 +175,6 @@ function App() {
   async function connect(enable: boolean) {
     setConnecting(true); setError('');
     try {
-      if (enable && !(await browser.permissions.request({ permissions: ['nativeMessaging'] }))) throw Error('AI connection permission was not granted. Basic autofill still works.');
       if (enable) setAiStatus(await send('sidebar-ai-status'));
       await send('sidebar-settings', { aiEnabled: enable }); await refresh();
     } catch (e) { setAiStatus({ connected: false, message: e instanceof Error ? e.message : 'Could not connect your AI.' }); }
@@ -212,7 +211,7 @@ function App() {
 
     <div className="setup">
       <ProfileEditor state={state} send={send} refresh={refresh} disabled={busy || active || loading} />
-      <details className="setup-section ai-section"><summary><span><strong>AI connection</strong><small><span className={`connection-dot${state.aiEnabled && aiStatus?.connected ? ' connected' : ''}`} />{state.aiEnabled ? aiStatus?.connected && aiStatus.provider ? `${aiStatus.provider} connected` : 'Connected AI enabled' : 'Use your existing AI account'}</small></span><span className="chevron" aria-hidden="true">⌄</span></summary>
+      <details className="setup-section ai-section"><summary><span><strong>AI connection</strong><small><span className={`connection-dot${state.aiEnabled && aiStatus?.connected ? ' connected' : ''}`} />{state.aiEnabled ? aiStatus?.connected && aiStatus.provider ? `${aiStatus.provider} connected` : aiStatus ? 'Connection needs attention' : 'Check AI connection' : 'Use your existing AI account'}</small></span><span className="chevron" aria-hidden="true">⌄</span></summary>
         <div className="section-body"><p className="helper">Saved experience and application questions go to your signed-in AI account. Its plan limits apply. No app credits.</p><label className="toggle"><input type="checkbox" checked={state.aiEnabled} disabled={connecting || active || busy} onChange={e => void connect(e.target.checked)} /><span>Draft answers with connected AI</span></label>
           <button className="secondary full" disabled={connecting || active || busy} onClick={() => void connect(true)}>{connecting ? 'Connecting…' : 'Check connection'}</button>
           {aiStatus && <p role="status" className={aiStatus.connected ? 'inline-message' : 'inline-error'}>{aiStatus.message}</p>}

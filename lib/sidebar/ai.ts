@@ -19,15 +19,22 @@ function nativeRequest(type: 'status' | 'draft', request?: Request, signal?: Abo
     const timer = setTimeout(() => finish(Error('AI took too long. Your basic fields remain filled.')), type === 'status' ? 15_000 : 75_000);
     signal?.addEventListener('abort', abort, { once: true });
     try {
-      port = browser.runtime.connectNative(AI_HOST);
-      port.onDisconnect.addListener(() => { void browser.runtime.lastError; finish(Error(SETUP)); });
+      const runtime = browser.runtime;
+      port = runtime.connectNative(AI_HOST);
+      port.onDisconnect.addListener(() => {
+        const reason = runtime.lastError?.message;
+        finish(Error(reason ? `AI connection failed: ${reason.slice(0, 400)} ${SETUP}` : SETUP));
+      });
       port.onMessage.addListener((message: unknown) => {
         if (!record(message) || message.id !== id || typeof message.ok !== 'boolean') { finish(Error('Unexpected reply from the AI helper.')); return; }
         if (!message.ok) { finish(Error(typeof message.error === 'string' ? message.error.slice(0, 600) : 'Connected AI failed.')); return; }
         finish(undefined, message.data);
       });
       port.postMessage({ id, type, ...(request ? { request } : {}) });
-    } catch { finish(Error(SETUP)); }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message.slice(0, 400) : 'Native messaging is unavailable.';
+      finish(Error(`AI connection could not start: ${reason} ${SETUP}`));
+    }
   });
 }
 

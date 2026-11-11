@@ -18,7 +18,11 @@ export default defineBackground(() => {
   void result.then(data => sendResponse({ ok: true, data }), error => sendResponse({ ok: false, error: error instanceof Error ? error.message : 'Operation failed.' }));
   return true;
  });
- void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+ // Chrome's automatic side-panel toggle skips activeTab. Use the normal action
+ // event so Chrome grants tab access, then open within that same user gesture.
+ // Explicitly clear the stored toggle behavior when upgrading an existing install.
+ void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+ browser.action.onClicked.addListener(tab => { if (tab.windowId !== undefined) void browser.sidePanel.open({ windowId: tab.windowId }); });
  browser.commands.onCommand.addListener((_command, tab) => { if (tab?.windowId !== undefined) void browser.sidePanel.open({ windowId: tab.windowId }); });
  browser.tabs.onUpdated.addListener((tabId, info) => { if (info.status === 'loading' || info.url) void cancelForNavigation(tabId); });
  browser.tabs.onRemoved.addListener(tabId => { void cancelForNavigation(tabId); });
