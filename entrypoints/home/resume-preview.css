@@ -12,7 +12,7 @@
 @media (max-width: 900px) { .page-shell.with-preview { display: flex; flex-direction: column; padding: 24px 20px 0; gap: 24px; }.with-preview main { width: 100%; }.resume-preview { position: static; width: 100%; max-height: none; order: -1; }.preview-heading h2 { font-size: 19px; }.with-preview .page-heading { margin-top: 12px; }.paper-viewport { max-width: 650px; margin-inline: auto; }.preview-options { max-height: 380px; overflow: auto; }.preview-controls input { min-width: 16px; min-height: 16px; }.preview-section-choices label { min-height: 25px; } }
 @media print {
   @page { size: letter; margin: .35in .55in .3in; }
-  :root, body { background: white; padding: 0; margin: 0; min-width: 0; }
+  html:root, body, #root { background: white !important; padding: 0 !important; margin: 0 !important; min-width: 0 !important; }
   .topbar, .skip-link, .save-dock, .with-preview > :not(.resume-preview), .resume-preview > :not(.paper-viewport) { display: none !important; }
   .page-shell.with-preview, .resume-preview, .paper-viewport, .paper-stage { display: block; position: static; overflow: visible; padding: 0; margin: 0; width: auto; max-width: none; max-height: none; height: auto !important; border: 0; background: white; box-shadow: none; border-radius: 0; }
   .resume-paper { width: auto; min-height: 0; padding: 0; transform: none !important; }

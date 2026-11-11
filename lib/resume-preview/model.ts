@@ -94,7 +94,20 @@ function buildEntry(fact: Fact, section: ResumeFactSection): ResumeEntry {
     const linkIndex = parts.findIndex(part => safeResumeLink(part) !== undefined);
     const linkText = linkIndex >= 0 ? parts.splice(linkIndex, 1)[0] : undefined;
     entry = { id: fact.id, heading, ...(parts.length ? { detail: parts.join(' | ') } : {}), lines: allLines.slice(start + 1), ...(linkText ? { link: { text: linkText, href: safeResumeLink(linkText) } } : {}) };
-  } else entry = { id: fact.id, heading: sourceHeading(fact), lines: allLines };
+  } else {
+    entry = { id: fact.id, heading: sourceHeading(fact), lines: allLines };
+    // Some saved projects use the source as their title and start the note
+    // with "Technologies | project URL". Move only that explicit final URL
+    // into the link slot; retain every preceding word as the entry detail.
+    const parts = first.split('|').map(part => part.trim());
+    const linkText = parts.at(-1) ?? '';
+    const href = section === 'projects' && parts.length > 1 && parts.every(Boolean) && !employmentHeader(first) ? safeResumeLink(linkText) : undefined;
+    if (href) {
+      entry.detail = parts.slice(0, -1).join(' | ');
+      entry.link = { text: linkText, href };
+      entry.lines = allLines.slice(start + 1);
+    }
+  }
   if (section === 'projects' && !entry.link) {
     const linkIndex = entry.lines.findIndex(line => !!safeResumeLink(line));
     if (linkIndex >= 0) {

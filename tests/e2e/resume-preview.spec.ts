@@ -64,6 +64,7 @@ test('live résumé preview uses every note, keeps optional sections separate, a
   await home.emulateMedia({ media: 'print' });
   await expect(home.locator('.save-dock')).not.toBeVisible();
   await expect(paper).toBeVisible();
+  expect(await home.evaluate(() => [document.documentElement, document.body, document.getElementById('root')!].map(el => ({ background: getComputedStyle(el).backgroundColor, padding: getComputedStyle(el).paddingBottom })))).toEqual(Array(3).fill({ background: 'rgb(255, 255, 255)', padding: '0px' }));
   await home.pdf({ path: testInfo.outputPath('preview.pdf'), preferCSSPageSize: true });
   await home.emulateMedia({ media: 'screen' });
   await home.setViewportSize({ width: 360, height: 900 });

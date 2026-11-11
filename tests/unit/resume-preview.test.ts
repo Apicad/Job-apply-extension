@@ -45,6 +45,19 @@ describe('resume preview preserves saved claims', () => {
     expect(entry).toEqual({ id: 'project', heading: 'Project: Trace viewer', lines: ['Built a React viewer.', 'Not yet deployed.'], link: { text: 'https://example.com/trace', href: 'https://example.com/trace' } });
   });
 
+  it('makes an explicit pipe-separated project URL clickable without replacing the source title or losing technologies', () => {
+    const fact = note('project', 'Example orchestration system', 'TypeScript, Node.js, HTTP, WebSocket | github.com/ada-example/agents\nExtended an open-source prototype; not production deployed.');
+    const layout = defaultResumeLayout(); layout.facts.project = { section: 'projects', included: true };
+    const entry = buildResumeDocument(emptyProfile(), [fact], layout).sections[0]?.entries[0];
+    expect(entry).toEqual({ id: 'project', heading: 'Example orchestration system', detail: 'TypeScript, Node.js, HTTP, WebSocket', link: { text: 'github.com/ada-example/agents', href: 'https://github.com/ada-example/agents' }, lines: ['Extended an open-source prototype; not production deployed.'] });
+    const files = unzipSync(createResumeDocx(buildResumeDocument(emptyProfile(), [fact], layout)));
+    expect(strFromU8(files['word/_rels/document.xml.rels']!)).toContain('Target="https://github.com/ada-example/agents" TargetMode="External"');
+    expect(inferFactSection(fact)).toBe('experience');
+    const unassigned = buildResumeDocument(emptyProfile(), [fact], defaultResumeLayout()).sections[0]?.entries[0];
+    expect(unassigned?.lines[0]).toBe('TypeScript, Node.js, HTTP, WebSocket | github.com/ada-example/agents');
+    expect(unassigned?.link).toBeUndefined();
+  });
+
   it('leaves ambiguous notes as experience and never invents a role or dates', () => {
     const facts = [note('a', 'Career notes', 'Built a project for practice.'), note('b', 'Example Org', 'Example Org | Volunteer | Remote\nHelped host a workshop.')];
     expect(facts.map(inferFactSection)).toEqual(['experience', 'experience']);
