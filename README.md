@@ -6,6 +6,8 @@ This version builds on audited source `f3b7ef0d5dd3f1be9a16753a643e209665797b60`
 
 ## Use it
 
+**Hackathon quick start:** use the prebuilt bundle and [START-HERE](docs/hackathon/START-HERE.md) for installation, your own AI connection, and three safe practice applications. See [tested scope](docs/hackathon/COMPATIBILITY.md). Build a shareable bundle from a clean Git checkout with `npm run package:hackathon -- /absolute/path/to/new-output-folder`. No developer profile, account or local path is bundled.
+
 Use Node 24 or newer and desktop Chrome. From this checkout:
 
 ```sh
