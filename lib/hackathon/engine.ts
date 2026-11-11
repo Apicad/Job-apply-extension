@@ -1,7 +1,7 @@
 import type { NativeOutcome } from './outcomes';
 import { stableKey } from './identity';
 import { classifyField } from '../classify';
-import { textValueFor } from '../profile';
+import { textValueFor, autofillAllowed } from '../profile';
 import { pickChoice } from '../choices';
 import { acceptsFile, isStoredResume } from '../resume';
 import { greenhouseAction } from './greenhouse-plan';
@@ -44,11 +44,13 @@ export function planNative(frames: Frame[], profile: Profile, resume: StoredResu
    const d = field.descriptor; const kind = classifyField(d); let action: NativeAction | null = null;
    const usageKey = kind === 'email' && /^confirm e-?mail(?: address)?[.:]?$/i.test(d.label.trim()) ? 'confirmEmail' : kind;
    let status = !field.empty ? 'Kept existing answer' : 'Manual / unsupported';
+   const enabled = autofillAllowed(profile, kind, d);
+   if (field.empty && !enabled) status = 'Section autofill disabled';
    const unsafe = /signature|certif|attest|acknowledg|declar|consent/i.test([d.label, d.groupLabel, d.placeholder, d.name, d.id, d.hints].join(' '));
    const eligibility = kind === 'workAuthorization' || kind === 'sponsorship';
    const savedCountry = countryCode(profile.country);
    const rightCountry = !eligibility || !!savedCountry && findCountries([d.label,d.groupLabel].join(' ')).every(code => code === savedCountry);
-   const inApplication = !unsafe && rightCountry && field.empty && best?.frame.documentId === frame.documentId && best.form === field.form;
+   const inApplication = enabled && !unsafe && rightCountry && field.empty && best?.frame.documentId === frame.documentId && best.form === field.form;
    if (inApplication) {
     const custom=greenhouseAction(field,frame.scan.fields,frame.scan.url,profile,fieldSignature(d,field.form,field.maxLength));
     if (custom && !used.has(custom.usageKey)) { action=custom.action; used.add(custom.usageKey); status='Ready for preview'; }

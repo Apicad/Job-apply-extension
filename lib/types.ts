@@ -15,6 +15,7 @@
 
 /** '' always means "not answered — never answer this for the user". */
 export type YesNo = '' | 'yes' | 'no';
+export type AutofillPreference = 'yes' | 'no';
 export type Gender = '' | 'male' | 'female' | 'nonbinary' | 'decline';
 export type Race =
   | ''
@@ -73,6 +74,17 @@ export interface Profile {
   workAuthorization: YesNo;
   /** "Will you now or in the future require visa sponsorship?" Same scope. */
   sponsorship: YesNo;
+  /** Explicitly supplied citizenship and nationality; never derived from residence or other answers. */
+  citizenshipCountry: string;
+  nationality: string;
+  /** Only for a plain question explicitly asking whether the applicant is a United States citizen. */
+  usCitizenship: YesNo;
+
+  /** Section preferences retain the saved values. Missing preferences in older profiles default to yes. */
+  fillLocation: AutofillPreference;
+  fillEducation: AutofillPreference;
+  fillEmployment: AutofillPreference;
+  fillEligibility: AutofillPreference;
 
   // Voluntary self-identification. All optional; '' leaves the question alone.
   gender: Gender;
@@ -131,6 +143,9 @@ export type FieldKind =
   | 'gpa'
   | 'workAuthorization'
   | 'sponsorship'
+  | 'citizenshipCountry'
+  | 'nationality'
+  | 'usCitizenship'
   | 'gender'
   | 'race'
   | 'veteran'
@@ -139,7 +154,7 @@ export type FieldKind =
   | 'resume';
 
 /** Kinds answered by choosing an option. Never typed into a text field. */
-export type EnumKind = 'workAuthorization' | 'sponsorship' | 'gender' | 'race' | 'veteran' | 'disability';
+export type EnumKind = 'workAuthorization' | 'sponsorship' | 'usCitizenship' | 'gender' | 'race' | 'veteran' | 'disability';
 
 /**
  * The control a descriptor describes.

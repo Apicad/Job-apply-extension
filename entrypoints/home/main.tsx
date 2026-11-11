@@ -7,6 +7,9 @@ import { MAX_IMPORT_TEXT, parseResume, proposeResumeImport } from '../../lib/res
 import type { Profile } from '../../lib/types';
 import type { Fact } from '../../lib/hackathon/contracts';
 import type { SidebarState } from '../../lib/sidebar/ui-types';
+import { defaultResumeLayout, normalizeResumeLayout } from '../../lib/resume-preview';
+import type { ResumeLayout } from '../../lib/resume-preview';
+import { ResumePreview } from './resume-preview';
 import './style.css';
 
 const blank = (): SidebarState => ({ profile: emptyProfile(), facts: [], resume: null, run: null, aiEnabled: false });
@@ -47,7 +50,8 @@ function App() {
   const [state, setState] = useState<SidebarState>(blank);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [facts, setFacts] = useState<Fact[]>([]);
-  const [base, setBase] = useState({ profile: emptyProfile(), facts: [] as Fact[] });
+  const [resumeLayout, setResumeLayout] = useState<ResumeLayout>(defaultResumeLayout);
+  const [base, setBase] = useState({ profile: emptyProfile(), facts: [] as Fact[], resumeLayout: defaultResumeLayout() });
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -58,7 +62,7 @@ function App() {
   const [importReview, setImportReview] = useState<ImportReview | null>(null);
   const [importError, setImportError] = useState('');
   const [activeSection, setActiveSection] = useState('contact');
-  const dirty = JSON.stringify({ profile, facts }) !== JSON.stringify(base);
+  const dirty = JSON.stringify({ profile, facts, resumeLayout }) !== JSON.stringify(base);
   const dirtyRef = useRef(false); dirtyRef.current = dirty;
   const draftRef = useRef({ profile, facts }); draftRef.current = { profile, facts };
   const mounted = useRef(true);
@@ -71,7 +75,7 @@ function App() {
     const next = await send('sidebar-state') as SidebarState;
     if (!mounted.current || request !== sequence.current) return;
     setState(next); setLoading(false); setLoaded(true);
-    if (discard || !dirtyRef.current) { draftRef.current = { profile: next.profile, facts: next.facts }; setProfile(next.profile); setFacts(next.facts); setBase({ profile: next.profile, facts: next.facts }); }
+    if (discard || !dirtyRef.current) { const layout = normalizeResumeLayout(next.resumeLayout); draftRef.current = { profile: next.profile, facts: next.facts }; setProfile(next.profile); setFacts(next.facts); setResumeLayout(layout); setBase({ profile: next.profile, facts: next.facts, resumeLayout: layout }); }
   }
   async function load(discard = false): Promise<void> {
     // Saving/reloading must adopt the new revision before allowing another edit.
@@ -109,9 +113,10 @@ function App() {
   const change = (key: keyof Profile, value: string) => { setProfile(current => ({ ...current, [key]: value })); setMessage(''); setError(''); };
   const field = ([key, label, type = 'text']: TextField) => <label className="field" key={key}><span>{label}</span><input type={type} value={profile[key]} maxLength={300} onChange={e => change(key, e.target.value)} autoComplete="off" /></label>;
   const choice = (key: keyof Profile, label: string, options: readonly { value: string; label: string }[]) => <label className="field" key={key}><span>{label}</span><select aria-label={label} value={profile[key]} onChange={e => change(key, e.target.value)}>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+  const toggle = (key: keyof Profile, label: string) => <label className="section-toggle"><input type="checkbox" checked={profile[key] !== 'no'} onChange={e => change(key, e.target.checked ? 'yes' : 'no')} /><span>{label}</span></label>;
   async function save() {
     setBusy(true); setError(''); setMessage('');
-    try { await send('sidebar-save-profile', { profile, facts, expectedProfile: base.profile, expectedFacts: base.facts }); await load(true); setMessage('Profile saved. Autofill will use these details.'); }
+    try { await send('sidebar-save-profile', { profile, facts, resumeLayout, expectedProfile: base.profile, expectedFacts: base.facts, expectedResumeLayout: base.resumeLayout }); await load(true); setMessage('Profile saved. Autofill will use these details.'); }
     catch (e) { setError(messageOf(e)); }
     finally { setBusy(false); }
   }
@@ -181,7 +186,7 @@ function App() {
   return <>
     <a className="skip-link" href="#profile-content">Skip to profile</a>
     <header className="topbar"><a className="brand" href="#contact"><Mark /><span>Job Apply<span className="brand-divider">/</span><span className="brand-page">Your profile</span></span></a><span className="storage-badge"><span aria-hidden="true">●</span> Saved in this browser</span></header>
-    <div className="page-shell">
+    <div className="page-shell with-preview">
       <aside className="navigation"><p className="eyebrow">YOUR WORKSPACE</p><nav aria-label="Profile sections">{sections.map(([id, label], index) => <a key={id} href={`#${id}`} onClick={() => setActiveSection(id)} aria-current={activeSection === id ? 'location' : undefined}><span className="nav-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>{label}</a>)}</nav><div className="nav-note"><span className="note-icon" aria-hidden="true">↗</span><strong>Set up once.<br />Bring it to every application.</strong><p>Open a job application, click Job Apply, then Autofill.</p></div></aside>
       <main id="profile-content">
         <header className="page-heading"><p className="eyebrow">A LITTLE LESS REPETITION</p><h1>Your next application<br />starts here.</h1><p>Keep your information in one place. Autofill uses what you’ve saved, every time.</p><a className="resume-start" href="#resume">Start with your résumé <span aria-hidden="true">↗</span></a></header>
@@ -191,6 +196,7 @@ function App() {
             <div className="field-grid">{contact.map(field)}</div><div className="subheading">FIND YOUR WORK</div><div className="field-grid links-grid">{links.map(field)}</div>
           </Section>
           <Section id="location" number="02" title="Location" description="Your current location, for matching application fields.">
+            {toggle('fillLocation', 'Autofill my location')}
             {field(['addressLine1', 'Street address'])}<div className="field-grid">{locationFields.map(field)}</div>
           </Section>
           <Section id="resume" number="03" title="Résumé" description="Upload once. We’ll read the text and start your profile for you.">
@@ -201,9 +207,11 @@ function App() {
             {importReview && <ImportPanel review={importReview} onText={text => setImportReview(current => current ? { ...current, text } : current)} onUse={useEditedText} />}
           </Section>
           <Section id="education" number="04" title="Education" description="Save the school and program you want to use on applications.">
+            {toggle('fillEducation', 'Autofill my education')}
             <div className="field-grid">{education.map(field)}</div><p className="helper">Use your actual degree or program. Leave dates and other details blank if you don’t want them filled.</p>
           </Section>
           <Section id="experience" number="05" title="Experience & projects" description="Give your AI tool the facts behind your work.">
+            {toggle('fillEmployment', 'Autofill my current company and title')}
             <div className="field-grid">{field(['currentCompany', 'Current company'])}{field(['currentTitle', 'Current title'])}</div>
             <p className="helper experience-help">Add a role, project, or accomplishment in your own words. These notes support AI drafts; they don’t create employment records on applications.</p>
             <div className="fact-list">{facts.map((fact, index) => <div className="fact-card" key={fact.id}><div className="fact-header"><span>EXPERIENCE {String(index + 1).padStart(2, '0')}</span><button className="text-button remove-button" type="button" aria-label={`Remove experience ${index + 1}`} onClick={() => { setFacts(items => items.filter(item => item.id !== fact.id)); setMessage(''); }}>Remove</button></div><label className="field"><span>Role or project</span><input aria-label={`Role or project ${index + 1}`} value={fact.location} maxLength={300} placeholder="e.g. Customer dashboard project" onChange={e => changeFact(fact.id, 'location', e.target.value)} /></label><label className="field"><span>What you did</span><textarea aria-label={`Experience details ${index + 1}`} value={fact.text} maxLength={2000} placeholder="What did you build, improve, or learn? Include the tools you used and results you can support." onChange={e => changeFact(fact.id, 'text', e.target.value)} /></label></div>)}</div>
@@ -211,6 +219,8 @@ function App() {
             <button className="secondary add-experience" type="button" disabled={facts.length >= 20} onClick={() => { setFacts(items => [...items, { id: crypto.randomUUID(), revision: 1, location: '', text: '' }]); setError(''); setMessage(''); }}><span aria-hidden="true">＋</span> Add experience</button><span className="fact-count">{facts.length} of 20 notes</span>
           </Section>
           <Section id="answers" number="06" title="Application answers" description="Save answers you want reused. “No answer” leaves a question untouched.">
+            {toggle('fillEligibility', 'Autofill my saved eligibility answers')}
+            <div className="field-grid">{field(['citizenshipCountry', 'Country of citizenship'])}{field(['nationality', 'Nationality'])}{choice('usCitizenship', 'Are you a U.S. citizen?', YES_NO_OPTIONS)}</div><p className="helper">Enter these separately from where you live. Only simple, matching questions use them; declarations that combine several conditions still need your review.</p>
             <div className="field-grid">{choice('workAuthorization', 'Authorized to work in your country?', YES_NO_OPTIONS)}{choice('sponsorship', 'Require employment visa sponsorship?', YES_NO_OPTIONS)}</div><p className="helper">These answers apply to your saved country. Questions about another country stay unanswered.</p>
             <details className="optional-answers"><summary>Voluntary self-identification<span>Optional</span></summary><p className="helper">Only save answers you want used on matching application questions.</p><div className="field-grid">{choice('gender', 'Gender', GENDER_OPTIONS)}{choice('race', 'Race / ethnicity', RACE_OPTIONS)}{choice('veteran', 'Veteran status', VETERAN_OPTIONS)}{choice('disability', 'Disability status', DISABILITY_OPTIONS)}</div></details>
           </Section>
@@ -218,6 +228,7 @@ function App() {
         </fieldset>}
         <footer className="page-footer">Saved details are reused in the sidebar. Blank fields stay unanswered. You review and submit each application.</footer>
       </main>
+      {loaded && <ResumePreview profile={profile} facts={facts} layout={resumeLayout} onChange={layout => { setResumeLayout(layout); setMessage(''); setError(''); }} dirty={dirty} disabled={busy} />}
     </div>
     <div className="save-dock"><div className="save-dock-inner"><div className="save-message">{error ? <p role="alert" className="error-message">{error}</p> : <p role="status"><span aria-hidden="true">{dirty ? '○' : '✓'}</span>{message || (dirty ? 'You have unsaved changes' : 'Your saved details are ready to reuse')}</p>}{dirty && <small>Autofill uses your last saved profile.</small>}{error && <button type="button" className="text-button" disabled={busy} onClick={() => void reloadSaved()}>Reload saved profile</button>}</div><button className="primary" type="button" disabled={!loaded || loading || busy || !dirty} onClick={() => void save()}>{readingResume ? 'Reading résumé…' : busy ? 'Saving…' : 'Save profile'}<span aria-hidden="true">↗</span></button></div></div>
   </>;

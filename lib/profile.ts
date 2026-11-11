@@ -3,7 +3,7 @@
  * (storage, an imported file), the text to type for a field, and the choices
  * the settings form offers. Pure: no DOM, no extension API.
  */
-import type { Disability, FieldKind, Gender, NormalizeProfile, Profile, Race, TextValueFor, Veteran, YesNo } from './types';
+import type { AutofillPreference, Disability, FieldDescriptor, FieldKind, Gender, NormalizeProfile, Profile, Race, TextValueFor, Veteran, YesNo } from './types';
 
 /** A profile with nothing answered. A new object on every call, so nobody shares edits by accident. */
 export function emptyProfile(): Profile {
@@ -29,6 +29,13 @@ export function emptyProfile(): Profile {
     gpa: '',
     workAuthorization: '',
     sponsorship: '',
+    citizenshipCountry: '',
+    nationality: '',
+    usCitizenship: '',
+    fillLocation: 'yes',
+    fillEducation: 'yes',
+    fillEmployment: 'yes',
+    fillEligibility: 'yes',
     gender: '',
     race: '',
     veteran: '',
@@ -39,7 +46,26 @@ export function emptyProfile(): Profile {
 /** True when nothing is filled in, so the popup can say "set up your profile" instead of listing every field. */
 export function isProfileEmpty(profile: Profile): boolean {
   const fields = Object.keys(emptyProfile()) as (keyof Profile)[];
-  return fields.every((field) => profile[field].trim() === '');
+  return fields.every((field) => AUTOFILL_PREFERENCES.includes(field as AutofillPreferenceKey) || profile[field].trim() === '');
+}
+
+export type AutofillPreferenceKey = 'fillLocation' | 'fillEducation' | 'fillEmployment' | 'fillEligibility';
+export const AUTOFILL_PREFERENCES: readonly AutofillPreferenceKey[] = ['fillLocation', 'fillEducation', 'fillEmployment', 'fillEligibility'];
+const sections: Partial<Record<FieldKind, AutofillPreferenceKey>> = {
+  addressLine1: 'fillLocation', city: 'fillLocation', state: 'fillLocation', postalCode: 'fillLocation', country: 'fillLocation', location: 'fillLocation',
+  school: 'fillEducation', degree: 'fillEducation', major: 'fillEducation', graduationDate: 'fillEducation', graduationYear: 'fillEducation', gpa: 'fillEducation',
+  currentCompany: 'fillEmployment', currentTitle: 'fillEmployment',
+  workAuthorization: 'fillEligibility', sponsorship: 'fillEligibility', citizenshipCountry: 'fillEligibility', nationality: 'fillEligibility', usCitizenship: 'fillEligibility',
+};
+/** Includes Greenhouse education parts whose date labels intentionally have no generic kind. */
+export function autofillSection(kind: FieldKind | null, descriptor?: FieldDescriptor): AutofillPreferenceKey | null {
+  if (descriptor && /^(school|degree|discipline|end-(?:date-)?month|end-(?:date-)?year)--\d+$/.test(descriptor.id)) return 'fillEducation';
+  if (descriptor && descriptor.label.trim().toLowerCase() === 'country' && descriptor.groupLabel.trim().toLowerCase() === 'phone') return 'fillLocation';
+  return kind ? sections[kind] ?? null : null;
+}
+export function autofillAllowed(profile: Profile, kind: FieldKind | null, descriptor?: FieldDescriptor): boolean {
+  const section = autofillSection(kind, descriptor);
+  return section === null || profile[section] !== 'no';
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +185,7 @@ function oneOf<Answer extends string>(options: readonly ProfileOption<Answer>[],
   }
   return unanswered;
 }
+const preference = (value: unknown): AutofillPreference => value === 'no' ? 'no' : 'yes';
 
 /**
  * Builds a valid profile from anything: stored data, an imported file, null.
@@ -196,6 +223,13 @@ export const normalizeProfile: NormalizeProfile = (input) => {
     gpa: text(read('gpa')),
     workAuthorization: oneOf(YES_NO_OPTIONS, '', read('workAuthorization')),
     sponsorship: oneOf(YES_NO_OPTIONS, '', read('sponsorship')),
+    citizenshipCountry: text(read('citizenshipCountry')),
+    nationality: text(read('nationality')),
+    usCitizenship: oneOf(YES_NO_OPTIONS, '', read('usCitizenship')),
+    fillLocation: preference(read('fillLocation')),
+    fillEducation: preference(read('fillEducation')),
+    fillEmployment: preference(read('fillEmployment')),
+    fillEligibility: preference(read('fillEligibility')),
     gender: oneOf(GENDER_OPTIONS, '', read('gender')),
     race: oneOf(RACE_OPTIONS, '', read('race')),
     veteran: oneOf(VETERAN_OPTIONS, '', read('veteran')),
@@ -240,6 +274,8 @@ function answer(kind: FieldKind, profile: Profile, inputType: string): string {
     case 'state':
     case 'postalCode':
     case 'country':
+    case 'citizenshipCountry':
+    case 'nationality':
     case 'currentCompany':
     case 'currentTitle':
     case 'school':
@@ -265,6 +301,7 @@ function answer(kind: FieldKind, profile: Profile, inputType: string): string {
     // token such as "notVeteran", which means nothing on a form.
     case 'workAuthorization':
     case 'sponsorship':
+    case 'usCitizenship':
     case 'gender':
     case 'race':
     case 'veteran':
@@ -312,7 +349,7 @@ function fits(text: string, inputType: string): boolean {
  */
 export const textValueFor: TextValueFor = (kind, profile, field) => {
   // A file input takes a file, never text.
-  if (field.control === 'file') return '';
+  if (field.control === 'file' || !autofillAllowed(profile, kind, field)) return '';
   const text = answer(kind, profile, field.inputType);
   return fits(text, field.inputType) ? text : '';
 };

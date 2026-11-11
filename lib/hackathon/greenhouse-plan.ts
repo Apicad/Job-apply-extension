@@ -1,7 +1,7 @@
 import { detectAts } from '../ats';
 import { stableKey } from './identity';
 import { classifyField } from '../classify';
-import { MONTH_NAMES, yearAndMonth } from '../profile';
+import { MONTH_NAMES, yearAndMonth, autofillAllowed } from '../profile';
 import { countryCode } from '../regions';
 import type { Profile } from '../types';
 import type { NativeField, NativeAction } from './page';
@@ -32,7 +32,7 @@ function educationPart(field: NativeField, fields: NativeField[]): 'school' | 'd
  return match[1] === 'school' ? 'school' : match[1] === 'degree' ? 'degree' : match[1] === 'discipline' ? 'major' : match[1]!.endsWith('month') ? 'month' : 'year';
 }
 export function greenhouseAction(field: NativeField, fields: NativeField[], url: string, profile: Profile, signature: string): { action: NativeAction; usageKey: string } | null {
- if (!supportedPage(url) || !field.empty) return null;
+ if (!supportedPage(url) || !field.empty || !autofillAllowed(profile, classifyField(field.descriptor), field.descriptor)) return null;
  const d = field.descriptor; const part = educationPart(field,fields); const date = yearAndMonth(profile.graduationDate);
  if (EDUCATION_ID.test(d.id) && (!part || !profile.school.trim())) return null;
  const row=EDUCATION_ID.exec(d.id)?.[2];

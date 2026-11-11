@@ -22,6 +22,8 @@ The owner subsequently requested local résumé text extraction into the editabl
 
 The November 11 checkbox follow-up adds read-only, application-scoped checkbox group observations to the sidebar. The historical exclusion from the writable control collector still applies: checkbox observations never receive fill handles, planned actions, AI answers or clicks. Report each visible question once under Needs your attention, including prechecked/partial groups, and preserve all selections.
 
+The subsequent home-profile request adds a live résumé preview and local Word/print export, section and per-note inclusion controls, and separate autofill switches for location, education, current employment and eligibility. Résumé generation formats saved wording; it does not invent or tailor claims. Citizenship country, nationality and U.S. citizenship are separate explicit answers, blank by default, never inferred from residence or work permission. Existing uploaded attachments stay unchanged. Repeating employment records still require a structured-data/ATS follow-up.
+
 The authoritative smaller scope in `docs/plans/2026-11-09-jobright-inspired-autofill.md`
 and its build handoff governs this isolated candidate. `lib/hackathon/` implements
 the integrated worker, evidence/library contracts and execution wrapper; the old

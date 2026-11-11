@@ -10,6 +10,8 @@ import type { Frame, NativePlan } from './engine';
 import type { NativeScan, NativeCommand } from './page';
 import { DEMO_PROFILE, DEMO_FACTS } from './demo';
 import { key, record } from './contracts';
+import { autofillAllowed } from '../profile';
+import { classifyField } from '../classify';
 const planKey = (tabId: number) => `plan:${tabId}`;
 // Hash rather than duplicating a multi-megabyte data URL in session storage.
 async function resumeFingerprint(value: unknown): Promise<string> {
@@ -71,6 +73,13 @@ export async function fillTab(tabId: number, id: string, shouldContinue: () => v
  const outcomes: NonNullable<NativePlan['outcomes']> = [];
  for (const documentId of new Set(plan.rows.map(r => r.documentId))) {
   const rows = plan.rows.filter(r => r.documentId === documentId && r.action); const first = rows[0]; if (!first) continue;
+  // Recheck preferences at the execution boundary too: no saved or stale
+  // plan may turn a disabled section into a write. Keep residence values
+  // intact because they still scope eligibility questions to their country.
+  const currentProfile = await loadProfile();
+  if (key(currentProfile) !== plan.profileKey) throw Error('Profile or autofill preferences changed. Scan and review again.');
+  if (rows.some(row => !autofillAllowed(currentProfile, classifyField(row.field.descriptor), row.field.descriptor) ||
+    (row.action?.education && currentProfile.fillEducation === 'no'))) throw Error('Autofill is disabled for this section. Scan and review again.');
   const command: NativeCommand = { job: first.job, scanId: first.scanId, url: first.url, actions: rows.map(r => r.action!) };
   shouldContinue();
   try {

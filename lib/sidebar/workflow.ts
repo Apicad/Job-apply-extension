@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, saveProfile, saveResume } from '../storage';
 import { normalizeProfile } from '../profile';
+import { normalizeResumeLayout } from '../resume-preview';
 import { record, key, isFact, makeRequest, parseReply, approve, editAnswer, currentApproval, sameContext, resolveMissing } from '../hackathon/contracts';
 import type { Answer, Fact } from '../hackathon/contracts';
 import { scanTab, fillTab, invalidateNativePlan } from '../hackathon/service';
@@ -44,7 +45,7 @@ function fieldViews(plan: NativePlan): SidebarField[] {
     const outcome = plan.outcomes?.find(o => o.ref === row.field.ref && o.documentId === row.documentId);
     return { id: rowKey(row), label: row.field.descriptor.label || row.field.descriptor.name || 'Unlabelled field',
       status: !row.field.empty ? 'kept' : outcome?.ok ? 'filled' : row.action && plan.state === 'finished' ? 'failed' : 'review',
-      detail: !row.field.empty ? 'Your existing answer was kept.' : outcome?.ok ? 'Filled and checked on the page.' : row.action ? plan.state === 'finished' ? 'Could not verify this field. Check it on the page.' : 'Waiting to fill…' : supportedQuestion(row) ? 'Answer needs review.' : 'Complete this field on the application.' };
+      detail: !row.field.empty ? 'Your existing answer was kept.' : outcome?.ok ? 'Filled and checked on the page.' : row.action ? plan.state === 'finished' ? 'Could not verify this field. Check it on the page.' : 'Waiting to fill…' : row.status === 'Section autofill disabled' ? 'Autofill is off for this section. Complete this field on the application.' : supportedQuestion(row) ? 'Answer needs review.' : 'Complete this field on the application.' };
   }), ...checkboxGroupViews(plan.checkboxGroups ?? [])];
 }
 
@@ -57,7 +58,8 @@ export async function sidebarState(tabId?: number): Promise<SidebarState> {
   }
   const resume = await loadResumeToAttach();
   return { profile: await loadProfile(), facts: await loadFacts(), resume: resume ? { name: resume.name } : null,
-    run: run ? publicRun(run) : null, aiEnabled: await readHackathon<boolean>('sidebar-ai-enabled') === true };
+    run: run ? publicRun(run) : null, aiEnabled: await readHackathon<boolean>('sidebar-ai-enabled') === true,
+    resumeLayout: normalizeResumeLayout(await readHackathon('resume-layout')) };
 }
 
 async function execute(task: Active): Promise<void> {
@@ -189,8 +191,12 @@ export async function handleSidebar(message: Record<string, unknown>): Promise<u
     if (!record(message.profile) || !Array.isArray(message.facts) || message.facts.length > 20 || !message.facts.every(isFact) || new Set(message.facts.map(f => f.id)).size !== message.facts.length) throw Error('Save up to 20 experience notes with valid text.');
     const before = await loadFacts();
     if (key(message.expectedProfile) !== key(await loadProfile()) || key(message.expectedFacts) !== key(before)) throw Error('Your saved information changed in another window. Reopen it before saving.');
+    const hasLayout = Object.hasOwn(message, 'resumeLayout');
+    if (hasLayout && key(message.expectedResumeLayout) !== key(normalizeResumeLayout(await readHackathon('resume-layout')))) throw Error('Your résumé choices changed in another window. Reload the saved profile before saving.');
     const facts: Fact[] = message.facts.map((f: Fact) => { const old = before.find(v => v.id === f.id); return { id: f.id, text: f.text, location: f.location, revision: old ? old.revision + (old.text !== f.text || old.location !== f.location ? 1 : 0) : 1 }; });
-    await cancelAll(); await saveProfile(normalizeProfile(message.profile)); await writeHackathon('facts', facts); return { saved: true };
+    await cancelAll(); await saveProfile(normalizeProfile(message.profile)); await writeHackathon('facts', facts);
+    if (hasLayout) await writeHackathon('resume-layout', normalizeResumeLayout(message.resumeLayout));
+    return { saved: true };
   }
   if (message.type === 'sidebar-save-resume') { await cancelAll(); await saveResume(message.resume); return { saved: true }; }
   if (tabId === undefined) throw Error('Open an application tab first.');

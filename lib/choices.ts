@@ -19,7 +19,7 @@
  * The result names an option by its position in the list it was given, which
  * is its position on the page.
  */
-import { MONTH_NAMES, yearAndMonth } from './profile';
+import { MONTH_NAMES, yearAndMonth, autofillAllowed } from './profile';
 import { countryCode, findCountries, stateCode, words } from './regions';
 import type { ChoiceOption, ChoicePick, Disability, Gender, PickChoice, Race, Veteran, YesNo } from './types';
 
@@ -387,11 +387,18 @@ function pickGraduation(stored: string, part: 'year' | 'month and year', options
  * option, or more than one, says what the profile says.
  */
 export const pickChoice: PickChoice = (kind, profile, options) => {
+  if (!autofillAllowed(profile, kind)) return MISSING;
   switch (kind) {
     case 'workAuthorization':
       return pickEligibility(profile.workAuthorization, profile.country, options);
     case 'sponsorship':
       return pickEligibility(profile.sponsorship, profile.country, options);
+    case 'usCitizenship': {
+      // A clause after yes/no could add residency, export-control or other
+      // claims. Only the two bare answers are supported for this new field.
+      if (readable(options).some(option => option.text !== 'yes' && option.text !== 'no')) return NO_OPTION;
+      return pickYesNo(profile.usCitizenship, options);
+    }
     case 'gender':
       return pickWorded(GENDER, profile.gender, options);
     case 'race':
@@ -404,6 +411,10 @@ export const pickChoice: PickChoice = (kind, profile, options) => {
       return pickState(profile.state, profile.country, options);
     case 'country':
       return pickPlace(profile.country, countryCode, options);
+    case 'citizenshipCountry':
+      return pickPlace(profile.citizenshipCountry, countryCode, options);
+    case 'nationality':
+      return pickTyped(profile.nationality, options);
     case 'school':
       return pickTyped(profile.school, options);
     case 'degree':

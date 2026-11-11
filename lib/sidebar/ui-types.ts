@@ -1,5 +1,6 @@
 import type { Profile } from '../types';
 import type { Fact } from '../hackathon/contracts';
+import type { ResumeLayout } from '../resume-preview';
 
 export interface SidebarField {
   id: string;
@@ -35,4 +36,5 @@ export interface SidebarState {
   resume: { name: string } | null;
   run: SidebarRun | null;
   aiEnabled: boolean;
+  resumeLayout?: ResumeLayout;
 }

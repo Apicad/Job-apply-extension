@@ -67,6 +67,9 @@ export const KIND_CONTROLS: Readonly<Record<FieldKind, readonly ControlType[]>> 
   gpa: TYPED,
   workAuthorization: CHOSEN,
   sponsorship: CHOSEN,
+  citizenshipCountry: TYPED_OR_LISTED,
+  nationality: TYPED_OR_LISTED,
+  usCitizenship: CHOSEN,
   gender: CHOSEN,
   race: CHOSEN,
   veteran: CHOSEN,
@@ -84,6 +87,8 @@ export const classifyField: ClassifyField = (field) => {
 
   const kind = kindAskedFor(field);
   if (kind === null) return null;
+  if (['citizenshipCountry', 'nationality', 'usCitizenship'].includes(kind) &&
+    [field.label, field.groupLabel, field.name, field.id, field.hints, field.placeholder].some(text => /sanction|export|clearance|passport|\bus[ .]*person\b|permanent.residen|consent|\bagree/i.test(text))) return null;
   if (!KIND_CONTROLS[kind].includes(field.control)) return null;
   if (groupRulesOut(field, kind)) return null;
   if (!optionsFit(kind, field.options)) return null;
@@ -287,7 +292,7 @@ function readLabel(label: string): LabelReading {
   const named: FieldKind[] = [];
   // The eligibility classifier judges the whole question, notes in brackets included, so
   // "(e.g. you are a citizen, you have a visa)" does not rule the label out as it would below.
-  const eligibility = classifyWorkEligibility(label);
+  const eligibility = classifyWorkEligibility(label) ?? classifyCitizenship(label);
   if (eligibility) named.push(eligibility);
   else if (OTHER_SUBJECT.test(text) || QUALIFIED.test(text)) return 'blocked';
 
@@ -297,6 +302,15 @@ function readLabel(label: string): LabelReading {
   // A label that names two things asks for neither.
   if (named.length > 1) return 'blocked';
   return named[0] ?? 'nothing';
+}
+
+/** Only complete, plain questions. Residence, ethnicity and work permission say nothing about citizenship. */
+function classifyCitizenship(label: string): 'citizenshipCountry' | 'nationality' | 'usCitizenship' | null {
+  const text = plain(spelledPlainly(label));
+  if (/^(country of citizenship|citizenship country|what is your country of citizenship\?)$/.test(text)) return 'citizenshipCountry';
+  if (/^(nationality|what is your nationality\?)$/.test(text)) return 'nationality';
+  if (/^are you (a (us|united states) citizen|a citizen of the united states)\?$/.test(text)) return 'usCitizenship';
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -553,6 +567,7 @@ function groupRulesOut(field: FieldDescriptor, kind: FieldKind): boolean {
   const group = plain(field.groupLabel);
   // The legend of a radio group is usually its question, and that has been judged as the label.
   if (group === plain(field.label)) return false;
+  if (['citizenshipCountry', 'nationality', 'usCitizenship'].includes(kind) && /^(citizenship|nationality|citizenship and nationality)$/.test(group)) return false;
   if (FOLLOW_UP.test(group) || SOMEONE_ELSE.test(group) || OTHER_SUBJECT.test(group)) return true;
 
   // A group that is itself one field: what stands inside belongs to that field. Greenhouse puts
