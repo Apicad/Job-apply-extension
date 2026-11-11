@@ -116,6 +116,11 @@ input::placeholder, textarea::placeholder { color: #a6b09f; font-size: 11px; }
 .connector-help code { display: block; font-size: 10px; overflow-wrap: anywhere; background: #f4f6f1; border: 1px solid #e4eadd; border-radius: 4px; padding: 9px; margin-top: 9px; }
 .connector-help .text-button { margin: 5px 0; }
 footer { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 20px 25px; font-size: 9px; color: #92a18a; }
+.profile-home { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border: 1px solid #d3e0d5; border-radius: 7px; background: #edf5ef; color: #245a43; text-decoration: none; }
+.profile-home:hover { background: #e1efe5; }
+.profile-home strong { display: block; font-size: 12px; }
+.profile-home small { display: block; margin-top: 3px; color: #687d6c; font-size: 10px; }
+.profile-home:focus-visible { outline: 3px solid #8dd6be; outline-offset: 3px; }
 @keyframes pulse { 50% { opacity: .3; } }
 @media (max-width: 320px) { .brand, .action-section, .results { padding-left: 15px; padding-right: 15px; } .setup { padding-left: 10px; padding-right: 10px; } .field-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }

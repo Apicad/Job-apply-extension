@@ -3,7 +3,7 @@ import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, savePro
 import { normalizeProfile } from '../profile';
 import { record, key, isFact, makeRequest, parseReply, approve, editAnswer, currentApproval, sameContext, resolveMissing } from '../hackathon/contracts';
 import type { Answer, Fact } from '../hackathon/contracts';
-import { scanTab, fillTab } from '../hackathon/service';
+import { scanTab, fillTab, invalidateNativePlan } from '../hackathon/service';
 import { loadFacts, supportedQuestion, contextForRow, rowKey, sessionKey, answerCommand, libraryStore } from '../hackathon/answers';
 import { readLibrary, saveAnswer } from '../hackathon/library';
 import type { NativePlan, Row } from '../hackathon/engine';
@@ -16,7 +16,7 @@ interface StoredRun extends SidebarRun {
   factsKey: string;
   answers: Record<string, Answer>;
 }
-interface Active { run: StoredRun; abort: AbortController }
+interface Active { run: StoredRun; abort: AbortController; plan?: NativePlan; stopping?: Promise<void> }
 const active = new Map<number, Active>();
 const runKey = (tabId: number) => `sidebar-run:${tabId}`;
 const jobText = (row: Row) => [row.job.title, row.job.company].filter(Boolean).join(' · ');
@@ -62,14 +62,14 @@ export async function sidebarState(tabId?: number): Promise<SidebarState> {
 async function execute(task: Active): Promise<void> {
   const run = task.run;
   try {
-    let plan = await scanTab(run.tabId); assertActive(task); await assertSnapshot(run);
+    let plan = await scanTab(run.tabId); task.plan = plan; assertActive(task); await assertSnapshot(run);
     run.job = plan.rows[0]?.job ?? { title: '', company: '' };
     run.fields = fieldViews(plan);
     run.phase = 'filling'; run.message = 'Filling your saved details…'; await persist(task);
     if (plan.rows.some(r => r.action)) { assertActive(task); plan = await fillTab(run.tabId, plan.id, () => assertActive(task)); }
     assertActive(task); run.fields = fieldViews(plan);
     // Re-read after basic writes, which can reveal or change dependent fields.
-    const questionsPlan = await scanTab(run.tabId); assertActive(task); await assertSnapshot(run);
+    const questionsPlan = await scanTab(run.tabId); task.plan = questionsPlan; assertActive(task); await assertSnapshot(run);
     const questions = eligibleApplicationRows(questionsPlan.rows).filter(supportedQuestion).slice(0, 5);
     const facts = (await loadFacts()).slice(0, 20);
     const enabled = await readHackathon<boolean>('sidebar-ai-enabled') === true;
@@ -111,6 +111,10 @@ async function execute(task: Active): Promise<void> {
   } catch (error) {
     if (!task.abort.signal.aborted) { run.phase = 'error'; run.message = fail(error); await persist(task); }
   } finally {
+    // Cancellation may have arrived while scanTab was still returning its new
+    // handles. Invalidate that exact late plan before allowing another run.
+    if (task.abort.signal.aborted) await invalidateNativePlan(task.plan);
+    if (task.stopping) await task.stopping;
     if (active.get(run.tabId) === task) active.delete(run.tabId);
   }
 }
@@ -118,11 +122,17 @@ async function execute(task: Active): Promise<void> {
 async function cancel(tabId: number, id?: string): Promise<void> {
   const task = active.get(tabId);
   if (task && (!id || task.run.id === id)) {
-    task.abort.abort(); task.run.phase = 'cancelled'; task.run.message = 'Stopped. Fields already filled remain on the page; review them before continuing.';
-    await writeHackathon(runKey(tabId), task.run, true);
+    if (!task.stopping) {
+      task.abort.abort(); task.run.phase = 'cancelled'; task.run.message = 'Stopped. Fields already filled remain on the page; review them before continuing.';
+      task.stopping = (async () => {
+        await invalidateNativePlan(task.plan);
+        if (active.get(tabId) === task) await writeHackathon(runKey(tabId), task.run, true);
+      })();
+    }
+    await task.stopping;
   }
 }
-async function cancelAll(): Promise<void> { for (const tabId of active.keys()) await cancel(tabId); }
+async function cancelAll(): Promise<void> { for (const [tabId, task] of Array.from(active)) await cancel(tabId, task.run.id); }
 export function sidebarBusy(tabId: number): boolean { return active.has(tabId); }
 export async function cancelForNavigation(tabId: number): Promise<void> { await cancel(tabId); }
 

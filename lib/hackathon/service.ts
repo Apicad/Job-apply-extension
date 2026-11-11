@@ -36,6 +36,26 @@ export async function getPlan(tabId: number): Promise<NativePlan> {
  const plan = await readHackathon<NativePlan>(planKey(tabId), true);
  if (!plan) throw Error('Scan this application first.'); return plan;
 }
+/** Stop only this plan's injected work. A later scan or command in the same frame is left alone. */
+export async function invalidateNativePlan(plan: NativePlan | undefined): Promise<void> {
+ if (!plan) return;
+ const documents = new Map<string, { scanId: string; url: string }[]>();
+ for (const row of plan.rows) {
+  const scans = documents.get(row.documentId) ?? [];
+  if (!scans.some(scan => scan.scanId === row.scanId && scan.url === row.url)) scans.push({ scanId: row.scanId, url: row.url });
+  documents.set(row.documentId, scans);
+ }
+ await Promise.allSettled(Array.from(documents, ([documentId, scans]) => browser.scripting.executeScript({
+  target: { tabId: plan.tabId, documentIds: [documentId] },
+  func: (expected: { scanId: string; url: string }[]) => {
+   const world = globalThis as typeof globalThis & { __jaaScan?: { id: string; url: string }; __jaaCommand?: { scanId: string; url: string } };
+   const scan = world.__jaaScan;
+   if (scan && expected.some(value => value.scanId === scan.id && value.url === scan.url)) delete world.__jaaScan;
+   const command = world.__jaaCommand;
+   if (command && expected.some(value => value.scanId === command.scanId && value.url === command.url)) delete world.__jaaCommand;
+  }, args: [scans],
+ })));
+}
 export async function fillTab(tabId: number, id: string, shouldContinue: () => void = () => {}): Promise<NativePlan> {
  const plan = await getPlan(tabId);
  shouldContinue();

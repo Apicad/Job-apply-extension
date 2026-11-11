@@ -22,6 +22,7 @@ export default defineConfig({
     // runtime grants can leave Chrome's native API absent until an extension reload.
     permissions: ['storage', 'activeTab', 'scripting', 'sidePanel', 'nativeMessaging'],
     side_panel: { default_path: 'sidepanel.html' },
+    options_ui: { page: 'home.html', open_in_tab: true },
     host_permissions: mode === 'e2e' ? E2E_HOSTS : [],
     commands: {
       autofill: {

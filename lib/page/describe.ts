@@ -10,6 +10,7 @@ import {
   wholeRadioGroup,
 } from './collect';
 import { isHiddenByMarkup } from './visibility';
+import { isComboboxEmpty } from './greenhouse';
 
 type FormControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
@@ -171,6 +172,8 @@ export const isEmpty: IsEmpty = (control) => {
       return isSelectEmpty(control.el);
     case 'file':
       return isFileInputEmpty(control.el);
+    case 'combobox':
+      return isComboboxEmpty(control.el);
     default:
       return control.el.value.trim() === '';
   }

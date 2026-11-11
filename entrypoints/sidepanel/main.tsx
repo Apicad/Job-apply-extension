@@ -166,6 +166,15 @@ function App() {
     timer = setTimeout(() => void poll(), 750);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [active, tabId]);
+  useEffect(() => {
+    const changed = (changes: Record<string, unknown>, area: string) => {
+      if (area === 'local' && ['profile', 'resume', 'hackathon:facts', 'hackathon:sidebar-ai-enabled'].some(key => key in changes)) {
+        void refresh().catch(e => setError(e instanceof Error ? e.message : 'Could not refresh your profile.'));
+      }
+    };
+    browser.storage.onChanged.addListener(changed);
+    return () => browser.storage.onChanged.removeListener(changed);
+  }, []);
   async function perform(type: string, extra: object = {}) {
     setBusy(true); setError('');
     try { await send(type, extra); await refresh(); }
@@ -196,7 +205,7 @@ function App() {
       <button className="autofill" disabled={loading || busy || active || !httpTab} onClick={() => void perform('sidebar-autofill')}><span aria-hidden="true">✦</span> Autofill</button>
       <p className="under-button">Fills saved details. You review and submit.</p>
       {!httpTab && !loading && <p className="inline-message">Open an application, then click the extension’s toolbar icon.</p>}
-      {!hasProfile && !loading && <p className="inline-message">Add your details below to get started.</p>}
+      {!hasProfile && !loading && <p className="inline-message">Open your profile home to save your details once.</p>}
       {active && <div className="run-progress"><div><span className="pulse" aria-hidden="true" /><p>{run?.message || 'Working on your application…'}</p><button className="text-button" disabled={busy} onClick={() => void perform('sidebar-cancel', { tabId: run?.tabId, runId: run?.id })}>Cancel</button></div><progress aria-label="Autofill progress" /></div>}
       {error && <p role="alert" className="inline-error">{error}</p>}
     </section>
@@ -210,6 +219,7 @@ function App() {
     </section>}
 
     <div className="setup">
+      <a className="profile-home" href={browser.runtime.getURL('/home.html')} target="_blank" rel="noreferrer"><span><strong>Profile home</strong><small>Your résumé, experience and saved answers</small></span><span aria-hidden="true">↗</span></a>
       <ProfileEditor state={state} send={send} refresh={refresh} disabled={busy || active || loading} />
       <details className="setup-section ai-section"><summary><span><strong>AI connection</strong><small><span className={`connection-dot${state.aiEnabled && aiStatus?.connected ? ' connected' : ''}`} />{state.aiEnabled ? aiStatus?.connected && aiStatus.provider ? `${aiStatus.provider} connected` : aiStatus ? 'Connection needs attention' : 'Check AI connection' : 'Use your existing AI account'}</small></span><span className="chevron" aria-hidden="true">⌄</span></summary>
         <div className="section-body"><p className="helper">Saved experience and application questions go to your signed-in AI account. Its plan limits apply. No app credits.</p><label className="toggle"><input type="checkbox" checked={state.aiEnabled} disabled={connecting || active || busy} onChange={e => void connect(e.target.checked)} /><span>Draft answers with connected AI</span></label>

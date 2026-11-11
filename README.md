@@ -1,6 +1,6 @@
-# Job Apply Assistant · sidebar release
+# Job Apply Assistant · profile home and sidebar
 
-Open an application, click **Autofill**, and review anything left in the sidebar. Saved profile details and your résumé fill first; AI drafts appear beside the application. **You submit manually.**
+Save your information once in **Profile home**, then open an application and click **Autofill**. Your contact details, résumé, education, experience and saved application answers are reused from the same browser profile. Missing details stay visible for you to complete in the app. AI drafts appear beside the application. **You submit manually.**
 
 This version builds on audited source `f3b7ef0d5dd3f1be9a16753a643e209665797b60`. Its new sidebar and local AI connection require their own review; earlier audit results do not certify these changes.
 
@@ -16,7 +16,7 @@ npm run build
 
 Load `.output/chrome-mv3` using Chrome's **Load unpacked** control. Click the extension icon on the application tab to open the persistent sidebar and grant access to that tab.
 
-1. Open **Your details** and save your profile once. Add a résumé for attachment. Under **Experience for AI**, save up to 20 short factual notes about your work or projects. The résumé file is attached, not automatically parsed into these notes.
+1. Open **Profile home** from the sidebar or the extension’s **Options** page. Save contact and location details, links, current education, optional application answers, and up to 20 factual experience/project notes. Add a résumé for attachment. Existing sidebar information is already there; the home and sidebar share one saved profile. The résumé file is attached, not automatically parsed into experience notes. This is a private application profile, not a published portfolio website.
 2. Connect an existing signed-in AI tool with the local helper described in [native-host/README.md](native-host/README.md). Enable AI from **AI connection**. Basic autofill works without it.
 3. Click **Autofill**. The extension scans the page and fills supported, empty fields from saved information. Existing answers are preserved. It shows filled, kept and needs-attention counts.
 4. Review any drafted project answers, expand the saved facts when useful, and edit if needed. **Use answer** approves, saves and fills that exact answer in one action. Unsupported claims and changed application contexts remain blocked.
@@ -40,9 +40,9 @@ npm run test:e2e
 npm run build
 ```
 
-Browser tests use isolated Chromium profiles and synthetic applications. Native transport stand-ins are test-only; a live CLI smoke is separate evidence. Files are limited to 4 MB. Writes are checked immediately and again after 100 ms, including native validation state; sites can change values later. An interrupted operation is never automatically replayed.
+Browser tests use isolated Chromium profiles and synthetic applications. Native transport stand-ins are test-only; a live CLI smoke is separate evidence. Files are limited to 4 MB. Text writes are checked after page handlers settle, including native validation state. Phone checks tolerate punctuation changes while preserving every digit. Résumé checks observe the original upload group for the exact filename and completed attachment state for up to five seconds, without retrying the upload. Greenhouse choices are checked after their selection commits; sites can still change values later. An interrupted operation is never automatically replayed.
 
-Supported: conservative native text/select/radio fields, explicitly recognized résumé inputs, email confirmation, and the existing project-answer question wordings. The sidebar keeps uncertain fields visible for review. Custom dropdowns/typeaheads, repeating employment/education, cross-origin forms, new multi-step navigation, general free-text questions, résumé parsing/tailoring and universal ATS coverage remain outside this change. Sensitive choices are only filled from explicit saved answers, never inferred by AI.
+Supported: conservative native text/select/radio fields, explicitly recognized résumé inputs, email confirmation, and the existing project-answer question wordings. Greenhouse single-value dropdowns support exact country/location and education choices from the saved profile; end dates bind to their school row. Existing selections are preserved. Phone-country selection is limited to supported North American numbers and an explicit US/Canada profile country. No fuzzy school, degree or location matches are selected. Missing values remain unanswered. The sidebar keeps uncertain fields visible for review. Repeating employment/education, other custom widgets, cross-origin forms, new multi-step navigation, general free-text questions, résumé parsing/tailoring and universal ATS coverage remain outside this change. Sensitive choices are only filled through supported controls from explicit saved answers, never inferred by AI.
 
 The original [hackathon plan](docs/plans/2026-11-09-jobright-inspired-autofill.md) and [build handoff](docs/plans/2026-11-09-hackersquad-build-handoff.md) remain in the source snapshot. The legacy review page remains addressable for regression coverage; the toolbar opens the sidebar.
 

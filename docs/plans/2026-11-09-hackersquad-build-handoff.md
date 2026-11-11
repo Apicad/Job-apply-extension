@@ -1,5 +1,7 @@
 # Building-agent prompt: smaller HackerSquad release
 
+> November 11 profile-home follow-up: the owner requested one home page for information entered once and reused across applications, instead of repeated chat questions. The extension home and sidebar share the existing saved profile, résumé and experience facts. Missing education or other answers are editable in that home and are never guessed. This follow-up also adds bounded Greenhouse dropdown/education handling and phone/upload verification fixes. Final submission remains manual. The README describes implemented scope; tests and live observations remain separate evidence.
+
 > November 10 sidebar follow-up: the user authorized one-click saved-detail autofill, a persistent sidebar, and an existing-account local AI connection. This supersedes the manual copy/paste and separate approve/save/preview UI sequence below for the new sidebar. Generated answers still require an explicit review-and-use action; final submission remains manual. The original plan is retained here as foundation history. See the root README for current scope and setup.
 
 Copy this prompt to the implementation agent. This is an instruction to build; this document does not establish that any feature or test is complete.

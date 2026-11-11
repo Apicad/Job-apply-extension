@@ -16,6 +16,8 @@ is at that moment.
 
 ## Current hackathon candidate addendum
 
+The November 11 owner request supersedes the earlier blanket custom-widget exclusion for the narrowly scoped Greenhouse adapter. Its only extra clicks select one exact, uniquely matching option in the input’s linked listbox. No submit, consent, arbitrary button or navigation actions are allowed. Profile home is the primary setup page and reuses the same storage as the sidebar. Current README and plan addenda govern scope.
+
 The authoritative smaller scope in `docs/plans/2026-11-09-jobright-inspired-autofill.md`
 and its build handoff governs this isolated candidate. `lib/hackathon/` implements
 the integrated worker, evidence/library contracts and execution wrapper; the old

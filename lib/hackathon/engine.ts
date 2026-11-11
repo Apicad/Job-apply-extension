@@ -4,6 +4,8 @@ import { classifyField } from '../classify';
 import { textValueFor } from '../profile';
 import { pickChoice } from '../choices';
 import { acceptsFile, isStoredResume } from '../resume';
+import { greenhouseAction } from './greenhouse-plan';
+import { countryCode, findCountries } from '../regions';
 import type { FieldDescriptor, Profile, JobInfo, StoredResume } from '../types';
 import type { NativeScan, NativeField, NativeAction } from './page';
 export interface Frame { frameId: number; documentId: string; scan: NativeScan }
@@ -34,7 +36,15 @@ export function planNative(frames: Frame[], profile: Profile, resume: StoredResu
    const usageKey = kind === 'email' && /^confirm e-?mail(?: address)?[.:]?$/i.test(d.label.trim()) ? 'confirmEmail' : kind;
    let status = !field.empty ? 'Kept existing answer' : 'Manual / unsupported';
    const unsafe = /signature|certif|attest|acknowledg|declar|consent/i.test([d.label, d.groupLabel, d.placeholder, d.name, d.id, d.hints].join(' '));
-   if (!unsafe && field.empty && best?.frame.documentId === frame.documentId && best.form === field.form && kind && usageKey && !used.has(usageKey) && kind !== 'location') {
+   const eligibility = kind === 'workAuthorization' || kind === 'sponsorship';
+   const savedCountry = countryCode(profile.country);
+   const rightCountry = !eligibility || !!savedCountry && findCountries([d.label,d.groupLabel].join(' ')).every(code => code === savedCountry);
+   const inApplication = !unsafe && rightCountry && field.empty && best?.frame.documentId === frame.documentId && best.form === field.form;
+   if (inApplication) {
+    const custom=greenhouseAction(field,frame.scan.fields,frame.scan.url,profile,fieldSignature(d,field.form,field.maxLength));
+    if (custom && !used.has(custom.usageKey)) { action=custom.action; used.add(custom.usageKey); status='Ready for preview'; }
+   }
+   if (!action && inApplication && kind && usageKey && !used.has(usageKey) && kind !== 'location') {
     const signature = fieldSignature(d, field.form, field.maxLength);
     if (d.control === 'text') { const value = textValueFor(kind, profile, d); if (value && (field.maxLength < 0 || value.length <= field.maxLength)) action = { ref: field.ref, type: 'text', value, signature }; }
     if (d.control === 'select' || d.control === 'radio') { const choice = pickChoice(kind, profile, d.options); if (choice.status === 'match') action = { ref: field.ref, type: d.control, index: choice.index, signature }; }
