@@ -1,6 +1,7 @@
 import type { Profile } from '../types';
 import type { Fact } from '../hackathon/contracts';
 import type { ResumeLayout } from '../resume-preview';
+import type { SavedMaterials } from '../materials-storage';
 
 export interface SidebarField {
   id: string;
@@ -37,4 +38,5 @@ export interface SidebarState {
   run: SidebarRun | null;
   aiEnabled: boolean;
   resumeLayout?: ResumeLayout;
+  materials?: SavedMaterials | null;
 }

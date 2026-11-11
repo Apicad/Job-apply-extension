@@ -18,7 +18,7 @@ export interface ResumeEntry {
   link?: ResumeContact;
 }
 export interface ResumeSection {
-  key: 'experience' | 'projects' | 'education' | 'skills';
+  key: 'summary' | 'experience' | 'projects' | 'education' | 'skills';
   title: string;
   entries: ResumeEntry[];
 }

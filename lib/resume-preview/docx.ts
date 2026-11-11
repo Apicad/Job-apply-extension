@@ -26,7 +26,7 @@ export function createResumeDocx(document: ResumeDocument): Uint8Array {
     return result + run(text.slice(last));
   };
   const paragraph = (content: string, properties = ''): string => `<w:p><w:pPr>${properties}<w:spacing w:after="0" w:line="216" w:lineRule="auto"/></w:pPr>${content}</w:p>`;
-  const entry = (item: ResumeEntry): string => {
+  const entry = (item: ResumeEntry, bullets = true): string => {
     let result = '';
     if (item.heading || item.detail || item.date || item.link) {
       let heading = run(item.heading, '<w:b/>');
@@ -37,15 +37,15 @@ export function createResumeDocx(document: ResumeDocument): Uint8Array {
     }
     for (const line of item.lines) {
       if (!line.trim()) continue;
-      const text = /^\s*[•*\-–—]\s/.test(line) ? line : `• ${line}`;
-      result += paragraph(inline(text), '<w:ind w:left="317" w:hanging="230"/>');
+      const text = !bullets || /^\s*[•*\-–—]\s/.test(line) ? line : `• ${line}`;
+      result += paragraph(inline(text), bullets ? '<w:ind w:left="317" w:hanging="230"/>' : '');
     }
     return result;
   };
   const contactProperties = '<w:i/><w:sz w:val="19"/><w:szCs w:val="19"/>';
   const contactContent = document.contact.map((item, index) => `${index ? run(' | ', contactProperties) : ''}${hyperlink(item, contactProperties)}`).join('');
   const header = `<w:tbl><w:tblPr><w:tblW w:w="10656" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="4176"/><w:gridCol w:w="6480"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="4176" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>${paragraph(run(document.name, '<w:b/><w:sz w:val="48"/><w:szCs w:val="48"/>'), '<w:keepNext/>')}</w:tc><w:tc><w:tcPr><w:tcW w:w="6480" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>${paragraph(contactContent, '<w:jc w:val="right"/><w:keepNext/>')}</w:tc></w:tr></w:tbl>`;
-  const body = document.sections.map(section => `<w:p><w:pPr><w:keepNext/><w:spacing w:before="80" w:after="20"/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr></w:pPr>${run(section.title, '<w:b/><w:sz w:val="22"/><w:szCs w:val="22"/>')}</w:p>${section.entries.map(entry).join('')}`).join('');
+  const body = document.sections.map(section => `<w:p><w:pPr><w:keepNext/><w:spacing w:before="80" w:after="20"/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr></w:pPr>${run(section.title, '<w:b/><w:sz w:val="22"/><w:szCs w:val="22"/>')}</w:p>${section.entries.map(item => entry(item, section.key !== 'summary')).join('')}`).join('');
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="${W}" xmlns:r="${R}"><w:body>${header}${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="504" w:right="792" w:bottom="432" w:left="792" w:header="0" w:footer="0" w:gutter="0"/><w:cols w:space="0"/></w:sectPr></w:body></w:document>`;
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:color w:val="000000"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="216" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style></w:styles>`;
   const docRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="${R}/styles" Target="styles.xml"/><Relationship Id="rIdSettings" Type="${R}/settings" Target="settings.xml"/>${relationships.map(link => `<Relationship Id="${link.id}" Type="${R}/hyperlink" Target="${xml(link.href)}" TargetMode="External"/>`).join('')}</Relationships>`;

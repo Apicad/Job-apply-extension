@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { StringDecoder } from 'node:string_decoder';
 import path from 'node:path';
-import { draftPrompt, RESPONSE_SCHEMA } from './protocol.mjs';
+import { draftPrompt, RESPONSE_SCHEMA, materialsPrompt, materialsResponseSchema, MAX_MATERIALS_RAW_CHARS } from './protocol.mjs';
 
 /** Explicit allowlist: never inherit API keys, provider overrides, shell hooks or SDK credentials. */
 export function childEnvironment(source = process.env) {
@@ -11,14 +11,14 @@ export function childEnvironment(source = process.env) {
   for (const key of ['HOME', 'PATH', 'USER', 'LOGNAME', 'LANG', 'LC_ALL', 'TMPDIR', 'SYSTEMROOT']) if (source[key]) env[key] = source[key];
   return { ...env, CLAUDE_CODE_SAFE_MODE: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' };
 }
-export function draftArguments() {
-  return ['--print', '--safe-mode', '--restricted', '--tools', '', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--setting-sources', '', '--disable-slash-commands', '--no-chrome', '--no-session-persistence', '--permission-prompts', 'none', '--output-format', 'json', '--json-schema', JSON.stringify(RESPONSE_SCHEMA)];
+export function draftArguments(schema = RESPONSE_SCHEMA) {
+  return ['--print', '--safe-mode', '--restricted', '--tools', '', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--setting-sources', '', '--disable-slash-commands', '--no-chrome', '--no-session-persistence', '--permission-prompts', 'none', '--output-format', 'json', '--json-schema', JSON.stringify(schema)];
 }
 export function codexArguments(schemaPath) {
   const disabled = ['shell_tool', 'view_image', 'apps', 'plugins', 'multi_agent', 'browser_use', 'browser_use_external', 'computer_use', 'image_generation', 'code_mode', 'code_mode_host', 'memories', 'chronicle', 'hooks', 'shell_snapshot', 'goals', 'sleep_tool', 'skill_search', 'tool_suggest', 'workspace_dependencies', 'remote_plugin', 'in_app_browser', 'agent_message_board'];
   return ['exec', '--ignore-user-config', '--ignore-rules', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '--json', '--color', 'never', '--output-schema', schemaPath, ...disabled.flatMap(name => ['--disable', name]), '-c', 'model_provider="openai"', '-c', 'forced_login_method="chatgpt"', '-c', 'web_search="disabled"', '-c', 'tools.update_plan.enabled=false', '-c', 'tools.experimental_request_user_input.enabled=false', '-c', 'project_doc_max_bytes=0', '-c', 'cloud.skills.enabled=false', '-c', 'orchestrator.mcp.enabled=false', '-'];
 }
-export function codexAnswer(raw) {
+export function codexAnswer(raw, maxChars = 30_000) {
   let events; try { events = raw.trim().split('\n').filter(Boolean).map(line => JSON.parse(line)); } catch { throw Error('Codex returned an unreadable event stream.'); }
   // Current Codex emits this fail-closed notice when its code execution host is
   // deliberately disabled. It is not a model tool call or a failed turn.
@@ -26,10 +26,10 @@ export function codexAnswer(raw) {
   if (events.some(event => event.type === 'turn.failed' || event.type === 'error' || (event.item && !['agent_message', 'reasoning'].includes(event.item.type) && !disabledHostNotice(event.item)))) throw Error('Codex attempted an unexpected operation or could not finish. The draft was discarded.');
   if (!events.some(event => event.type === 'turn.completed')) throw Error('Codex did not complete the answer.');
   const answer = events.filter(event => event.type === 'item.completed' && event.item?.type === 'agent_message').at(-1)?.item?.text;
-  if (typeof answer !== 'string' || answer.length > 30_000) throw Error('Codex returned an invalid answer.');
+  if (typeof answer !== 'string' || answer.length > maxChars) throw Error('Codex returned an invalid answer.');
   return answer;
 }
-export function capture(executable, args, { input = '', cwd, signal, timeoutMs = 60_000, maxBytes = 128 * 1024, captureStderr = false, spawnProcess = spawn, env = childEnvironment() } = {}) {
+export function capture(executable, args, { input = '', cwd, signal, timeoutMs = 60_000, timeoutMessage = 'AI took too long. Your basic fields are already filled; try drafting again later.', maxBytes = 128 * 1024, captureStderr = false, spawnProcess = spawn, env = childEnvironment() } = {}) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(Error('AI request cancelled.')); return; }
     let child; let settled = false; let output = ''; let bytes = 0; let errorBytes = 0;
@@ -40,7 +40,7 @@ export function capture(executable, args, { input = '', cwd, signal, timeoutMs =
       if (error) { stop(); reject(error); } else resolve(result);
     };
     const abort = () => finish(Error('AI request cancelled.'));
-    const timer = setTimeout(() => finish(Error('AI took too long. Your basic fields are already filled; try drafting again later.')), timeoutMs);
+    const timer = setTimeout(() => finish(Error(timeoutMessage)), timeoutMs);
     signal?.addEventListener('abort', abort, { once: true });
     try { child = spawnProcess(executable, args, { cwd, env, stdio: ['pipe', 'pipe', 'pipe'], shell: false, detached: process.platform !== 'win32' }); }
     catch { finish(Error('Could not start the connected AI tool. Run the helper installer again.')); return; }
@@ -66,19 +66,24 @@ export async function checkAccount(executable, { provider = 'claude', ...options
 }
 
 export async function generate(executable, request, { signal, provider = 'claude', ...options } = {}) {
+  const materials = request.kind === 'materials';
+  const schema = materials ? materialsResponseSchema(request) : RESPONSE_SCHEMA;
+  const prompt = materials ? materialsPrompt(request) : draftPrompt(request);
+  const maxChars = materials ? MAX_MATERIALS_RAW_CHARS : 30_000;
+  const outputOptions = materials ? { ...options, maxBytes: 512 * 1024, timeoutMessage: 'AI took too long. Your saved profile and uploaded résumé are unchanged.' } : options;
   const cwd = await mkdtemp(path.join(tmpdir(), 'job-apply-ai-'));
   try {
     await checkAccount(executable, { ...options, signal, cwd, provider });
     if (provider === 'codex') {
-      const schemaPath = path.join(cwd, 'response-schema.json'); await writeFile(schemaPath, JSON.stringify(RESPONSE_SCHEMA), { mode: 0o600 });
-      const raw = await capture(executable, codexArguments(schemaPath), { ...options, signal, cwd, input: draftPrompt(request) });
-      return codexAnswer(raw);
+      const schemaPath = path.join(cwd, 'response-schema.json'); await writeFile(schemaPath, JSON.stringify(schema), { mode: 0o600 });
+      const raw = await capture(executable, codexArguments(schemaPath), { ...outputOptions, signal, cwd, input: prompt });
+      return codexAnswer(raw, maxChars);
     }
-    const raw = await capture(executable, draftArguments(), { ...options, signal, cwd, input: draftPrompt(request) });
+    const raw = await capture(executable, draftArguments(schema), { ...outputOptions, signal, cwd, input: prompt });
     let result; try { result = JSON.parse(raw); } catch { throw Error('The AI returned an unreadable response.'); }
     if (result.is_error || result.subtype !== 'success' || !result.structured_output || typeof result.structured_output !== 'object') throw Error('The AI did not return a complete structured answer.');
     const answer = JSON.stringify(result.structured_output);
-    if (answer.length > 30_000) throw Error('The AI answer is too large.');
+    if (answer.length > maxChars) throw Error('The AI answer is too large.');
     return answer;
   } finally { await rm(cwd, { recursive: true, force: true }); }
 }

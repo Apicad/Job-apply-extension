@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, saveProfile, saveResume } from '../storage';
 import { normalizeProfile } from '../profile';
 import { normalizeResumeLayout } from '../resume-preview';
+import { loadSavedMaterials, saveMaterials } from '../materials-storage';
 import { record, key, isFact, makeRequest, parseReply, approve, editAnswer, currentApproval, sameContext, resolveMissing } from '../hackathon/contracts';
 import type { Answer, Fact } from '../hackathon/contracts';
 import { scanTab, fillTab, invalidateNativePlan } from '../hackathon/service';
@@ -59,7 +60,7 @@ export async function sidebarState(tabId?: number): Promise<SidebarState> {
   const resume = await loadResumeToAttach();
   return { profile: await loadProfile(), facts: await loadFacts(), resume: resume ? { name: resume.name } : null,
     run: run ? publicRun(run) : null, aiEnabled: await readHackathon<boolean>('sidebar-ai-enabled') === true,
-    resumeLayout: normalizeResumeLayout(await readHackathon('resume-layout')) };
+    resumeLayout: normalizeResumeLayout(await readHackathon('resume-layout')), materials: await loadSavedMaterials() };
 }
 
 async function execute(task: Active): Promise<void> {
@@ -182,6 +183,7 @@ export async function handleSidebar(message: Record<string, unknown>): Promise<u
   const tabId = Number.isSafeInteger(message.tabId) && Number(message.tabId) >= 0 ? Number(message.tabId) : undefined;
   if (message.type === 'sidebar-state') return sidebarState(tabId);
   if (message.type === 'sidebar-ai-status') return checkAI();
+  if (message.type === 'sidebar-save-materials') return { saved: true, materials: await saveMaterials(message.materials, message.expectedMaterials) };
   if (message.type === 'sidebar-settings') {
     if (typeof message.aiEnabled !== 'boolean') throw Error('Invalid AI setting.');
     if (!message.aiEnabled) await cancelAll();

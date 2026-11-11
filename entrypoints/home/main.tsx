@@ -10,10 +10,11 @@ import type { SidebarState } from '../../lib/sidebar/ui-types';
 import { defaultResumeLayout, normalizeResumeLayout } from '../../lib/resume-preview';
 import type { ResumeLayout } from '../../lib/resume-preview';
 import { ResumePreview } from './resume-preview';
+import { MaterialsPanel, useMaterials } from './materials';
 import './style.css';
 
 const blank = (): SidebarState => ({ profile: emptyProfile(), facts: [], resume: null, run: null, aiEnabled: false });
-const sections = [['contact', 'Contact & links'], ['location', 'Location'], ['resume', 'Résumé'], ['education', 'Education'], ['experience', 'Experience & projects'], ['answers', 'Application answers']] as const;
+const sections = [['materials', 'Create documents'], ['contact', 'Contact & links'], ['location', 'Location'], ['resume', 'Résumé'], ['education', 'Education'], ['experience', 'Experience & projects'], ['answers', 'Application answers']] as const;
 const messageOf = (error: unknown) => error instanceof Error ? error.message : 'Something went wrong. Please try again.';
 type TextField = [keyof Profile, string, string?];
 const contact: TextField[] = [['firstName', 'First name'], ['lastName', 'Last name'], ['email', 'Email', 'email'], ['phone', 'Phone', 'tel']];
@@ -63,6 +64,7 @@ function App() {
   const [importError, setImportError] = useState('');
   const [activeSection, setActiveSection] = useState('contact');
   const dirty = JSON.stringify({ profile, facts, resumeLayout }) !== JSON.stringify(base);
+  const materials = useMaterials(state, dirty);
   const dirtyRef = useRef(false); dirtyRef.current = dirty;
   const draftRef = useRef({ profile, facts }); draftRef.current = { profile, facts };
   const mounted = useRef(true);
@@ -191,6 +193,7 @@ function App() {
       <main id="profile-content">
         <header className="page-heading"><p className="eyebrow">A LITTLE LESS REPETITION</p><h1>Your next application<br />starts here.</h1><p>Keep your information in one place. Autofill uses what you’ve saved, every time.</p><a className="resume-start" href="#resume">Start with your résumé <span aria-hidden="true">↗</span></a></header>
         <div className="profile-overview"><div className="avatar" aria-hidden="true">{initials}</div><div className="profile-identity"><strong>{savedName || 'Make this profile yours'}</strong><span>{state.profile.email || 'Your details, ready when you need them'}</span></div><div className="saved-progress"><div><span>Saved basics</span><strong>{savedBasics}<span> / 5</span></strong></div><progress value={savedBasics} max={5} aria-label="Saved basics" /><small>Four contact details + your résumé</small></div></div>
+        {loaded && <MaterialsPanel model={materials} profileDirty={dirty} disabled={busy} />}
         {!loaded ? <div className="loading" role="status">{loading ? 'Loading your saved profile…' : 'Your saved profile could not be loaded. Use “Reload saved profile” to try again.'}</div> : <fieldset className="profile-fields" disabled={busy}>
           <Section id="contact" number="01" title="Contact & links" description="The details you shouldn’t have to type again.">
             <div className="field-grid">{contact.map(field)}</div><div className="subheading">FIND YOUR WORK</div><div className="field-grid links-grid">{links.map(field)}</div>
@@ -224,11 +227,11 @@ function App() {
             <div className="field-grid">{choice('workAuthorization', 'Authorized to work in your country?', YES_NO_OPTIONS)}{choice('sponsorship', 'Require employment visa sponsorship?', YES_NO_OPTIONS)}</div><p className="helper">These answers apply to your saved country. Questions about another country stay unanswered.</p>
             <details className="optional-answers"><summary>Voluntary self-identification<span>Optional</span></summary><p className="helper">Only save answers you want used on matching application questions.</p><div className="field-grid">{choice('gender', 'Gender', GENDER_OPTIONS)}{choice('race', 'Race / ethnicity', RACE_OPTIONS)}{choice('veteran', 'Veteran status', VETERAN_OPTIONS)}{choice('disability', 'Disability status', DISABILITY_OPTIONS)}</div></details>
           </Section>
-          <section className="ai-card" aria-labelledby="ai-heading"><span className="ai-icon" aria-hidden="true">✦</span><div><h2 id="ai-heading">Your AI, connected to your experience.</h2><p>Use your connected AI account for supported writing questions. You review drafts in the sidebar before using them.</p><label className="ai-toggle"><input type="checkbox" checked={state.aiEnabled} onChange={e => void setting(e.target.checked)} />Use connected AI to draft answers</label><small>No app credits. Your AI account’s normal limits apply.</small>{aiMessage && <p role="status" className="ai-message">{aiMessage}</p>}</div></section>
+          <section className="ai-card" aria-labelledby="ai-heading"><span className="ai-icon" aria-hidden="true">✦</span><div><h2 id="ai-heading">Your AI, connected to your experience.</h2><p>Use your connected AI account for supported writing questions. You review drafts in the sidebar before using them.</p><label className="ai-toggle"><input type="checkbox" checked={state.aiEnabled} onChange={e => void setting(e.target.checked)} />Use connected AI for Autofill question drafts</label><small>No app credits. Your AI account’s normal limits apply.</small>{aiMessage && <p role="status" className="ai-message">{aiMessage}</p>}</div></section>
         </fieldset>}
         <footer className="page-footer">Saved details are reused in the sidebar. Blank fields stay unanswered. You review and submit each application.</footer>
       </main>
-      {loaded && <ResumePreview profile={profile} facts={facts} layout={resumeLayout} onChange={layout => { setResumeLayout(layout); setMessage(''); setError(''); }} dirty={dirty} disabled={busy} />}
+      {loaded && <ResumePreview profile={profile} facts={facts} layout={resumeLayout} onChange={layout => { setResumeLayout(layout); setMessage(''); setError(''); }} dirty={dirty} disabled={busy} materials={materials} />}
     </div>
     <div className="save-dock"><div className="save-dock-inner"><div className="save-message">{error ? <p role="alert" className="error-message">{error}</p> : <p role="status"><span aria-hidden="true">{dirty ? '○' : '✓'}</span>{message || (dirty ? 'You have unsaved changes' : 'Your saved details are ready to reuse')}</p>}{dirty && <small>Autofill uses your last saved profile.</small>}{error && <button type="button" className="text-button" disabled={busy} onClick={() => void reloadSaved()}>Reload saved profile</button>}</div><button className="primary" type="button" disabled={!loaded || loading || busy || !dirty} onClick={() => void save()}>{readingResume ? 'Reading résumé…' : busy ? 'Saving…' : 'Save profile'}<span aria-hidden="true">↗</span></button></div></div>
   </>;

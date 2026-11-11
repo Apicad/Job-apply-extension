@@ -1,13 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { isAbsolute } from 'node:path';
-import { decoder, encodeMessage, validateMessage } from './protocol.mjs';
+import { decoder, encodeMessage, validateMessage, MAX_MATERIALS_REPLY_BYTES } from './protocol.mjs';
 import { checkAccount, generate } from './runner.mjs';
 
 export async function serve({ input = process.stdin, output = process.stdout, origin, config, account = checkAccount, draft = generate } = {}) {
   if (!/^chrome-extension:\/\/[a-p]{32}\/$/.test(origin ?? '') || origin !== config?.origin || !isAbsolute(config?.executable ?? '') || (config.provider !== undefined && !['codex', 'claude'].includes(config.provider))) throw Error('Unauthorized extension origin or invalid helper installation.');
   let active = false; let dead = false; const controller = new AbortController();
-  const write = value => { if (!dead) output.write(encodeMessage(value)); };
+  const write = (value, maxBytes) => { if (!dead) output.write(encodeMessage(value, maxBytes)); };
   const onMessage = async raw => {
     if (active) { write({ id: typeof raw?.id === 'string' ? raw.id.slice(0, 100) : '', ok: false, error: 'An AI request is already running.' }); return; }
     let message;
@@ -15,8 +15,8 @@ export async function serve({ input = process.stdin, output = process.stdout, or
     active = true;
     try {
       const options = { signal: controller.signal, provider: config.provider ?? 'claude' };
-      const data = message.type === 'status' ? await account(config.executable, options) : { raw: await draft(config.executable, message.request, options) };
-      write({ id: message.id, ok: true, data });
+      const data = message.type === 'status' ? { ...await account(config.executable, options), helperVersion: 2, capabilities: ['draft','materials'] } : { raw: await draft(config.executable, message.request, options) };
+      write({ id: message.id, ok: true, data }, message.type === 'materials' ? MAX_MATERIALS_REPLY_BYTES : undefined);
     } catch (error) { write({ id: message.id, ok: false, error: error instanceof Error ? error.message : 'AI request failed.' }); }
     finally { active = false; }
   };

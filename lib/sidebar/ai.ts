@@ -1,12 +1,14 @@
 import { browser } from 'wxt/browser';
 import type { Request } from '../hackathon/contracts';
 import { record } from '../hackathon/contracts';
+import type { MaterialsRequest } from '../materials/types';
+import { isMaterialsRequest, MAX_MATERIALS_REPLY } from '../materials/request';
 
 export const AI_HOST = 'com.jobapply.ai';
 export interface AIStatus { connected: boolean; message: string; provider?: 'Codex' | 'Claude Code' }
 const SETUP = 'Connect your AI tool once from the sidebar settings. Your saved profile still works without AI.';
 
-function nativeRequest(type: 'status' | 'draft', request?: Request, signal?: AbortSignal): Promise<unknown> {
+function nativeRequest(type: 'status' | 'draft' | 'materials', request?: Request | MaterialsRequest, signal?: AbortSignal): Promise<unknown> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(Error('AI request cancelled.')); return; }
     let port: ReturnType<typeof browser.runtime.connectNative> | undefined; let done = false;
@@ -16,7 +18,7 @@ function nativeRequest(type: 'status' | 'draft', request?: Request, signal?: Abo
       port?.disconnect(); error ? reject(error) : resolve(data);
     };
     const abort = () => finish(Error('AI request cancelled.'));
-    const timer = setTimeout(() => finish(Error('AI took too long. Your basic fields remain filled.')), type === 'status' ? 15_000 : 75_000);
+    const timer = setTimeout(() => finish(Error(type === 'materials' ? 'AI took too long. Your saved profile and uploaded résumé are unchanged.' : 'AI took too long. Your basic fields remain filled.')), type === 'status' ? 15_000 : 75_000);
     signal?.addEventListener('abort', abort, { once: true });
     try {
       const runtime = browser.runtime;
@@ -49,5 +51,23 @@ export async function checkAI(): Promise<AIStatus> {
 export async function draftWithAI(request: Request, signal?: AbortSignal): Promise<string> {
   const value = await nativeRequest('draft', request, signal);
   if (!record(value) || typeof value.raw !== 'string' || value.raw.length > 30_000) throw Error('The AI helper returned an invalid answer.');
+  return value.raw;
+}
+
+/** Only called by the trusted home page after the person chooses Generate. */
+export async function draftMaterialsWithAI(request: MaterialsRequest, signal?: AbortSignal): Promise<string> {
+  if (signal?.aborted) throw Error('AI request cancelled.');
+  if (!isMaterialsRequest(request) || request.expiresAt < Date.now() || request.expiresAt > Date.now() + 31 * 60_000) throw Error('Invalid or expired materials request. Generate a new draft.');
+  const snapshot = structuredClone(request);
+  // Old helpers continue ordinary autofill/drafting; never send new personal
+  // evidence until the installed helper explicitly advertises this protocol.
+  const status = await nativeRequest('status', undefined, signal);
+  if (!record(status) || status.connected !== true || !['Codex','Claude Code'].includes(String(status.provider))) throw Error('Connect your signed-in AI tool before generating materials.');
+  if (!Array.isArray(status.capabilities) || !status.capabilities.includes('materials')) throw Error('Update the local AI helper to generate résumé and cover-letter drafts. Existing Autofill remains available.');
+  const value = await nativeRequest('materials', snapshot, signal);
+  if (!record(value) || typeof value.raw !== 'string' || value.raw.length > MAX_MATERIALS_REPLY) throw Error('The AI helper returned an invalid materials response.');
+  let parsed: unknown;
+  try { parsed = JSON.parse(value.raw); } catch { throw Error('The AI helper returned an invalid materials response.'); }
+  if (!record(parsed)) throw Error('The AI helper returned an invalid materials response.');
   return value.raw;
 }
