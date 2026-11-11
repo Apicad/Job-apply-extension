@@ -5,7 +5,7 @@ import type { PageEnv } from '../../lib/types';
 
 const env: PageEnv = { isRendered: el => !el.hasAttribute('data-invisible'), assignFiles: () => {} };
 const school: GreenhouseTarget = { kind: 'school', value: 'Example College' };
-function fixture(labels: string[], options: { delay?: number; selected?: string; commit?: string; foreign?: boolean; disabled?: boolean } = {}) {
+function fixture(labels: string[], options: { delay?: number; selected?: string; commit?: string; foreign?: boolean; disabled?: boolean; keyupOnly?: boolean } = {}) {
  document.body.innerHTML = '<form><div class="select__container"><label for="school">School</label><div class="select__control"><div class="select__value-container"><input id="school" class="select__input" role="combobox" aria-autocomplete="list" aria-expanded="false" /></div></div></div><button id="submit" type="submit">Submit</button></form>';
  const input = document.querySelector<HTMLInputElement>('#school')!;
  const wrapper = document.querySelector<HTMLElement>('.select__value-container')!;
@@ -20,8 +20,9 @@ function fixture(labels: string[], options: { delay?: number; selected?: string;
   input.setAttribute('aria-expanded','true');
   input.setAttribute('aria-controls', options.foreign ? 'missing' : list.id);
  };
- input.addEventListener('keydown', e => { if (e.key === 'ArrowDown' && !options.delay) open(); });
- input.addEventListener('input', () => { if (input.value) { if (options.delay) setTimeout(open,options.delay); else open(); } });
+ input.addEventListener('keydown', e => { if (e.key === 'ArrowDown' && !options.delay && !options.keyupOnly) open(); });
+ input.addEventListener('keyup', e => { if (options.keyupOnly && e.code === 'ArrowDown') open(); });
+ input.addEventListener('input', () => { if (input.value && !options.keyupOnly) { if (options.delay) setTimeout(open,options.delay); else open(); } });
  return { input, chosen: () => selected, clicks: () => clicks };
 }
 afterEach(() => { document.body.replaceChildren(); vi.useRealTimers(); });
@@ -32,6 +33,10 @@ describe('scoped Greenhouse dropdowns', () => {
   expect(await fillGreenhouseCombobox(f.input,school,env,()=>true,()=>{})).toBe(true);
   expect(f.chosen()).toBe('Example College'); expect(f.clicks()).toBe(1);
   expect(verifyGreenhouseCombobox(f.input,school,env)).toBe(true);
+ });
+ it('opens Greenhouse menus controlled by keyup instead of internal React-Select state', async () => {
+  const f=fixture(['Example College'],{keyupOnly:true});
+  expect(await fillGreenhouseCombobox(f.input,school,env,()=>true,()=>{})).toBe(true);expect(f.chosen()).toBe('Example College');
  });
  it('waits for asynchronous suggestions and matches location with equivalent region names', async () => {
   const f = fixture(['Example City, CA, USA'],{delay:50});

@@ -17,6 +17,13 @@ describe('Greenhouse planner',()=>{
   const result=planned();expect(result.map(r=>r.id)).toEqual(['school--0','degree--0','discipline--0','end-date-month--0','end-date-year--0']);
   expect(result[3]?.action).toMatchObject({type:'combobox',target:{kind:'graduationDate',value:'June'}});expect(result[4]?.action).toMatchObject({type:'text',value:'2027'});
  });
+ it('recognizes the live Greenhouse end-month and end-year IDs with school dependencies',()=>{
+  const list=fields();list[4]!.descriptor.id='end-month--0';list[5]!.descriptor.id='end-year--0';
+  expect(planned(list).filter(r=>r.id.startsWith('end-'))).toEqual([
+   {id:'end-month--0',action:expect.objectContaining({type:'combobox',target:{kind:'graduationDate',value:'June'},education:expect.objectContaining({schoolRef:1})})},
+   {id:'end-year--0',action:expect.objectContaining({type:'text',value:'2027',education:expect.objectContaining({schoolRef:1})})},
+  ]);
+ });
  it('requires a saved school before planning dependent education',()=>{
   expect(planned(fields(),{...profile,school:''})).toEqual([]);
  });

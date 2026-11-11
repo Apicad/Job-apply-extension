@@ -339,3 +339,12 @@ Suggested story: show the applicant's repetitive work, demonstrate one complete 
 Use the companion [building-agent prompt](2026-11-09-hackersquad-build-handoff.md). It divides the work into dependent parts, assigns separate branches/worktrees and test ownership, defines integration and release checks, and includes status-report requirements. The prompt is intended for the agent doing implementation; writing it has not created branches, run product tests, published the repository, or submitted anything.
 
 Use the separate [Grok GitHub audit prompt](2026-11-09-grok-github-audit-prompt.md) against an exact candidate SHA. External auditors cannot inspect unpushed local work; provide the intended commit or an explicit source export. Audit findings inform fixes and retesting, not a guarantee of correctness.
+
+
+## November 11 follow-up: résumé import and reusable projects
+
+The owner prioritized getting the private Profile home populated from a résumé, with project and experience notes reused by the extension. Uploading a PDF, DOCX or TXT extracts text locally and proposes supported ordinary fields and verbatim source notes. Existing nonblank values remain; imported edits require review and Save profile before Autofill uses them. The résumé attachment is saved separately and immediately. Do not infer eligibility, demographics, earned degrees, current employment or missing graduation dates. Scanned-image OCR and résumé tailoring remain out of scope.
+
+LinkedIn account connection and profile import were explicitly deferred to a later feature. Keep the existing LinkedIn URL field. Do not register an app, add OAuth credentials/backend, claim a connected account or publish/deploy for this scope.
+
+Record browser persistence and same-profile sidebar reuse, a packaged PDF worker smoke, unsupported/malformed-file handling and duplicate import preservation with synthetic fixtures. Keep real résumé data and live application snapshots outside the repository and public audit package. Phone/résumé readback succeeded in the live 0.3.0 Databricks test; custom dropdowns required a bounded keyboard-event correction and must not be described as live-verified until retested. Submission remains manual.

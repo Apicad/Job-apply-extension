@@ -28,10 +28,10 @@ test('Greenhouse-shaped async dropdowns, education, formatted phone and replaced
   await expect(page.locator('#phone')).toHaveValue('4155550100');
   await expect(page.locator('.file-upload').first()).toContainText('Ada.txt');
   await expect(page.locator('#resume')).toHaveCount(0);
-  for (const [name, value] of [['country', 'US'], ['candidate-location', 'sf-ca-us'], ['school--0', 'college-1'], ['degree--0', 'AS'], ['discipline--0', 'CS'], ['end-date-month--0', '6']] as const) {
+  for (const [name, value] of [['country', 'US'], ['candidate-location', 'sf-ca-us'], ['school--0', 'college-1'], ['degree--0', 'AS'], ['discipline--0', 'CS'], ['end-month--0', '6']] as const) {
     await expect(page.locator(`input[type="hidden"][name="${name}"]`)).toHaveValue(value);
   }
-  await expect(page.locator('#end-date-year--0')).toHaveValue('2027');
+  await expect(page.locator('#end-year--0')).toHaveValue('2027');
   for (const label of ['Phone', 'Resume/CV', 'Country', 'Location (City)', 'School', 'Degree', 'Discipline', 'End date month', 'End date year']) {
     const field = result.fields.find((field: any) => field.label.replace(/\*/g, '').trim() === label);
     expect(field?.status, `${label}: ${JSON.stringify(result.fields)}`).toBe('filled');
@@ -51,10 +51,10 @@ test('Greenhouse preserves a selected country, refuses ambiguous school choices,
   const result = await run(ui, tabId);
   expect(result.phase).toBe('review');
   await expect(page.locator('input[type="hidden"][name="country"]')).toHaveValue('CA');
-  for (const name of ['school--0', 'degree--0', 'end-date-month--0']) await expect(page.locator(`input[type="hidden"][name="${name}"]`)).toHaveValue('');
-  await expect(page.locator('#end-date-year--0')).toHaveValue('');
+  for (const name of ['school--0', 'degree--0', 'end-month--0']) await expect(page.locator(`input[type="hidden"][name="${name}"]`)).toHaveValue('');
+  await expect(page.locator('#end-year--0')).toHaveValue('');
   const selections = await page.evaluate(() => (window as any).__fixture.selections);
-  expect(selections.some((choice: any) => ['school--0', 'degree--0', 'end-date-month--0', 'country', 'question_authorization'].includes(choice.id))).toBe(false);
+  expect(selections.some((choice: any) => ['school--0', 'degree--0', 'end-month--0', 'country', 'question_authorization'].includes(choice.id))).toBe(false);
   await expect(page.locator('#unrelated-school')).toHaveValue('');
   await expect(page.locator('#consent')).not.toBeChecked();
   await expect(page.locator('#submitted')).toHaveText('Not submitted');
@@ -65,12 +65,12 @@ test('Greenhouse leaves dependent education untouched when the saved school cann
   const ui = await openExtensionPage('sidepanel.html'); const tabId = await prepare(ui, page, true);
   const result = await run(ui, tabId);
   expect(result.phase).toBe('review');
-  for (const name of ['school--0', 'degree--0', 'discipline--0', 'end-date-month--0']) {
+  for (const name of ['school--0', 'degree--0', 'discipline--0', 'end-month--0']) {
     await expect(page.locator(`input[type="hidden"][name="${name}"]`)).toHaveValue('');
   }
-  await expect(page.locator('#end-date-year--0')).toHaveValue('');
+  await expect(page.locator('#end-year--0')).toHaveValue('');
   const selections = await page.evaluate(() => (window as any).__fixture.selections);
-  expect(selections.some((choice: any) => /^(school|degree|discipline|end-date)/.test(choice.id))).toBe(false);
+  expect(selections.some((choice: any) => /^(school|degree|discipline|end-)/.test(choice.id))).toBe(false);
   await expect(page.locator('#consent')).not.toBeChecked();
   await expect(page.locator('#submitted')).toHaveText('Not submitted');
 });

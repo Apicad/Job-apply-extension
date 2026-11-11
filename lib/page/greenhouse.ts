@@ -109,7 +109,11 @@ export async function fillGreenhouseCombobox(input: HTMLInputElement, target: Gr
  // Typing only filters; it is never counted as the selected answer.
  fillText(input,query,onWrite);
  if (!current() || selectedLabels(input).length > 0 || input.value !== query) return false;
- input.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',code:'ArrowDown',bubbles:true}));
+ // Greenhouse controls menuIsOpen outside React-Select and opens it on keyup.
+ // A keydown alone only changes React-Select's ignored internal menu state.
+ input.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',code:'ArrowDown',bubbles:true,cancelable:true}));
+ if (!current() || selectedLabels(input).length > 0 || input.value !== query) return false;
+ input.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowDown',code:'ArrowDown',bubbles:true,cancelable:true}));
  const deadline=Date.now()+2500;
  while (Date.now() < deadline) {
   if (!current() || selectedLabels(input).length > 0 || input.value !== query) return false;
@@ -131,7 +135,10 @@ export async function fillGreenhouseCombobox(input: HTMLInputElement, target: Gr
  if (current() && input.value === query && selectedLabels(input).length === 0) {
   const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
   if (setter) { setter.call(input,''); input.dispatchEvent(new Event('input',{bubbles:true,composed:true})); input.dispatchEvent(new Event('change',{bubbles:true})); }
-  if (current()) input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));
+  if (current() && input.value === '' && selectedLabels(input).length === 0) {
+   input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true,cancelable:true}));
+   if (current() && input.value === '' && selectedLabels(input).length === 0) input.dispatchEvent(new KeyboardEvent('keyup',{key:'Escape',code:'Escape',bubbles:true,cancelable:true}));
+  }
  }
  return false;
 }

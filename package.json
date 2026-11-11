@@ -2,10 +2,10 @@
   "name": "job-apply-extension",
   "description": "Chrome extension that fills job application forms from your saved profile. You review and submit.",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "wxt",
@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "@fontsource-variable/public-sans": "^5.3.0",
+    "fflate": "0.8.3",
+    "pdfjs-dist": "6.5.438",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

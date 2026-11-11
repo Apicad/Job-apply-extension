@@ -16,7 +16,7 @@ function supportedPage(url: string): boolean {
 const label = (field: NativeField) => field.descriptor.label.trim().replace(/[*:]/g,'').trim().toLowerCase();
 /** One saved education record maps to one blank school row. Existing school
  * selections carry no value in a scan, so their other fields stay untouched. */
-const EDUCATION_ID = /^(school|degree|end-date-month|end-date-year|discipline)--(\d+)$/;
+const EDUCATION_ID = /^(school|degree|end-(?:date-)?month|end-(?:date-)?year|discipline)--(\d+)$/;
 const safeEducationGroup = (field: NativeField): boolean => {
  const group=field.descriptor.groupLabel.trim().toLowerCase();
  return group === '' || /^(education|educational history|academic history)( \d+)?$/.test(group);
@@ -27,9 +27,9 @@ function educationPart(field: NativeField, fields: NativeField[]): 'school' | 'd
  const schools=fields.filter(f => f.form === field.form && /^school--\d+$/.test(f.descriptor.id) && classifyField(f.descriptor) === 'school' && f.empty && safeEducationGroup(f));
  const school=schools[0];
  if (!school || school.descriptor.id !== `school--${match[2]}` || schools.filter(f=>f.descriptor.id===school.descriptor.id).length !== 1) return null;
- const expected=match[1]!.replaceAll('-',' ');
+ const expected=match[1]!.startsWith('end-') ? `end date ${match[1]!.endsWith('month') ? 'month' : 'year'}` : match[1]!.replaceAll('-',' ');
  if (label(field) !== expected) return null;
- return match[1] === 'school' ? 'school' : match[1] === 'degree' ? 'degree' : match[1] === 'discipline' ? 'major' : match[1] === 'end-date-month' ? 'month' : 'year';
+ return match[1] === 'school' ? 'school' : match[1] === 'degree' ? 'degree' : match[1] === 'discipline' ? 'major' : match[1]!.endsWith('month') ? 'month' : 'year';
 }
 export function greenhouseAction(field: NativeField, fields: NativeField[], url: string, profile: Profile, signature: string): { action: NativeAction; usageKey: string } | null {
  if (!supportedPage(url) || !field.empty) return null;

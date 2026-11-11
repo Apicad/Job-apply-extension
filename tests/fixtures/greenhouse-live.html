@@ -32,7 +32,7 @@
       <div id="transcript-label">Please provide a recent transcript of your undergraduate studies*</div>
       <label for="transcript">Attach transcript</label><input id="transcript" type="file" accept=".pdf,.txt" />
     </div>
-    <div class="education--container"><div class="education--form"><h2>Education</h2><div id="education-slots"></div><label>End date year<input id="end-date-year--0" type="number" min="1900" max="2100" /></label></div></div>
+    <div class="education--container"><div class="education--form"><h2>Education</h2><div id="education-slots"></div><label>End date year<input id="end-year--0" type="number" min="1900" max="2100" /></label></div></div>
     <label>LinkedIn Profile<input id="linkedin" /></label>
     <div id="authorization-slot"></div>
     <label><input id="consent" type="checkbox" />I certify my application is accurate</label>
@@ -44,7 +44,7 @@
     window.__fixture = { submitted: false, events: [], selections: [], uploads: 0 };
     const fixture = window.__fixture;
     const params = new URLSearchParams(location.search);
-    for (const type of ['input', 'change', 'click', 'keydown']) document.addEventListener(type, event => fixture.events.push({ type, id: event.target.id }), true);
+    for (const type of ['input', 'change', 'click', 'keydown', 'keyup']) document.addEventListener(type, event => fixture.events.push({ type, id: event.target.id }), true);
     document.querySelector('#application-form').addEventListener('submit', event => { event.preventDefault(); fixture.submitted = true; document.querySelector('#submitted').textContent = 'Submitted'; });
     document.querySelector('#phone').addEventListener('input', event => { event.target.value = event.target.value.replace(/[^0-9]/g, ''); });
     document.querySelector('#attach-resume').addEventListener('click', () => document.querySelector('#resume')?.click());
@@ -91,7 +91,10 @@
           document.body.append(menu);
         }, options.delay || 80);
       };
-      input.addEventListener('input', show); input.addEventListener('focus', show); input.addEventListener('keydown', event => { if (event.key === 'ArrowDown') { event.preventDefault(); show(); } if (event.key === 'Escape') removeMenu(); });
+      // Actual Greenhouse controls menuIsOpen from its wrapper's keyup handler.
+      input.addEventListener('input', () => { if (input.getAttribute('aria-expanded') === 'true') show(); });
+      input.addEventListener('keydown', event => { if (event.key === 'ArrowDown') event.preventDefault(); });
+      input.addEventListener('keyup', event => { if (event.code === 'Escape' || event.code === 'Tab') removeMenu(); else if (event.code !== 'Enter') show(); });
       if (options.prefilled) select(options.prefilled, false);
       return widget;
     }
@@ -103,7 +106,7 @@
     combo('#education-slots', 'school--0', 'School', params.has('ambiguous') ? [school, { ...school, value: 'college-2' }] : [school, { label: 'Other', value: 'other' }]);
     combo('#education-slots', 'degree--0', 'Degree', [{ label: 'Associate of Science', value: 'AS' }, { label: 'Bachelor of Science', value: 'BS' }, { label: 'Other', value: 'other' }]);
     combo('#education-slots', 'discipline--0', 'Discipline', [{ label: 'Computer Science', value: 'CS' }, { label: 'Other', value: 'other' }]);
-    combo('#education-slots', 'end-date-month--0', 'End date month', [{ label: 'May', value: '5' }, { label: 'June', value: '6' }, { label: 'July', value: '7' }]);
+    combo('#education-slots', 'end-month--0', 'End date month', [{ label: 'May', value: '5' }, { label: 'June', value: '6' }, { label: 'July', value: '7' }]);
     combo('#authorization-slot', 'question_authorization', 'Are you legally authorized to work in the country in which you are applying?', [{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]);
   </script>
 </body>

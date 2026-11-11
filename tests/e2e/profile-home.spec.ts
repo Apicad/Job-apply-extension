@@ -5,6 +5,32 @@ async function send(ui: Page, message: Record<string, unknown>) {
   return ui.evaluate(async value => (globalThis as any).chrome.runtime.sendMessage(value), message);
 }
 
+const resumeText = `Ada Lovelace
+ada@example.com | (415) 555-0100
+San Francisco, California, United States
+https://linkedin.com/in/ada-lovelace
+Education
+Example College
+Bachelor of Science in Computer Science
+Expected graduation: May 2027
+GPA: 3.8
+Projects
+Algorithm visualizer
+Built a React visualizer with step-by-step traces.`;
+
+// A real, self-contained PDF: exercises the extension's bundled PDF worker,
+// font/text extraction, and import UI instead of mocking the parser.
+function syntheticPdf(text: string): Buffer {
+  const escape = (value: string) => value.replace(/([\\()])/g, '\\$1');
+  const stream = `BT /F1 12 Tf 16 TL 40 750 Td\n${text.split('\n').map((line, i) => `${i ? 'T* ' : ''}(${escape(line)}) Tj`).join('\n')}\nET`;
+  const objects = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>', `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`];
+  let pdf = '%PDF-1.4\n'; const offsets = [0];
+  objects.forEach((object, i) => { offsets.push(Buffer.byteLength(pdf)); pdf += `${i + 1} 0 obj\n${object}\nendobj\n`; });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf);
+}
+
 test('profile home saves once, survives reload, and supplies the application sidebar without AI calls', async ({ context, serviceWorker, openExtensionPage }, testInfo) => {
   await serviceWorker.evaluate(() => {
     (globalThis as any).__homeNativeCalls = 0;
@@ -109,4 +135,83 @@ test('a storage refresh during save cannot discard the new profile revision or l
   await home.getByRole('button', { name: 'Save profile', exact: true }).click();
   await expect(home.getByRole('status')).toContainText('Profile saved');
   expect((await send(home, { type: 'sidebar-state' })).data.profile.firstName).toBe('Ada revised');
+});
+
+test('résumé text populates only blank draft fields, preserves projects, avoids duplicate imports, and saves for reuse', async ({ openExtensionPage, serviceWorker }) => {
+  const home = await openExtensionPage('home.html');
+  await expect(home.getByLabel('First name', { exact: true })).toBeVisible();
+  await home.getByLabel('First name', { exact: true }).fill('User preferred name');
+  await home.getByRole('button', { name: 'Add experience', exact: true }).click();
+  await home.getByLabel('Role or project 1', { exact: true }).fill('Existing project');
+  await home.getByLabel('Experience details 1', { exact: true }).fill('I documented a community tool.');
+  await home.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(home.getByRole('status')).toContainText('Profile saved');
+  await serviceWorker.evaluate(() => { (globalThis as any).__importNativeCalls = 0; (globalThis as any).chrome.runtime.connectNative = () => { (globalThis as any).__importNativeCalls++; throw Error('Résumé extraction must stay local.'); }; });
+  const file = { name: 'Ada-resume.txt', mimeType: 'text/plain', buffer: Buffer.from(resumeText) };
+  await home.getByLabel('Upload résumé', { exact: true }).setInputFiles(file);
+  await expect(home.getByRole('heading', { name: 'Résumé details ready to review' })).toBeVisible();
+  await expect(home.getByLabel('First name', { exact: true })).toHaveValue('User preferred name');
+  await expect(home.getByLabel('Last name', { exact: true })).toHaveValue('Lovelace');
+  await expect(home.getByLabel('Email', { exact: true })).toHaveValue('ada@example.com');
+  await expect(home.getByLabel('School', { exact: true })).toHaveValue('Example College');
+  await expect(home.getByLabel('Graduation month', { exact: true })).toHaveValue('2027-05');
+  await expect(home.getByLabel('Experience details 1', { exact: true })).toHaveValue('I documented a community tool.');
+  await expect(home.getByLabel('Experience details 2', { exact: true })).toHaveValue(/Built a React visualizer/);
+  await expect(home.getByLabel('Authorized to work in your country?', { exact: true })).toHaveValue('');
+  let stored = (await send(home, { type: 'sidebar-state' })).data;
+  expect(stored.profile.email).toBe(''); expect(stored.facts).toHaveLength(1); expect(stored.resume.name).toBe('Ada-resume.txt');
+  await home.getByLabel('Upload résumé', { exact: true }).setInputFiles(file);
+  await expect(home.getByRole('heading', { name: 'Résumé details ready to review' })).toBeVisible();
+  await expect(home.getByLabel('Experience details 3', { exact: true })).toHaveCount(0);
+  await home.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(home.getByRole('status')).toContainText('Profile saved');
+  stored = (await send(home, { type: 'sidebar-state' })).data;
+  expect(stored.profile.firstName).toBe('User preferred name'); expect(stored.profile.email).toBe('ada@example.com'); expect(stored.facts).toHaveLength(2);
+  await home.reload();
+  await expect(home.getByLabel('School', { exact: true })).toHaveValue('Example College');
+  await expect(home.getByLabel('Experience details 2', { exact: true })).toHaveValue(/Built a React visualizer/);
+  expect(await serviceWorker.evaluate(() => (globalThis as any).__importNativeCalls)).toBe(0);
+});
+
+test('a real PDF is parsed locally in the extension and its extracted text remains reviewable', async ({ openExtensionPage }, testInfo) => {
+  const home = await openExtensionPage('home.html'); const externalRequests: string[] = []; const errors: string[] = [];
+  home.on('request', request => { if (/^https?:/.test(request.url())) externalRequests.push(request.url()); });
+  home.on('pageerror', error => errors.push(error.message));
+  await expect(home.getByLabel('Upload résumé', { exact: true })).toBeAttached();
+  await home.getByLabel('Upload résumé', { exact: true }).setInputFiles({ name: 'Ada-resume.pdf', mimeType: 'application/pdf', buffer: syntheticPdf(resumeText) });
+  await expect(home.getByRole('heading', { name: 'Résumé details ready to review' })).toBeVisible({ timeout: 20_000 });
+  await expect(home.getByLabel('First name', { exact: true })).toHaveValue('Ada');
+  await expect(home.getByLabel('Email', { exact: true })).toHaveValue('ada@example.com');
+  await home.getByText('Extracted résumé text', { exact: false }).first().click();
+  await expect(home.getByLabel('Extracted résumé text', { exact: true })).toHaveValue(/Algorithm visualizer/);
+  await expect(home.getByLabel('Experience details 1', { exact: true })).toHaveValue(/Built a React visualizer/);
+  expect((await send(home, { type: 'sidebar-state' })).data.profile.firstName).toBe('');
+  expect(externalRequests).toEqual([]); expect(errors).toEqual([]);
+  await home.setViewportSize({ width: 1440, height: 1000 });
+  await home.locator('#resume').scrollIntoViewIfNeeded();
+  await home.screenshot({ path: testInfo.outputPath('home-resume-import.png'), fullPage: false });
+  await home.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(home.getByRole('status')).toContainText('Profile saved');
+});
+
+test('a corrupt PDF preserves the saved profile and projects while clearly reporting that text import failed', async ({ openExtensionPage }) => {
+  const home = await openExtensionPage('home.html');
+  await expect(home.getByLabel('First name', { exact: true })).toBeVisible();
+  await home.getByLabel('First name', { exact: true }).fill('Existing applicant');
+  await home.getByRole('button', { name: 'Add experience', exact: true }).click();
+  await home.getByLabel('Role or project 1', { exact: true }).fill('Existing project');
+  await home.getByLabel('Experience details 1', { exact: true }).fill('I wrote tests for a community dashboard.');
+  await home.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(home.getByRole('status')).toContainText('Profile saved');
+  const before = (await send(home, { type: 'sidebar-state' })).data;
+  await home.getByLabel('Upload résumé', { exact: true }).setInputFiles({ name: 'Corrupt.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\nThis is not a complete PDF document.\n') });
+  await expect(home.getByRole('alert')).toContainText('text could not be imported', { timeout: 20_000 });
+  await expect(home.getByRole('status')).toContainText('Your profile details were left unchanged');
+  await expect(home.getByRole('heading', { name: 'Résumé details ready to review' })).toHaveCount(0);
+  await expect(home.getByLabel('First name', { exact: true })).toHaveValue('Existing applicant');
+  await expect(home.getByLabel('Experience details 1', { exact: true })).toHaveValue('I wrote tests for a community dashboard.');
+  await expect(home.getByRole('button', { name: 'Save profile', exact: true })).toBeDisabled();
+  const after = (await send(home, { type: 'sidebar-state' })).data;
+  expect(after.profile).toEqual(before.profile); expect(after.facts).toEqual(before.facts);
+  expect(after.resume.name).toBe('Corrupt.pdf');
 });

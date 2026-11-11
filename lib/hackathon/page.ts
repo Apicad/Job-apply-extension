@@ -43,7 +43,7 @@ function educationCurrent(action: NativeAction, target: Control | null, env: Pag
  const school = recallControl(dependency.schoolRef);
  if (!school || school.control !== 'combobox' || !isShown(school, env) || formIndex(school) !== formIndex(target)) return false;
  const descriptor = describeControl(school); const row = /^school--(\d+)$/.exec(descriptor.id);
- const child = /^(?:degree|discipline|end-date-month|end-date-year)--(\d+)$/.exec(describeControl(target).id);
+ const child = /^(?:degree|discipline|end-(?:date-)?month|end-(?:date-)?year)--(\d+)$/.exec(describeControl(target).id);
  if (!row || !child || row[1] !== child[1] || classifyField(descriptor) !== 'school') return false;
  if (signature({ ref: dependency.schoolRef, form: formIndex(school), descriptor, empty: false, maxLength: maximum(school) }) !== dependency.signature) return false;
  return verifyGreenhouseCombobox(school.el, { kind: 'school', value: dependency.value }, env);
