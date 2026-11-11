@@ -88,10 +88,14 @@ try {
   await expect(paper).toContainText('Ada Lovelace');
   await expect(paper).toContainText('Python');
   await expect(home.getByRole('button', { name: 'Download Word', exact: true })).toBeDisabled();
+  await home.evaluate(() => window.scrollTo(0, 0));
+  await home.locator('.resume-preview').evaluate(element => { element.scrollTop = 0; });
   await paper.screenshot({ path: path.join(out, 'resume-preview.png') });
   await home.getByRole('button', { name: 'Cover letter', exact: true }).click();
   await expect(paper).toContainText('Dear hiring team,');
   await expect(paper).toContainText('Example Tools');
+  await home.evaluate(() => window.scrollTo(0, 0));
+  await home.locator('.resume-preview').evaluate(element => { element.scrollTop = 0; });
   await paper.screenshot({ path: path.join(out, 'cover-letter-preview.png') });
   // Exercise the actual sidebar workflow with new inference from the saved facts.
   await worker.evaluate(() => {
