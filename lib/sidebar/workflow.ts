@@ -8,6 +8,7 @@ import { loadFacts, supportedQuestion, contextForRow, rowKey, sessionKey, answer
 import { readLibrary, saveAnswer } from '../hackathon/library';
 import type { NativePlan, Row } from '../hackathon/engine';
 import { eligibleApplicationRows } from '../hackathon/engine';
+import { checkboxGroupViews } from '../hackathon/checkbox-groups';
 import { checkAI, draftWithAI } from './ai';
 import type { SidebarRun, SidebarState, SidebarField, SidebarDraft } from './ui-types';
 
@@ -39,12 +40,12 @@ async function assertSnapshot(run: StoredRun): Promise<void> {
   if (key(await loadProfile()) !== run.profileKey || key(await loadFacts()) !== run.factsKey) throw Error('Your saved information changed. Click Autofill again.');
 }
 function fieldViews(plan: NativePlan): SidebarField[] {
-  return eligibleApplicationRows(plan.rows).map(row => {
+  return [...eligibleApplicationRows(plan.rows).map((row): SidebarField => {
     const outcome = plan.outcomes?.find(o => o.ref === row.field.ref && o.documentId === row.documentId);
     return { id: rowKey(row), label: row.field.descriptor.label || row.field.descriptor.name || 'Unlabelled field',
       status: !row.field.empty ? 'kept' : outcome?.ok ? 'filled' : row.action && plan.state === 'finished' ? 'failed' : 'review',
       detail: !row.field.empty ? 'Your existing answer was kept.' : outcome?.ok ? 'Filled and checked on the page.' : row.action ? plan.state === 'finished' ? 'Could not verify this field. Check it on the page.' : 'Waiting to fill…' : supportedQuestion(row) ? 'Answer needs review.' : 'Complete this field on the application.' };
-  });
+  }), ...checkboxGroupViews(plan.checkboxGroups ?? [])];
 }
 
 export async function sidebarState(tabId?: number): Promise<SidebarState> {
@@ -70,6 +71,9 @@ async function execute(task: Active): Promise<void> {
     assertActive(task); run.fields = fieldViews(plan);
     // Re-read after basic writes, which can reveal or change dependent fields.
     const questionsPlan = await scanTab(run.tabId); task.plan = questionsPlan; assertActive(task); await assertSnapshot(run);
+    // Basic fields may reveal checkbox questions. Refresh only observations so
+    // their current state is visible without replacing verified fill outcomes.
+    run.fields = fieldViews({ ...plan, checkboxGroups: questionsPlan.checkboxGroups });
     const questions = eligibleApplicationRows(questionsPlan.rows).filter(supportedQuestion).slice(0, 5);
     const facts = (await loadFacts()).slice(0, 20);
     const enabled = await readHackathon<boolean>('sidebar-ai-enabled') === true;

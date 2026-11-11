@@ -6,6 +6,7 @@ import { ACCEPTED_RESUME_TYPES, fileToStoredResume } from '../../lib/resume';
 import type { Profile } from '../../lib/types';
 import type { Fact } from '../../lib/hackathon/contracts';
 import type { SidebarDraft, SidebarRun, SidebarState } from '../../lib/sidebar/ui-types';
+import { visibleAttentionFields } from '../../lib/sidebar/attention';
 import './style.css';
 
 const initialState = (): SidebarState => ({ profile: emptyProfile(), facts: [], resume: null, run: null, aiEnabled: false });
@@ -190,7 +191,7 @@ function App() {
     finally { setConnecting(false); }
   }
   const pending = run?.fields.filter(f => f.status === 'review' || f.status === 'failed') ?? [];
-  const attentionFields = pending.filter(field => !run?.drafts.some(draft => draft.question === field.label));
+  const attentionFields = visibleAttentionFields(pending, run?.drafts ?? []);
   const filled = run?.fields.filter(f => f.status === 'filled') ?? [];
   const kept = run?.fields.filter(f => f.status === 'kept') ?? [];
   const hasProfile = !!(state.profile.firstName || state.profile.email);

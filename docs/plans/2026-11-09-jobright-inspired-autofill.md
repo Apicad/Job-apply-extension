@@ -348,3 +348,12 @@ The owner prioritized getting the private Profile home populated from a résumé
 LinkedIn account connection and profile import were explicitly deferred to a later feature. Keep the existing LinkedIn URL field. Do not register an app, add OAuth credentials/backend, claim a connected account or publish/deploy for this scope.
 
 Record browser persistence and same-profile sidebar reuse, a packaged PDF worker smoke, unsupported/malformed-file handling and duplicate import preservation with synthetic fixtures. Keep real résumé data and live application snapshots outside the repository and public audit package. Phone/résumé readback succeeded in the live 0.3.0 Databricks test; custom dropdowns required a bounded keyboard-event correction and must not be described as live-verified until retested. Submission remains manual.
+
+
+## November 11 follow-up: checkbox questions in the sidebar
+
+The owner requested that checkbox groups also appear when Autofill cannot complete them. Report each visible native checkbox question in the chosen application form once under Needs your attention, using its group question rather than one row per option. Include standalone consent checkboxes as manual review items. Preserve every checked and unchecked state; do not infer location preferences, sanctions/export-control answers or consent from profile facts. Existing selections do not prove a group is complete.
+
+Keep these observations separate from writable controls and AI questions, validate and bound page-supplied labels/counts, and refresh after basic writes for newly revealed groups. Exclude hidden, authentication/search and unrelated form controls. Tests must cover grouping, duplicate names across forms, existing selections, dynamic visibility, persisted sidebar results, zero checkbox events and no submission. Bounded native detection does not establish universal custom-widget or cross-origin coverage.
+
+The prior 0.3.1 live Databricks test verified country/city and flagged an unmatched school, but omitted three checkbox questions from its count. The checkbox follow-up requires its own clean release checks and live retest on the exact new candidate. Keep personal profile and application evidence outside the public source snapshot.

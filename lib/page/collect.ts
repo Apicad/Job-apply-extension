@@ -105,7 +105,7 @@ export const formIndex: FormIndex = (control) => {
  * a form (<img name="querySelectorAll"> replaces `document.querySelectorAll`), hence the call
  * through the prototype.
  */
-function eachElement(doc: Document, visit: (el: Element) => void): void {
+export function eachElement(doc: Document, visit: (el: Element) => void): void {
   const walk = (elements: Iterable<Element>): void => {
     for (const el of elements) {
       visit(el);

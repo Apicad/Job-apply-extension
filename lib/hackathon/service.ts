@@ -4,7 +4,8 @@ import { answerCommand, loadFacts, libraryStore, validateAnswerBinding, invalida
 import { browser } from 'wxt/browser';
 import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, saveSyntheticProfile } from '../storage';
 import { sanitizeFrameScan } from '../report';
-import { planNative } from './engine';
+import { planNative, planCheckboxGroups } from './engine';
+import { sanitizeCheckboxGroups } from './checkbox-groups';
 import type { Frame, NativePlan } from './engine';
 import type { NativeScan, NativeCommand } from './page';
 import { DEMO_PROFILE, DEMO_FACTS } from './demo';
@@ -23,12 +24,13 @@ export async function scanTab(tabId: number): Promise<NativePlan> {
  for (const r of raw) {
   const value = r.result as NativeScan | undefined;
   const clean = value && sanitizeFrameScan({ ...value, top: r.frameId === 0, childOrigins: [], error: '' });
-  if (!clean || !value || typeof value.scanId !== 'string' || value.scanId.length > 100 || !r.documentId || new Set(clean.fields.map(f => f.ref)).size !== clean.fields.length || clean.fields.some(f => f.ref < 0 || f.form < -1)) continue;
-  frames.push({ documentId: r.documentId, frameId: r.frameId, scan: { ...value, job: clean.job, fields: clean.fields.map(f => ({ ...f, maxLength: value.fields.find(v => v.ref === f.ref)?.maxLength ?? -1 })) } });
+  const checkboxGroups = sanitizeCheckboxGroups(value?.checkboxGroups);
+  if (!clean || !value || !checkboxGroups || typeof value.scanId !== 'string' || value.scanId.length > 100 || !r.documentId || new Set(clean.fields.map(f => f.ref)).size !== clean.fields.length || clean.fields.some(f => f.ref < 0 || f.form < -1)) continue;
+  frames.push({ documentId: r.documentId, frameId: r.frameId, scan: { ...value, job: clean.job, checkboxGroups, fields: clean.fields.map(f => ({ ...f, maxLength: value.fields.find(v => v.ref === f.ref)?.maxLength ?? -1 })) } });
  }
  const profile = await loadProfile(); const resume = await loadResumeToAttach();
  const rows = planNative(frames, profile, resume);
- const plan: NativePlan = { id: crypto.randomUUID(), tabId, url: tab.url, profileKey: key(profile), rows, state: 'preview' };
+ const plan: NativePlan = { id: crypto.randomUUID(), tabId, url: tab.url, profileKey: key(profile), rows, checkboxGroups: planCheckboxGroups(frames, rows), state: 'preview' };
  if (rows.some(row => row.action?.type === 'file')) plan.resumeKey = await resumeFingerprint(resume);
  await writeHackathon(planKey(tabId), plan, true); return plan;
 }

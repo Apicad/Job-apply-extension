@@ -74,3 +74,40 @@ test('Greenhouse leaves dependent education untouched when the saved school cann
   await expect(page.locator('#consent')).not.toBeChecked();
   await expect(page.locator('#submitted')).toHaveText('Not submitted');
 });
+
+for (const prechecked of [false, true]) {
+  test(`Greenhouse reports checkbox questions once without changing ${prechecked ? 'existing selections or newly revealed groups' : 'unchecked choices'}`, async ({ context, openExtensionPage }) => {
+    const page = await context.newPage();
+    await page.goto(`${ORIGIN.main}/greenhouse-live.html${prechecked ? '?prechecked=1&conditional=1' : ''}`);
+    const checkboxState = () => page.locator('input[type="checkbox"]').evaluateAll(inputs => inputs.map(input => ({ id: input.id, checked: (input as HTMLInputElement).checked })));
+    const before = await checkboxState();
+    const ui = await openExtensionPage('sidepanel.html'); const tabId = await prepare(ui, page, true);
+    const result = await run(ui, tabId);
+    const questions = [
+      'Please choose the single location that you are most interested in.',
+      'Please confirm which export-control conditions apply. Select all that apply.',
+      'Please review the additional status categories. Select all that apply.',
+      'I certify my application is accurate',
+      ...(prechecked ? ['Additional application checklist'] : []),
+    ];
+    for (const label of questions) {
+      const fields = result.fields.filter((field: any) => field.label === label);
+      expect(fields, `one manual row for ${label}`).toHaveLength(1);
+      expect(fields[0].status).toBe('review');
+      expect(fields[0].detail).toMatch(/checkbox|select|review/i);
+      await expect(ui.locator('.attention li').filter({ hasText: label })).toHaveCount(1);
+    }
+    for (const label of ['North office', 'South office', 'Condition listed by employer', 'None of the above', 'Example category', 'Not applicable', 'Hidden application checkbox', 'Unrelated newsletter']) {
+      expect(result.fields.some((field: any) => field.label === label), label).toBe(false);
+    }
+    const pending = result.fields.filter((field: any) => field.status === 'review' || field.status === 'failed').length;
+    await expect(ui.locator('.attention > summary .count')).toHaveText(String(pending));
+    expect(await checkboxState()).toEqual(before);
+    const checkboxIds = before.map(input => input.id);
+    expect(await page.evaluate(ids => (window as any).__fixture.events.filter((event: any) => ids.includes(event.id)), checkboxIds)).toEqual([]);
+    await expect(page.locator('#submitted')).toHaveText('Not submitted');
+    await ui.reload();
+    for (const label of questions) await expect(ui.locator('.attention li').filter({ hasText: label })).toHaveCount(1);
+    expect(await checkboxState()).toEqual(before);
+  });
+}

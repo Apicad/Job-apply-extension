@@ -20,6 +20,8 @@ The November 11 owner request supersedes the earlier blanket custom-widget exclu
 
 The owner subsequently requested local résumé text extraction into the editable profile, with review/save before reuse. PDF.js and bounded DOCX/TXT extraction are permitted for this private home. LinkedIn account integration is explicitly deferred. Existing AI native-helper behavior remains governed by the README; historical manual-copy/paste descriptions below are not current feature restrictions.
 
+The November 11 checkbox follow-up adds read-only, application-scoped checkbox group observations to the sidebar. The historical exclusion from the writable control collector still applies: checkbox observations never receive fill handles, planned actions, AI answers or clicks. Report each visible question once under Needs your attention, including prechecked/partial groups, and preserve all selections.
+
 The authoritative smaller scope in `docs/plans/2026-11-09-jobright-inspired-autofill.md`
 and its build handoff governs this isolated candidate. `lib/hackathon/` implements
 the integrated worker, evidence/library contracts and execution wrapper; the old

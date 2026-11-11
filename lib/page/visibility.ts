@@ -73,7 +73,8 @@ function isSeen(el: Element, env: PageEnv): boolean {
  * hidden by hiding its label is not rescued by the list item around it. Only a radio without any
  * label may be vouched for by its own wrapper.
  */
-function isRadioSeen(radio: HTMLInputElement, env: PageEnv): boolean {
+/** Also used for read-only checkbox observations; this does not grant any write capability. */
+export function isRadioSeen(radio: HTMLInputElement, env: PageEnv): boolean {
   if (isHiddenByMarkup(radio)) return false;
   if (env.isRendered(radio)) return true;
 

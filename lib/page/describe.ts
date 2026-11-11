@@ -241,7 +241,7 @@ function isFileInputEmpty(input: HTMLInputElement): boolean {
  * 3. Its label elements.
  * 4. The question it belongs to: see `questionOf`.
  */
-function labelOf(el: FormControl): string {
+export function labelOf(el: FormControl): string {
   const byReference = textNamedBy(el, el);
   if (byReference !== '') return byReference;
 
@@ -263,7 +263,7 @@ function labelOf(el: FormControl): string {
  * (b) the question title of a Lever or Ashby field wrapper.
  * (c) text shortly before it, inside a wrapper of its own.
  */
-function questionOf(own: readonly FormControl[]): string {
+export function questionOf(own: readonly FormControl[]): string {
   const first = own[0];
   if (first === undefined) return '';
 

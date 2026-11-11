@@ -8,9 +8,10 @@ import { greenhouseAction } from './greenhouse-plan';
 import { countryCode, findCountries } from '../regions';
 import type { FieldDescriptor, Profile, JobInfo, StoredResume } from '../types';
 import type { NativeScan, NativeField, NativeAction } from './page';
+import { sanitizeCheckboxGroups, type ApplicationCheckboxGroup } from './checkbox-groups';
 export interface Frame { frameId: number; documentId: string; scan: NativeScan }
 export interface Row { job: JobInfo; documentId: string; frameId: number; scanId: string; url: string; field: NativeField; action: NativeAction | null; status: string }
-export interface NativePlan { id: string; tabId: number; url: string; profileKey: string; resumeKey?: string; rows: Row[]; state: 'preview' | 'executing' | 'finished' | 'invalidated'; answerBinding?: { id: string; revision: number; savedId?: string }; errors?: string[]; outcomes?: (NativeOutcome & { documentId: string })[] }
+export interface NativePlan { id: string; tabId: number; url: string; profileKey: string; resumeKey?: string; rows: Row[]; checkboxGroups?: ApplicationCheckboxGroup[]; state: 'preview' | 'executing' | 'finished' | 'invalidated'; answerBinding?: { id: string; revision: number; savedId?: string }; errors?: string[]; outcomes?: (NativeOutcome & { documentId: string })[] }
 export const fieldSignature = (descriptor: FieldDescriptor, form: number, maxLength: number): string => stableKey({ descriptor, form, maxLength });
 /** Scope automatic drafting to the same application group as basic autofill. */
 export function eligibleApplicationRows(rows: Row[]): Row[] {
@@ -21,6 +22,14 @@ export function eligibleApplicationRows(rows: Row[]): Row[] {
   return { members, eligible, count: kinds.filter(Boolean).length };
  }).filter(group => group.eligible).sort((a, b) => b.count - a.count);
  return groups[0]?.members ?? [];
+}
+/** Manual observations cannot nominate an application or create any action. */
+export function planCheckboxGroups(frames: Frame[], rows: Row[]): ApplicationCheckboxGroup[] {
+ const selected = eligibleApplicationRows(rows)[0];
+ if (!selected) return [];
+ return frames.filter(frame => frame.scan.shown && frame.documentId === selected.documentId).flatMap(frame =>
+  (sanitizeCheckboxGroups(frame.scan.checkboxGroups) ?? []).filter(group => group.form === selected.field.form)
+   .map(group => ({ ...group, documentId: frame.documentId })));
 }
 export function planNative(frames: Frame[], profile: Profile, resume: StoredResume | null = null): Row[] {
  const groups = frames.flatMap(frame => [...new Set(frame.scan.fields.map(f => f.form))].map(form => {

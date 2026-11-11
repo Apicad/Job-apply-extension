@@ -35,15 +35,43 @@
     <div class="education--container"><div class="education--form"><h2>Education</h2><div id="education-slots"></div><label>End date year<input id="end-year--0" type="number" min="1900" max="2100" /></label></div></div>
     <label>LinkedIn Profile<input id="linkedin" /></label>
     <div id="authorization-slot"></div>
+    <fieldset aria-required="true" class="checkbox">
+      <legend id="location-preference-label" class="label checkbox__description">Please choose the single location that you are most interested in.</legend>
+      <label><input id="preferred-north" type="checkbox" name="question_location[]" value="north" />North office</label>
+      <label><input id="preferred-south" type="checkbox" name="question_location[]" value="south" />South office</label>
+    </fieldset>
+    <fieldset aria-required="true" class="checkbox">
+      <legend id="export-review-label" class="label checkbox__description">Please confirm which export-control conditions apply. Select all that apply.</legend>
+      <label><input id="export-condition" type="checkbox" name="question_export_condition" value="condition" />Condition listed by employer</label>
+      <label><input id="export-none" type="checkbox" name="question_export_none" value="none" />None of the above</label>
+    </fieldset>
+    <fieldset id="additional-status-group">
+      <legend>Please review the additional status categories. Select all that apply.</legend>
+      <label><input id="status-example" type="checkbox" name="question_status[]" value="example" />Example category</label>
+      <label><input id="status-na" type="checkbox" name="question_status[]" value="na" />Not applicable</label>
+    </fieldset>
+    <div id="conditional-checkbox-group" role="group" aria-labelledby="conditional-label" hidden>
+      <div id="conditional-label">Additional application checklist</div>
+      <label><input id="conditional-check" type="checkbox" />Review the newly revealed question</label>
+    </div>
+    <div hidden><label><input id="hidden-check" type="checkbox" />Hidden application checkbox</label></div>
     <label><input id="consent" type="checkbox" />I certify my application is accurate</label>
     <button id="submit-application" type="submit">Submit application</button>
   </form>
   <p id="submitted">Not submitted</p>
-  <form id="unrelated-form"><label>School<input id="unrelated-school" /></label></form>
+  <form id="unrelated-form"><label>School<input id="unrelated-school" /></label><label><input type="checkbox" id="unrelated-check" />Unrelated newsletter</label></form>
   <script>
     window.__fixture = { submitted: false, events: [], selections: [], uploads: 0 };
     const fixture = window.__fixture;
     const params = new URLSearchParams(location.search);
+    if (params.has('prechecked')) {
+      document.querySelector('#preferred-south').checked = true;
+      document.querySelector('#export-none').checked = true;
+      document.querySelector('#consent').checked = true;
+    }
+    if (params.has('conditional')) {
+      document.querySelector('#email').addEventListener('input', () => { document.querySelector('#conditional-checkbox-group').hidden = false; });
+    }
     for (const type of ['input', 'change', 'click', 'keydown', 'keyup']) document.addEventListener(type, event => fixture.events.push({ type, id: event.target.id }), true);
     document.querySelector('#application-form').addEventListener('submit', event => { event.preventDefault(); fixture.submitted = true; document.querySelector('#submitted').textContent = 'Submitted'; });
     document.querySelector('#phone').addEventListener('input', event => { event.target.value = event.target.value.replace(/[^0-9]/g, ''); });
