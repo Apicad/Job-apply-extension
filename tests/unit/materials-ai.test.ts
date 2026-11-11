@@ -34,6 +34,12 @@ test('old helper returns a clear update message and receives no materials payloa
   onMessage({ id: status.id, ok: true, data: { connected: true, provider: 'Codex', message: 'Connected' } });
   await failure; expect(port.postMessage).toHaveBeenCalledTimes(1);
 });
+test('role-only general resumes require the new helper capability before evidence is sent', async () => {
+  const r = request(); r.brief.jobDescription = ''; r.brief.careerDirection = ''; r.brief.role = 'Data analyst';
+  const pending = draftMaterialsWithAI(r); const failure = expect(pending).rejects.toThrow('Update the local AI helper');
+  await capable(); await failure;
+  expect(port.postMessage).toHaveBeenCalledTimes(1);
+});
 test('capability preflight cannot change the reviewed request snapshot', async () => {
   const r = request(); const pending = draftMaterialsWithAI(r); r.evidence[0]!.text = 'Changed after the request began.';
   const message = await capable(); expect(message.request.evidence[0].text).toContain('CSV validation prototype');

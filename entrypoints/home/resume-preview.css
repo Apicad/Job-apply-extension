@@ -17,6 +17,20 @@
   .page-shell.with-preview, .resume-preview, .paper-viewport, .paper-stage { display: block; position: static; overflow: visible; padding: 0; margin: 0; width: auto; max-width: none; max-height: none; height: auto !important; border: 0; background: white; box-shadow: none; border-radius: 0; }
   .resume-paper { width: auto; min-height: 0; padding: 0; transform: none !important; }
   .resume-document-section > h2, .resume-entry-heading { break-after: avoid; }
-  .resume-document-entry { break-inside: avoid; }
+  .resume-document-entry { break-inside: auto; }
+  .resume-document-entry li { break-inside: avoid; }
   .resume-paper a { text-decoration: none; }
 }
+
+/* Optional professional layout; preserve classic as a compact alternative. */
+.resume-paper.template-professional { font-size: 10.5pt; line-height: 1.22; color: #17232d; }
+.template-professional .resume-document-header { padding-bottom: 14px; border-bottom: 2px solid #304c60; margin-bottom: 12px; }
+.template-professional .resume-document-header h1 { font-size: 26pt; letter-spacing: -.5px; color: #20394c; }
+.template-professional .resume-document-header > div { font-style: normal; font-size: 9pt; line-height: 1.35; }
+.template-professional .resume-document-section { margin-top: 16px; }
+.template-professional .resume-document-section > h2 { color: #304c60; text-transform: uppercase; letter-spacing: 1px; border-color: #b6c1c9; padding-bottom: 4px; margin-bottom: 8px; }
+.template-professional .resume-document-entry { margin-bottom: 11px; }
+.template-professional .resume-entry-heading { margin-bottom: 4px; }
+.template-professional .resume-document-entry li { margin-top: 4px; }
+.template-professional .resume-entry-date { font-size: 9pt; color: #40515e; }
+.template-professional .resume-summary { line-height: 1.3; }

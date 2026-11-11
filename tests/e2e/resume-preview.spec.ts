@@ -84,3 +84,40 @@ test('an older editor cannot overwrite saved résumé choices', async ({ openExt
   await expect(first.getByRole('alert')).toContainText('changed');
   await expect(first.getByLabel('First name', { exact: true })).toHaveValue('Unsaved name');
 });
+
+
+test('general résumé saves summary, professional style and multiple pages without losing source text', async ({ openExtensionPage }, testInfo) => {
+  const home = await openExtensionPage('home.html'); await home.setViewportSize({ width: 1600, height: 1800 });
+  await home.getByLabel('First name', { exact: true }).fill('Ada');
+  await home.getByLabel('Last name', { exact: true }).fill('Lovelace');
+  await home.getByRole('button', { name: 'Add experience', exact: true }).click();
+  await home.getByLabel('Role or project 1', { exact: true }).fill('Example Labs');
+  await home.getByLabel('Experience details 1', { exact: true }).fill('Example Labs | Intern | Remote | May 2025–August 2025\nBuilt a Python CSV validation prototype.\nDocumented edge cases for the team.');
+  await home.locator('.preview-options > summary').click();
+  await home.getByRole('textbox', { name: 'Professional summary', exact: true }).fill('I build practical data validation tools and document their limitations.');
+  await home.getByLabel('Résumé style', { exact: true }).selectOption('professional');
+  await home.getByLabel('Length preference', { exact: true }).selectOption('multiple');
+  await home.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await home.reload();
+  await home.locator('.preview-options > summary').click();
+  await expect(home.getByRole('textbox', { name: 'Professional summary', exact: true })).toHaveValue('I build practical data validation tools and document their limitations.');
+  await expect(home.getByLabel('Length preference', { exact: true })).toHaveValue('multiple');
+  await expect(home.locator('.resume-paper')).toHaveClass(/template-professional/);
+  await expect(home.getByRole('article', { name: 'Résumé document' })).toContainText('Professional summary');
+  await home.locator('.preview-options > summary').click();
+  await home.locator('.resume-preview').evaluate(el => { el.scrollTop = 0; });
+  await home.getByRole('article', { name: 'Résumé document' }).screenshot({ path: testInfo.outputPath('professional-general-resume.png') });
+  const pending = home.waitForEvent('download'); await home.getByRole('button', { name: 'Download Word', exact: true }).click();
+  await (await pending).saveAs(testInfo.outputPath('professional-general-resume.docx'));
+  const files = unzipSync(await readFile(testInfo.outputPath('professional-general-resume.docx')));
+  expect(strFromU8(files['word/document.xml']!)).toContain('I build practical data validation tools');
+  expect(strFromU8(files['word/styles.xml']!)).toContain('w:val="21"');
+  await home.emulateMedia({ media: 'print' });
+  await home.pdf({ path: testInfo.outputPath('professional-general-resume.pdf'), preferCSSPageSize: true });
+  await home.emulateMedia({ media: 'screen' });
+  await home.getByLabel('Experience details 1', { exact: true }).fill('Example Labs | Intern | Remote | May 2025–August 2025\n' + 'Documented validation edge cases.\n'.repeat(45) + 'Last retained source line.');
+  await expect(home.getByRole('article', { name: 'Résumé document' })).toContainText('Last retained source line.');
+  await expect(home.getByText('This draft is longer than one page.', { exact: false })).toHaveCount(0);
+  await home.emulateMedia({ media: 'print' });
+  await home.pdf({ path: testInfo.outputPath('multiple-pages.pdf'), preferCSSPageSize: true });
+});

@@ -32,7 +32,7 @@ export function containsSensitiveMaterial(text: string): boolean { return sensit
 
 /** Structural checks deliberately ignore time so saved drafts remain editable. */
 export function isMaterialsRequest(value: unknown): value is MaterialsRequest {
-  if (!record(value) || !exactKeys(value, ['schema', 'kind', 'id', 'expiresAt', 'sourceKey', 'brief', 'entries', 'evidence']) || value.schema !== 1 || value.kind !== 'materials' || !boundedText(value.id, 100) || !positive(value.expiresAt) || typeof value.sourceKey !== 'string' || !/^[a-f0-9]{64}$/.test(value.sourceKey) || !isMaterialsBrief(value.brief) || !(value.brief.jobDescription.trim() || value.brief.careerDirection.trim())) return false;
+  if (!record(value) || !exactKeys(value, ['schema', 'kind', 'id', 'expiresAt', 'sourceKey', 'brief', 'entries', 'evidence']) || value.schema !== 1 || value.kind !== 'materials' || !boundedText(value.id, 100) || !positive(value.expiresAt) || typeof value.sourceKey !== 'string' || !/^[a-f0-9]{64}$/.test(value.sourceKey) || !isMaterialsBrief(value.brief) || !(value.brief.role.trim() || value.brief.jobDescription.trim() || value.brief.careerDirection.trim())) return false;
   if (!Array.isArray(value.evidence) || value.evidence.length < 1 || value.evidence.length > 22 || !value.evidence.every(f => record(f) && exactKeys(f, ['id', 'revision', 'text', 'location']) && boundedText(f.id, 100) && positive(f.revision) && boundedText(f.text, 6000) && boundedText(f.location, 300) && !containsSensitiveMaterial(`${f.location}\n${f.text}`)) || new Set(value.evidence.map(f => f.id)).size !== value.evidence.length) return false;
   if (!Array.isArray(value.entries) || value.entries.length > 20 || !value.entries.every(e => record(e) && exactKeys(e, ['id', 'revision', 'heading', 'lines', 'section'], ['detail', 'date']) && boundedText(e.id, 100) && positive(e.revision) && boundedText(e.heading, 300, true) && (e.detail === undefined || boundedText(e.detail, 600, true)) && (e.date === undefined || boundedText(e.date, 100, true)) && ['experience', 'projects'].includes(String(e.section)) && Array.isArray(e.lines) && e.lines.length <= 40 && e.lines.every(line => boundedText(line, 2000, true)) && !containsSensitiveMaterial([e.heading, e.detail, ...e.lines].filter(Boolean).join('\n')) && (value.evidence as Fact[]).some(f => f.id === e.id && f.revision === e.revision)) || new Set(value.entries.map(e => e.id)).size !== value.entries.length) return false;
   return new TextEncoder().encode(JSON.stringify(value)).length <= 230_000;
@@ -46,7 +46,7 @@ export async function materialsSourceKey(profile: Profile, facts: readonly Fact[
 }
 export async function buildMaterialsRequest(profile: Profile, facts: readonly Fact[], layout: ResumeLayout, briefInput: MaterialsBrief, now = Date.now()): Promise<MaterialsRequest> {
   const brief = normalizeMaterialsBrief(briefInput);
-  if (!(brief.jobDescription || brief.careerDirection)) throw Error('Add a job description or career direction before generating materials.');
+  if (!(brief.role || brief.jobDescription || brief.careerDirection)) throw Error('Add a target position, job description or career direction before generating materials.');
   if (facts.length > 20 || !facts.every(isFact) || new Set(facts.map(f => f.id)).size !== facts.length || facts.some(f => f.id.startsWith('profile:'))) throw Error('Saved experience notes are invalid. Review them before generating materials.');
   const base = buildResumeDocument(profile, facts, layout);
   const entries: MaterialsRequest['entries'] = [];

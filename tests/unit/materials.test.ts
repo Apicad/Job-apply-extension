@@ -23,6 +23,13 @@ const request = () => buildMaterialsRequest(savedProfile(), facts(), defaultResu
 const reply = (request: MaterialsRequest): MaterialsReplyWire => ({ schema: 1, kind: 'materials', requestId: request.id, sourceKey: request.sourceKey, expiresAt: request.expiresAt, summary: [{ text: 'Built a Python prototype for 3 internal examples.', sources: [source()] }], entries: [{ entryId: 'role-a', bullets: [{ text: 'Built a Python prototype supporting 3 internal examples.', sources: [source()] }] }], coverLetter: [{ text: 'My Python prototype work involved 3 internal examples.', sources: [source()] }], missing: [] });
 
 describe('materials request evidence and identity', () => {
+  it('creates a general role request without a company or job posting, using the same saved evidence', async () => {
+    const general = await buildMaterialsRequest(savedProfile(), facts(), defaultResumeLayout(), { ...emptyMaterialsBrief(), role: 'Data analyst' });
+    expect(isMaterialsRequest(general)).toBe(true);
+    expect(general.brief.company).toBe(''); expect(general.brief.jobDescription).toBe('');
+    expect(general.evidence.map(f => f.id)).toContain('role-a');
+    expect(JSON.stringify(general.evidence)).not.toContain('Data analyst');
+  });
   it('sends selected facts and ordinary education, never profile contact or eligibility values', async () => {
     const r = await request(); const serialized = JSON.stringify(r);
     expect(isMaterialsRequest(r)).toBe(true);

@@ -216,3 +216,7 @@ Needs Node 22.12 or newer (`.nvmrc` pins 24).
 ### Preferred first name
 
 Profile home also stores an optional preferred first name, blank by default. Résumé and cover-letter names/signatures use it when supplied and otherwise use the regular first name. Autofill uses it only for explicit preferred first/given-name text questions; ordinary and legal first/full names keep the original identity. Ambiguous preferred-name questions remain manual. This value stays local during document generation, and changing it makes existing tailored documents stale until regenerated.
+
+### General résumé and style addendum
+
+The November 11 owner request replaces the fixed one-page/base-only presentation with an editable General résumé, optional professional summary, Professional/Classic styles and a one-page or multi-page preference. A target position alone may start AI document generation; company/posting are optional. The helper explicitly advertises general-materials support before role-only evidence is sent. Preserve existing profile facts, attachments, source validation, explicit review and no-submit behavior. Saved layouts retain their classic template on migration; new profiles default to Professional. A larger ranked evidence database and saved role-version library remain separate work.

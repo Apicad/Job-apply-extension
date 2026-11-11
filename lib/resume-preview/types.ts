@@ -1,4 +1,4 @@
-export type ResumeSectionKey = 'contact' | 'location' | 'links' | 'experience' | 'projects' | 'education' | 'skills';
+export type ResumeSectionKey = 'summary' | 'contact' | 'location' | 'links' | 'experience' | 'projects' | 'education' | 'skills';
 export type ResumeFactSection = 'experience' | 'projects';
 export interface ResumeFactLayout { section: ResumeFactSection; included: boolean }
 export interface ResumeLayout {
@@ -6,6 +6,9 @@ export interface ResumeLayout {
   facts: Record<string, ResumeFactLayout>;
   /** User-entered skills only; nothing is inferred from experience. */
   skills: string;
+  summary: string;
+  pagePreference: 'one' | 'multiple';
+  template: 'classic' | 'professional';
 }
 export interface ResumeContact { text: string; href?: string }
 export interface ResumeEntry {
@@ -23,6 +26,7 @@ export interface ResumeSection {
   entries: ResumeEntry[];
 }
 export interface ResumeDocument {
+  template?: 'classic' | 'professional';
   name: string;
   contact: ResumeContact[];
   sections: ResumeSection[];

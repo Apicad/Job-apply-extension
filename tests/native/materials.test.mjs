@@ -20,7 +20,7 @@ test('materials validates an isolated request and rejects malformed, stale and c
   assert.deepEqual(validateMessage({ id: 'native-id', type: 'materials', request: r }).request, r);
   for (const bad of [
     { ...r, kind: 'draft' }, { ...r, expiresAt: 1 }, { ...r, sourceKey: 'not-a-digest' },
-    { ...r, brief: { ...r.brief, command: 'run a shell' } }, { ...r, brief: { ...r.brief, jobDescription: '', careerDirection: '' } },
+    { ...r, brief: { ...r.brief, command: 'run a shell' } }, { ...r, brief: { ...r.brief, role: '', jobDescription: '', careerDirection: '' } },
     { ...r, brief: { ...r.brief, tone: 'aggressive' } }, { ...r, brief: { ...r.brief, jobDescription: 'x'.repeat(20_001) } },
     { ...r, entries: [r.entries[0], r.entries[0]] }, { ...r, entries: [{ ...r.entries[0], section: 'employment' }] },
     { ...r, entries: [{ ...r.entries[0], lines: Array(41).fill('text') }] },
@@ -28,6 +28,13 @@ test('materials validates an isolated request and rejects malformed, stale and c
     { ...r, evidence: [r.evidence[0], r.evidence[0]] }, { ...r, evidence: [{ ...r.evidence[0], revision: 0 }] },
     { ...r, executable: '/bin/sh' },
   ]) assert.throws(() => validateMessage({ id: 'native-id', type: 'materials', request: bad }), /materials|facts|Expired/i);
+});
+
+test('general materials accept a target position without a posting or company', () => {
+  const r = request(); r.brief = { role: 'Data analyst', company: '', jobDescription: '', careerDirection: '', tone: 'natural' };
+  assert.equal(validateMessage({ id: 'general', type: 'materials', request: r }).request.brief.role, 'Data analyst');
+  r.brief.role = '';
+  assert.throws(() => validateMessage({ id: 'general', type: 'materials', request: r }), /context/);
 });
 
 test('materials schema fixes identity, entry IDs and exact source revisions without changing draft flags', () => {

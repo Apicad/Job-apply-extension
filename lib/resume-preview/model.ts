@@ -4,14 +4,14 @@ import type { Fact } from '../hackathon/contracts';
 import type { ResumeContact, ResumeDocument, ResumeEntry, ResumeFactSection, ResumeLayout, ResumeSectionKey } from './types';
 
 export const MAX_RESUME_SKILLS = 6000;
-const SECTION_KEYS: ResumeSectionKey[] = ['contact', 'location', 'links', 'experience', 'projects', 'education', 'skills'];
+const SECTION_KEYS: ResumeSectionKey[] = ['summary', 'contact', 'location', 'links', 'experience', 'projects', 'education', 'skills'];
 const own = (value: unknown, key: string): unknown => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   try { return Object.getOwnPropertyDescriptor(value, key)?.value; } catch { return undefined; }
 };
 
 export function defaultResumeLayout(): ResumeLayout {
-  return { sections: { contact: true, location: true, links: true, experience: true, projects: true, education: true, skills: true }, facts: {}, skills: '' };
+  return { sections: { summary: true, contact: true, location: true, links: true, experience: true, projects: true, education: true, skills: true }, facts: {}, skills: '', summary: '', pagePreference: 'one', template: 'professional' };
 }
 export function normalizeResumeLayout(input: unknown): ResumeLayout {
   const result = defaultResumeLayout();
@@ -30,6 +30,11 @@ export function normalizeResumeLayout(input: unknown): ResumeLayout {
   }
   const skills = own(input, 'skills');
   if (typeof skills === 'string' && skills.length <= MAX_RESUME_SKILLS) result.skills = skills.replace(/\r\n?/g, '\n');
+  const summary = own(input, 'summary');
+  if (typeof summary === 'string' && summary.length <= 3000) result.summary = summary.replace(/\r\n?/g, '\n');
+  if (own(input, 'pagePreference') === 'multiple') result.pagePreference = 'multiple';
+  // Preserve the compact appearance of existing saved layouts on upgrade.
+  if (own(input, 'template') === 'classic' || input && typeof input === 'object' && own(input, 'template') === undefined) result.template = 'classic';
   return result;
 }
 
@@ -122,7 +127,7 @@ function buildEntry(fact: Fact, section: ResumeFactSection): ResumeEntry {
 export function buildResumeDocument(profileInput: Profile, facts: readonly Fact[], layoutInput: ResumeLayout): ResumeDocument {
   const profile = normalizeProfile(profileInput);
   const layout = normalizeResumeLayout(layoutInput);
-  const document: ResumeDocument = { name: [profile.preferredFirstName.trim() || profile.firstName, profile.lastName].filter(Boolean).join(' '), contact: [], sections: [], warnings: [] };
+  const document: ResumeDocument = { template: layout.template, name: [profile.preferredFirstName.trim() || profile.firstName, profile.lastName].filter(Boolean).join(' '), contact: [], sections: [], warnings: [] };
   const contact = (text: string, link = false): void => {
     if (!text.trim()) return;
     const item: ResumeContact = { text };
@@ -132,6 +137,7 @@ export function buildResumeDocument(profileInput: Profile, facts: readonly Fact[
   if (layout.sections.contact) { contact(profile.email); contact(profile.phone); }
   if (layout.sections.location) contact([profile.city, profile.state, profile.country].filter(Boolean).join(', '));
   if (layout.sections.links) { contact(profile.linkedin, true); contact(profile.github, true); contact(profile.portfolio, true); }
+  if (layout.sections.summary && layout.summary.trim()) document.sections.push({ key: 'summary', title: 'Professional summary', entries: [{ id: 'summary', heading: '', lines: linesOf(layout.summary) }] });
   for (const section of ['experience', 'projects'] as const) {
     if (!layout.sections[section]) continue;
     const entries = facts.filter(fact => typeof fact.text === 'string' && fact.text.trim() && typeof fact.location === 'string' && layout.facts[fact.id]?.included !== false && (layout.facts[fact.id]?.section ?? inferFactSection(fact)) === section).map(fact => buildEntry(fact, section));

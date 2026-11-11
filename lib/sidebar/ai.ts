@@ -64,6 +64,7 @@ export async function draftMaterialsWithAI(request: MaterialsRequest, signal?: A
   const status = await nativeRequest('status', undefined, signal);
   if (!record(status) || status.connected !== true || !['Codex','Claude Code'].includes(String(status.provider))) throw Error('Connect your signed-in AI tool before generating materials.');
   if (!Array.isArray(status.capabilities) || !status.capabilities.includes('materials')) throw Error('Update the local AI helper to generate résumé and cover-letter drafts. Existing Autofill remains available.');
+  if (!snapshot.brief.jobDescription && !snapshot.brief.careerDirection && !status.capabilities.includes('general-materials')) throw Error('Update the local AI helper to create a general résumé from a target position alone.');
   const value = await nativeRequest('materials', snapshot, signal);
   if (!record(value) || typeof value.raw !== 'string' || value.raw.length > MAX_MATERIALS_REPLY) throw Error('The AI helper returned an invalid materials response.');
   let parsed: unknown;

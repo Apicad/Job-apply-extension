@@ -1,10 +1,10 @@
 # Install and try Job Apply Assistant
 
-Use desktop Google Chrome. Basic autofill, local résumé import, base preview and export do not need an AI account. AI-created résumés and cover letters require your own supported signed-in CLI and its available account allowance. No app credits or paid fallback are used.
+Use desktop Google Chrome. Basic autofill, local résumé import, general résumé preview and export do not need an AI account. AI-created résumés and cover letters require your own supported signed-in CLI and its available account allowance. No app credits or paid fallback are used.
 
 ## Install the prebuilt bundle
 
-1. Extract the complete `job-apply-assistant-0.5.2.zip` into a permanent folder. Keep it there while the extension is installed. Do not choose the ZIP itself.
+1. Extract the complete `job-apply-assistant-0.6.0.zip` into a permanent folder. Keep it there while the extension is installed. Do not choose the ZIP itself.
 2. Open `chrome://extensions` in Chrome. Turn on **Developer mode**, choose **Load unpacked**, and select the bundle's **extension** folder (the one containing `manifest.json`).
 3. Pin **Job Apply Assistant** from Chrome's puzzle-piece menu. Open its Details → Extension options to reach **Profile home**.
 4. Upload your résumé, review the extracted fields, add your experience/project notes, and **Save profile**. Nothing from the developer's account is bundled. Education and sensitive eligibility answers are optional; leave unknown answers blank.
@@ -26,7 +26,7 @@ No `npm install`, developer account, API key or repository checkout is needed fo
 
 ## Connect your own AI (macOS or Linux Google Chrome)
 
-The current native helper supports macOS/Linux. Windows users can use basic autofill and the base résumé preview/export, but **AI-generated documents are not supported on Windows in this release**. Windows execution has not been validated on a Windows device.
+The current native helper supports macOS/Linux. Windows users can use basic autofill and the general résumé preview/export, but **AI-generated documents are not supported on Windows in this release**. Windows execution has not been validated on a Windows device.
 
 1. Install and sign in to the Codex CLI using its official installation instructions. The Codex desktop app alone is not assumed to expose a usable CLI. Confirm `codex --version` and `codex login status` work in your terminal. Use a supported ChatGPT account; an API-key login is not the intended connection. Claude Code is an alternative only when Codex is absent; its organization may block inference.
 2. Copy the extension ID from `chrome://extensions` (32 letters). In the extracted bundle folder run:
@@ -36,8 +36,9 @@ node scripts/install-ai-host.mjs --extension-id YOUR_EXTENSION_ID
 ```
 
 3. Open the application sidebar → **AI connection** → **Check connection**. The installer pins one provider and only this extension ID. Re-run it after upgrading the helper or changing the extension folder/ID.
-4. In **Profile home**, provide a job posting and career direction. Select the saved facts to include. Click **Create résumé & cover letter**. Selected facts and target text go through your CLI to your AI account.
-5. Wait for a new result, then open **Tailored résumé** and **Cover letter**. Review/edit the text and source warnings. Check **I reviewed both documents and checked the claims** to enable Word export or Print / save PDF. Use US Letter, disable browser headers/footers, and check page count. Generated exports do not automatically replace the uploaded résumé.
+4. In **Profile home**, enter the position you want. Company, posting and career direction are optional for a general résumé. Add a posting later to tailor it. Select the saved facts to include. Click **Create résumé & cover letter**. Selected facts and target text go through your CLI to your AI account.
+5. In the General résumé preview, expand **Choose what to include** to edit a professional summary, select Professional or Classic style, choose a one-page or multi-page preference, and include/exclude sections and notes. Save profile before generating. Longer documents are never silently clipped.
+6. Wait for a new result, then open **Tailored résumé** and **Cover letter**. Review/edit the text and source warnings. Check **I reviewed both documents and checked the claims** to enable Word export or Print / save PDF. Use US Letter, disable browser headers/footers, and check page count. Generated exports do not automatically replace the uploaded résumé.
 
 A successful connection check proves CLI/account detection, not successful inference. The final acceptance check is a new generation that appears in both preview tabs. Keep any generation error visible; do not describe an old draft as a new result. Account limits still apply.
 

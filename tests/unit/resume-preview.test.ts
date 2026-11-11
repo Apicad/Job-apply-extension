@@ -118,6 +118,17 @@ describe('resume preview preserves saved claims', () => {
 });
 
 describe('resume layout boundaries', () => {
+  it('keeps an editable professional summary and multi-page preference without dropping long experience', () => {
+    const layout = normalizeResumeLayout({ summary: 'I build practical data tools.', pagePreference: 'multiple' });
+    expect(layout.pagePreference).toBe('multiple');
+    const facts = [note('long', 'Project: Data tools', 'Documented a data validation prototype.\n'.repeat(60))];
+    const doc = buildResumeDocument(profile(), facts, layout);
+    expect(doc.sections[0]).toMatchObject({ key: 'summary', title: 'Professional summary', entries: [{ lines: ['I build practical data tools.'] }] });
+    expect(doc.sections.find(section => section.key === 'projects')?.entries[0]?.lines.join('\n')).toContain('Documented a data validation prototype.');
+    layout.sections.summary = false;
+    expect(buildResumeDocument(profile(), facts, layout).sections.some(section => section.key === 'summary')).toBe(false);
+    expect(normalizeResumeLayout({ pagePreference: 'invalid', summary: 'x'.repeat(3001) })).toMatchObject({ pagePreference: 'one', summary: '' });
+  });
   it('normalizes invalid storage without invoking accessors or sharing defaults', () => {
     const getter = vi.fn(() => false);
     const sections = Object.create({ education: false });

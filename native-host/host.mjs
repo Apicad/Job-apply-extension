@@ -15,7 +15,7 @@ export async function serve({ input = process.stdin, output = process.stdout, or
     active = true;
     try {
       const options = { signal: controller.signal, provider: config.provider ?? 'claude' };
-      const data = message.type === 'status' ? { ...await account(config.executable, options), helperVersion: 2, capabilities: ['draft','materials'] } : { raw: await draft(config.executable, message.request, options) };
+      const data = message.type === 'status' ? { ...await account(config.executable, options), helperVersion: 3, capabilities: ['draft','materials','general-materials'] } : { raw: await draft(config.executable, message.request, options) };
       write({ id: message.id, ok: true, data }, message.type === 'materials' ? MAX_MATERIALS_REPLY_BYTES : undefined);
     } catch (error) { write({ id: message.id, ok: false, error: error instanceof Error ? error.message : 'AI request failed.' }); }
     finally { active = false; }

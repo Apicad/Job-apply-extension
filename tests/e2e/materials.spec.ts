@@ -14,8 +14,8 @@ async function seed(home: Page) {
   expect((await send(home, { type: 'sidebar-save-profile', profile, facts, expectedProfile: before.profile, expectedFacts: before.facts })).ok).toBe(true);
   expect((await send(home, { type: 'sidebar-save-resume', resume: { name: 'original.txt', type: 'text/plain', size: 3, dataUrl: 'data:text/plain;base64,QWRh', updatedAt: 1 } })).ok).toBe(true);
   await expect(home.getByLabel('First name', { exact: true })).toHaveValue('Ada');
-  await home.getByLabel('Target role', { exact: true }).fill('Implementation engineer');
-  await home.getByLabel('Target company', { exact: true }).fill('Fictional Tools');
+  await home.getByLabel('What position are you aiming for?', { exact: true }).fill('Implementation engineer');
+  await home.getByLabel('Target company (optional)', { exact: true }).fill('Fictional Tools');
   await home.getByLabel('My career direction', { exact: true }).fill('Build practical developer and implementation tools.');
   await home.locator('.materials-job > summary').click();
   await home.getByLabel('Job description', { exact: true }).fill('Help customers build Python validation tools and explain edge cases clearly.');
@@ -28,7 +28,7 @@ async function nativeStub(home: Page, hold = false, capable = true, reviewNotes 
     (globalThis as any).chrome.runtime.connectNative = () => {
       let messageListener: (m: any) => void = () => {};
       return { onMessage: { addListener: (cb: any) => { messageListener = cb; } }, onDisconnect: { addListener: () => {} }, disconnect: () => { (globalThis as any).__materialsDisconnects++; }, postMessage: (message: any) => {
-        if (message.type === 'status') { queueMicrotask(() => messageListener({ id: message.id, ok: true, data: { connected: true, provider: 'Codex', message: 'Synthetic test helper', capabilities: capable ? ['materials'] : [] } })); return; }
+        if (message.type === 'status') { queueMicrotask(() => messageListener({ id: message.id, ok: true, data: { connected: true, provider: 'Codex', message: 'Synthetic test helper', capabilities: capable ? ['materials', 'general-materials'] : [] } })); return; }
         const r = message.request; (globalThis as any).__materialsRequests.push(r);
         const ref = (id: string): { id: string; revision: number; statement?: number } => { const fact = r.evidence.find((f: any) => f.id === id); return { id, revision: fact.revision }; };
         const reply = { schema: 1, kind: 'materials', requestId: r.id, sourceKey: r.sourceKey, expiresAt: r.expiresAt,
@@ -147,9 +147,31 @@ test('generation save acknowledgement cannot be cancelled into an unlocked targe
   });
   await home.getByRole('button', { name: 'Create résumé & cover letter', exact: true }).click();
   await expect.poll(() => home.evaluate(() => (globalThis as any).__materialsSaveWaiting)).toBe(true);
-  await expect(home.getByLabel('Target role', { exact: true })).toBeDisabled();
+  await expect(home.getByLabel('What position are you aiming for?', { exact: true })).toBeDisabled();
   await expect(home.getByRole('button', { name: 'Stop generating', exact: true })).toHaveCount(0);
   await home.evaluate(() => (globalThis as any).__releaseMaterialsSave());
   await expect(home.locator('.materials-status')).toContainText('Your drafts are ready');
-  await expect(home.getByLabel('Target role', { exact: true })).toBeEnabled();
+  await expect(home.getByLabel('What position are you aiming for?', { exact: true })).toBeEnabled();
+});
+
+
+test('general résumé starts from a position alone and posting tailoring preserves the general profile', async ({ openExtensionPage }) => {
+  const home = await openExtensionPage('home.html'); await seed(home); await nativeStub(home);
+  await home.getByLabel('What position are you aiming for?', { exact: true }).fill('Data analyst');
+  await home.getByLabel('Target company (optional)', { exact: true }).fill('');
+  await home.getByLabel('My career direction', { exact: true }).fill('');
+  await home.getByLabel('Job description', { exact: true }).fill('');
+  await home.getByRole('button', { name: 'Create résumé & cover letter', exact: true }).click();
+  await expect(home.locator('.materials-status')).toContainText('Your drafts are ready');
+  const requests = await home.evaluate(() => (globalThis as any).__materialsRequests);
+  expect(requests[0].brief).toMatchObject({ role: 'Data analyst', company: '', jobDescription: '', careerDirection: '' });
+  await home.getByRole('button', { name: 'General résumé', exact: true }).click();
+  await expect(home.getByRole('article', { name: 'Résumé document' })).toContainText('Built a Python CSV validation prototype.');
+  await home.getByLabel('Target company (optional)', { exact: true }).fill('Example Data');
+  await home.getByLabel('Job description', { exact: true }).fill('Analyze CSV quality and document edge cases.');
+  await home.getByRole('button', { name: 'Create new drafts', exact: true }).click();
+  await expect(home.locator('.materials-status')).toContainText('Your drafts are ready');
+  const saved = (await send(home, { type: 'sidebar-state' })).data;
+  expect(saved.facts[0].text).toContain('Built a Python CSV validation prototype.');
+  expect(saved.materials.request.brief.company).toBe('Example Data');
 });
