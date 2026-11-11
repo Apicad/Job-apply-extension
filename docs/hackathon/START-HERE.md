@@ -69,4 +69,4 @@ To package from a Git checkout: commit the reviewed source, run the checks, then
 
 ## Five-minute demo
 
-Show the saved fictional profile → run Autofill on each practice format → demonstrate preserved edits and clearly flagged manual fields → create fresh AI résumé/cover-letter drafts → switch previews and review before export. Leave every application unsubmitted. When presenting, distinguish local format tests from live employer testing.
+Show the saved fictional profile → demonstrate a new AI answer on the linked generic practice page → run Autofill on each practice format → demonstrate preserved edits and clearly flagged manual fields → create fresh AI résumé/cover-letter drafts → switch previews and review before export. Leave every application unsubmitted. When presenting, distinguish local format tests from live employer testing.

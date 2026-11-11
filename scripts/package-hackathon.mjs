@@ -25,7 +25,7 @@ const included = [
   'scripts/install-ai-host.mjs', 'scripts/demo-server.mjs',
   'native-host/host.mjs', 'native-host/protocol.mjs', 'native-host/runner.mjs', 'native-host/README.md',
   'demo/index.html', 'demo/sample-resume.txt',
-  'tests/fixtures/greenhouse-live.html', 'tests/fixtures/lever.html', 'tests/fixtures/ashby.html',
+  'tests/fixtures/greenhouse-live.html', 'tests/fixtures/lever.html', 'tests/fixtures/ashby.html', 'tests/fixtures/hackathon.html',
   'docs/hackathon/START-HERE.md', 'docs/hackathon/COMPATIBILITY.md',
 ];
 for (const file of included) {

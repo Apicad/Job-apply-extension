@@ -7,7 +7,7 @@ test('portable demo serves three offline applications and rejects writes and pri
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
-    for (const route of ['/', '/greenhouse-live.html', '/lever.html', '/ashby.html', '/sample-resume.txt']) {
+    for (const route of ['/', '/greenhouse-live.html', '/lever.html', '/ashby.html', '/hackathon.html', '/sample-resume.txt']) {
       const response = await fetch(base + route);
       assert.equal(response.status, 200);
       assert.match(response.headers.get('content-security-policy'), /connect-src 'none'; form-action 'none'/);

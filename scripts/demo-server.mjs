@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const files = new Map([
   ['/', ['demo/index.html', 'text/html']],
   ['/sample-resume.txt', ['demo/sample-resume.txt', 'text/plain']],
-  ...['greenhouse-live', 'lever', 'ashby'].map(name => [`/${name}.html`, [`tests/fixtures/${name}.html`, 'text/html']]),
+  ...['greenhouse-live', 'lever', 'ashby', 'hackathon'].map(name => [`/${name}.html`, [`tests/fixtures/${name}.html`, 'text/html']]),
 ]);
 
 export function createDemoServer() {
