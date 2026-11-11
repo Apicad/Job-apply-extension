@@ -475,7 +475,7 @@ describe('classifyField: field names on text boxes', () => {
     ['Legal Name', 'fullName'],
     ['Legal Name (if different than above)', null],
     ['First Name', 'firstName'],
-    ['Preferred First Name', null], // 159 of 376 Greenhouse forms
+    ['Preferred First Name', 'preferredFirstName'], // Separate explicit saved answer; never the legal first name.
     ['Preferred Last Name', null],
     ['Preferred Name', null],
     ['Preferred First & Last Name', null], // Ashby's main name field at some employers

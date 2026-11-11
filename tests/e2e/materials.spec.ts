@@ -6,7 +6,7 @@ import { unzipSync, strFromU8 } from 'fflate';
 async function send(page: Page, value: Record<string, unknown>) { return page.evaluate(async message => (globalThis as any).chrome.runtime.sendMessage(message), value); }
 async function seed(home: Page) {
   const before = (await send(home, { type: 'sidebar-state' })).data;
-  const profile = { ...before.profile, firstName: 'Ada', lastName: 'Lovelace', email: 'private@example.com', phone: '(415) 555-0199', country: 'United States', citizenshipCountry: 'Canada', usCitizenship: 'no', school: 'Example College', major: 'Computer Science coursework' };
+  const profile = { ...before.profile, firstName: 'Ada', preferredFirstName: 'Addie', lastName: 'Lovelace', email: 'private@example.com', phone: '(415) 555-0199', country: 'United States', citizenshipCountry: 'Canada', usCitizenship: 'no', school: 'Example College', major: 'Computer Science coursework' };
   const facts = [
     { id: 'role', revision: 1, location: 'Example Labs internship', text: 'Example Labs | Intern | Remote | May 2025–August 2025\nBuilt a Python CSV validation prototype.\nDocumented edge cases for the team.' },
     { id: 'project', revision: 1, location: 'Project: Trace viewer', text: 'Built a React trace viewer prototype for a personal project.' },
@@ -50,11 +50,13 @@ test('one generation uses saved evidence, previews both documents, preserves ori
   await expect(home.locator('.materials-status')).toContainText('Your drafts are ready');
   await expect(home.getByRole('button', { name: 'Tailored résumé', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const paper = home.getByRole('article', { name: 'Résumé document' });
+  await expect(home.getByLabel('Preferred first name', { exact: true })).toHaveValue('Addie');
+  await expect(paper.locator('.resume-document-header')).toContainText('Addie Lovelace');
   await expect(paper).toContainText('Built a Python CSV validation prototype and documented edge cases.');
   await expect(paper).toContainText('Example Labs'); await expect(paper).toContainText('May 2025–August 2025');
   await expect(home.getByRole('button', { name: 'Download Word', exact: true })).toBeDisabled();
   const requests = await home.evaluate(() => (globalThis as any).__materialsRequests);
-  expect(requests).toHaveLength(1); expect(JSON.stringify(requests)).not.toContain('private@example.com'); expect(JSON.stringify(requests)).not.toContain('Canada'); expect(JSON.stringify(requests)).not.toContain('data:text');
+  expect(requests).toHaveLength(1); expect(JSON.stringify(requests)).not.toContain('private@example.com'); expect(JSON.stringify(requests)).not.toContain('Canada'); expect(JSON.stringify(requests)).not.toContain('Addie'); expect(JSON.stringify(requests)).not.toContain('data:text');
   const saved = (await send(home, { type: 'sidebar-state' })).data;
   expect(saved.profile).toEqual(original.profile); expect(saved.facts).toEqual(original.facts); expect(saved.resume).toEqual(original.resume);
   await home.getByRole('button', { name: 'Cover letter', exact: true }).click(); await expect(paper).toContainText('Dear hiring team,');
@@ -69,6 +71,7 @@ test('one generation uses saved evidence, previews both documents, preserves ori
   const download = await pending; await download.saveAs(testInfo.outputPath('cover-letter.docx'));
   const xml = strFromU8(unzipSync(await readFile(testInfo.outputPath('cover-letter.docx')))['word/document.xml']!);
   expect(xml).toContain('Dear hiring team,'); expect(xml).toContain('Sincerely,'); expect(xml).not.toContain('•'); expect(xml).toContain('Fictional Tools');
+  expect(xml).toContain('Addie Lovelace');
   await home.evaluate(() => window.scrollTo(0, 0)); await home.screenshot({ path: testInfo.outputPath('materials-cover-preview.png') });
   await home.emulateMedia({ media: 'print' }); await home.pdf({ path: testInfo.outputPath('cover-letter.pdf'), preferCSSPageSize: true }); await home.emulateMedia({ media: 'screen' });
   await home.getByRole('button', { name: 'Tailored résumé', exact: true }).click();

@@ -196,7 +196,7 @@ function App() {
         {loaded && <MaterialsPanel model={materials} profileDirty={dirty} disabled={busy} />}
         {!loaded ? <div className="loading" role="status">{loading ? 'Loading your saved profile…' : 'Your saved profile could not be loaded. Use “Reload saved profile” to try again.'}</div> : <fieldset className="profile-fields" disabled={busy}>
           <Section id="contact" number="01" title="Contact & links" description="The details you shouldn’t have to type again.">
-            <div className="field-grid">{contact.map(field)}</div><div className="subheading">FIND YOUR WORK</div><div className="field-grid links-grid">{links.map(field)}</div>
+            <div className="field-grid">{contact.map(field)}</div><div className="preferred-name">{field(['preferredFirstName', 'Preferred first name'])}<p className="helper">Optional. Used on your résumé, cover letter and fields explicitly asking for a preferred first name. Your regular first-name answer stays unchanged.</p></div><div className="subheading">FIND YOUR WORK</div><div className="field-grid links-grid">{links.map(field)}</div>
           </Section>
           <Section id="location" number="02" title="Location" description="Your current location, for matching application fields.">
             {toggle('fillLocation', 'Autofill my location')}

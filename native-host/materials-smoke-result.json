@@ -1,18 +1,20 @@
 {
-  "date": "2026-11-11T20:51:12.902Z",
+  "date": "2026-11-11T21:02:33.037Z",
   "provider": "Codex",
   "model": "CLI default; no model override",
   "syntheticOnly": true,
   "success": true,
-  "elapsedMs": 10065,
+  "elapsedMs": 14147,
   "noToolEvents": true,
   "existingSignedInAccount": true,
   "installedHelperChanged": false,
+  "contractValidated": true,
+  "promptClarifiesLocalHeaders": true,
   "request": {
     "schema": 1,
     "kind": "materials",
     "id": "synthetic-materials-live-smoke",
-    "expiresAt": 1794432062840,
+    "expiresAt": 1794432738698,
     "sourceKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "brief": {
       "role": "Junior implementation developer",
@@ -53,10 +55,10 @@
     "kind": "materials",
     "requestId": "synthetic-materials-live-smoke",
     "sourceKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    "expiresAt": 1794432062840,
+    "expiresAt": 1794432738698,
     "summary": [
       {
-        "text": "Contributed to a Python CSV validation prototype in a personal learning project and documented two manual checks.",
+        "text": "Contributor to a personal Python CSV validation prototype, with experience documenting manual checks.",
         "sources": [
           {
             "id": "prototype",
@@ -79,7 +81,7 @@
         "entryId": "prototype",
         "bullets": [
           {
-            "text": "Contributed to a Python CSV validation prototype that flags missing fields in a personal learning project; the prototype has not been deployed to production.",
+            "text": "Contributed to a Python CSV validation prototype that flags missing fields in a personal learning project.",
             "sources": [
               {
                 "id": "prototype",
@@ -88,7 +90,7 @@
             ]
           },
           {
-            "text": "Documented two manual checks for the prototype.",
+            "text": "Documented two manual checks for the prototype, which has not been deployed to production.",
             "sources": [
               {
                 "id": "prototype",
@@ -101,17 +103,12 @@
     ],
     "coverLetter": [
       {
-        "text": "In a personal learning project, I contributed to a Python CSV validation prototype that flags missing fields and documented two manual checks. The prototype has not been deployed to production.",
+        "text": "In a personal learning project, I contributed to a Python CSV validation prototype that flags missing fields and documented two manual checks. The prototype has not been deployed to production. I am also currently taking introductory computer science coursework at Example Community College; no degree has been awarded.",
         "sources": [
           {
             "id": "prototype",
             "revision": 1
-          }
-        ]
-      },
-      {
-        "text": "I am currently taking introductory computer science coursework at Example Community College; no degree has been awarded.",
-        "sources": [
+          },
           {
             "id": "profile:education",
             "revision": 1
@@ -120,11 +117,12 @@
       }
     ],
     "missing": [
-      "Draft requires applicant review before export or use.",
-      "No evidence of production Kubernetes experience was supplied.",
-      "No employment history, completed degree, contact details or links were supplied."
+      "Production Kubernetes experience is preferred by the posting but is not established by the supplied applicant evidence."
     ]
   },
+  "reviewWarnings": [
+    "Production Kubernetes experience is preferred by the posting but is not established by the supplied applicant evidence."
+  ],
   "eventTypes": [
     "thread.started",
     "item.completed",

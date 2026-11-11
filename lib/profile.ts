@@ -9,6 +9,7 @@ import type { AutofillPreference, Disability, FieldDescriptor, FieldKind, Gender
 export function emptyProfile(): Profile {
   return {
     firstName: '',
+    preferredFirstName: '',
     lastName: '',
     email: '',
     phone: '',
@@ -203,6 +204,7 @@ export const normalizeProfile: NormalizeProfile = (input) => {
 
   return {
     firstName: text(read('firstName')),
+    preferredFirstName: text(read('preferredFirstName')),
     lastName: text(read('lastName')),
     email: text(read('email')),
     phone: text(read('phone')),
@@ -266,6 +268,7 @@ function graduationDate(stored: string, inputType: string): string {
 function answer(kind: FieldKind, profile: Profile, inputType: string): string {
   switch (kind) {
     case 'firstName':
+    case 'preferredFirstName':
     case 'lastName':
     case 'email':
     case 'phone':

@@ -122,7 +122,7 @@ function buildEntry(fact: Fact, section: ResumeFactSection): ResumeEntry {
 export function buildResumeDocument(profileInput: Profile, facts: readonly Fact[], layoutInput: ResumeLayout): ResumeDocument {
   const profile = normalizeProfile(profileInput);
   const layout = normalizeResumeLayout(layoutInput);
-  const document: ResumeDocument = { name: [profile.firstName, profile.lastName].filter(Boolean).join(' '), contact: [], sections: [], warnings: [] };
+  const document: ResumeDocument = { name: [profile.preferredFirstName.trim() || profile.firstName, profile.lastName].filter(Boolean).join(' '), contact: [], sections: [], warnings: [] };
   const contact = (text: string, link = false): void => {
     if (!text.trim()) return;
     const item: ResumeContact = { text };

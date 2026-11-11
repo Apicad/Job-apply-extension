@@ -43,6 +43,7 @@ const CHOSEN: readonly ControlType[] = ['select', 'radio', 'combobox'];
  */
 export const KIND_CONTROLS: Readonly<Record<FieldKind, readonly ControlType[]>> = {
   firstName: TYPED,
+  preferredFirstName: TYPED,
   lastName: TYPED,
   fullName: TYPED,
   email: TYPED,
@@ -121,6 +122,7 @@ function kindAskedFor(field: FieldDescriptor): FieldKind | null {
  * no entry: no attribute ever names them, see IDENTIFIERS.)
  */
 const NEEDS_ITS_OWN_LABEL: ReadonlySet<FieldKind> = new Set<FieldKind>([
+  'preferredFirstName',
   'location',
   'country',
   'state',
@@ -256,7 +258,7 @@ const SOMEONE_ELSE =
   /\b(their|referr\w*|references?|referees?|recruiter|manager|supervisor|emergency|relatives?|spouse|parents?|guardians?|next of kin)\b|\bfamily\b(?! name)|employee's/;
 
 // Another subject that shares words with ours: "Portfolio password", "Passport Country",
-// "Preferred First Name", "What are your pronouns?", "What is the country of your birth?".
+// "Preferred Full Name", "What are your pronouns?", "What is the country of your birth?".
 // The last three alternatives are the wording of honeypots ("This input is for robots only").
 const OTHER_SUBJECT =
   /password|pronoun|prefer|passport|citizen|birth|nationality|consent|\bagree|employee id|\brobots?\b|\bhuman\b|\bleave\b.*\b(blank|empty)\b/;
@@ -292,7 +294,7 @@ function readLabel(label: string): LabelReading {
   const named: FieldKind[] = [];
   // The eligibility classifier judges the whole question, notes in brackets included, so
   // "(e.g. you are a citizen, you have a visa)" does not rule the label out as it would below.
-  const eligibility = classifyWorkEligibility(label) ?? classifyCitizenship(label);
+  const eligibility = classifyWorkEligibility(label) ?? classifyCitizenship(label) ?? classifyPreferredFirstName(label);
   if (eligibility) named.push(eligibility);
   else if (OTHER_SUBJECT.test(text) || QUALIFIED.test(text)) return 'blocked';
 
@@ -302,6 +304,11 @@ function readLabel(label: string): LabelReading {
   // A label that names two things asks for neither.
   if (named.length > 1) return 'blocked';
   return named[0] ?? 'nothing';
+}
+
+/** A preferred given name is separate from both ordinary/legal and full names. */
+function classifyPreferredFirstName(label: string): 'preferredFirstName' | null {
+  return /^(preferred (first|given) name|what is your preferred (first|given) name\?)$/.test(plain(label)) ? 'preferredFirstName' : null;
 }
 
 /** Only complete, plain questions. Residence, ethnicity and work permission say nothing about citizenship. */
@@ -462,6 +469,7 @@ function kindFromAutocomplete(autocomplete: string): FieldKind | null {
  */
 const IDENTIFIERS: readonly (readonly [FieldKind, readonly string[]])[] = [
   ['firstName', ['firstname', 'fname', 'givenname']],
+  ['preferredFirstName', ['preferredfirstname', 'preferredgivenname']],
   ['lastName', ['lastname', 'lname', 'familyname', 'surname']],
   // "name" and "name-input" are Lever's, "_systemfield_name" is Ashby's.
   ['fullName', ['name', 'fullname', 'nameinput', 'systemfieldname']],
@@ -552,7 +560,7 @@ const PARTS_OF_AN_ADDRESS: readonly FieldKind[] = ['addressLine1', 'city', 'stat
  * "Location". A group named after any other field holds that field only.
  */
 const PIECES_OF: Partial<Record<FieldKind, readonly FieldKind[]>> = {
-  fullName: ['firstName', 'lastName'],
+  fullName: ['firstName', 'preferredFirstName', 'lastName'],
   addressLine1: PARTS_OF_AN_ADDRESS,
   location: PARTS_OF_AN_ADDRESS,
 };
@@ -567,6 +575,7 @@ function groupRulesOut(field: FieldDescriptor, kind: FieldKind): boolean {
   const group = plain(field.groupLabel);
   // The legend of a radio group is usually its question, and that has been judged as the label.
   if (group === plain(field.label)) return false;
+  if (kind === 'preferredFirstName' && /\blegal\b/.test(group)) return true;
   if (['citizenshipCountry', 'nationality', 'usCitizenship'].includes(kind) && /^(citizenship|nationality|citizenship and nationality)$/.test(group)) return false;
   if (FOLLOW_UP.test(group) || SOMEONE_ELSE.test(group) || OTHER_SUBJECT.test(group)) return true;
 

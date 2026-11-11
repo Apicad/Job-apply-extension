@@ -40,6 +40,8 @@ export type Disability = '' | 'yes' | 'no' | 'decline';
  */
 export interface Profile {
   firstName: string;
+  /** Optional preferred given name; never substitutes for legal application identity fields. */
+  preferredFirstName: string;
   lastName: string;
   email: string;
   phone: string;
@@ -117,6 +119,7 @@ export type ResumeMeta = Pick<StoredResume, 'name' | 'type' | 'size'>;
 /** What a form field is asking for. "No kind" (null) means: leave it alone. */
 export type FieldKind =
   | 'firstName'
+  | 'preferredFirstName'
   | 'lastName'
   | 'fullName'
   | 'email'

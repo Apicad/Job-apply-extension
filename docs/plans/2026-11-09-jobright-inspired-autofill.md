@@ -377,3 +377,8 @@ Use the existing signed-in Codex/Claude helper with no app credits or paid fallb
 Store generated drafts separately with source/target hashes, exact-content review fingerprints and optimistic revisions. Edits invalidate review. Source or target changes require regeneration before download. Expired inference requests must not erase saved documents. Cancellation discards late replies; storage acknowledgement briefly locks the editor so it cannot overwrite newer text. Keep profile import and basic Autofill usable when the helper is unavailable or older.
 
 Verification includes strict response/citation handling, preserved headers and attachments, stale edits, helper capability negotiation, cancellation, print/Word layout and an actual synthetic Codex request with no tools. Recorded response replay in browser tests is explicitly separate from the real native smoke. Do not send personal data for development smoke tests, install/upgrade the live helper, submit applications, or publish this candidate as part of this implementation step.
+
+
+### Preferred first name
+
+Profile home also stores an optional preferred first name, blank by default. Résumé and cover-letter names/signatures use it when supplied and otherwise use the regular first name. Autofill uses it only for explicit preferred first/given-name text questions; ordinary and legal first/full names keep the original identity. Ambiguous preferred-name questions remain manual. This value stays local during document generation, and changing it makes existing tailored documents stale until regenerated.

@@ -20,6 +20,7 @@ import type { FieldDescriptor, FieldKind, Profile } from '../../lib/types';
 /** Every field of a profile, each with a value no other field has. Nobody real. */
 const ADA: Profile = {
   firstName: 'Ada',
+  preferredFirstName: 'Addie',
   lastName: 'Lovelace',
   email: 'ada@example.com',
   phone: '555-0100',
@@ -55,6 +56,7 @@ const ADA: Profile = {
 
 const EMPTY: Profile = {
   firstName: '',
+  preferredFirstName: '',
   lastName: '',
   email: '',
   phone: '',

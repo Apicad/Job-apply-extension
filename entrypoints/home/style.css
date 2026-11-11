@@ -41,3 +41,4 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }.profile-section { b
 @media (max-width: 760px) { .import-details dl > div { grid-template-columns: 1fr; gap: 5px; }.import-review { padding: 15px; }.import-details summary > span { display: block; margin: 4px 0 0 13px; } }
 .import-details summary { font-size: 11px; color: #597748; font-weight: 550; cursor: pointer; }
 .resume-start { display: inline-flex; gap: 12px; align-items: center; color: #477548; margin-top: 17px; font-size: 11px; font-weight: 600; text-decoration: none; border-bottom: 1px solid #bbcfb0; padding-bottom: 3px; }.resume-start:hover { color: #285a38; border-color: #658e55; }.resume-start > span { font-size: 15px; }
+.preferred-name { margin-top: 20px; }.preferred-name .helper { margin-top: 9px; }

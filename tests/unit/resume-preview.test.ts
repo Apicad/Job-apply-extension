@@ -19,6 +19,19 @@ const profile = () => normalizeProfile({
 });
 
 describe('resume preview preserves saved claims', () => {
+  it('uses the optional preferred first name in documents without changing legal identity', () => {
+    const saved = { ...profile(), preferredFirstName: '  Addie  ' };
+    const before = structuredClone(saved);
+    const document = buildResumeDocument(saved, [], defaultResumeLayout());
+    expect(document.name).toBe('Addie Lovelace');
+    expect(saved).toEqual(before);
+    expect(saved.firstName).toBe('Ada');
+    expect(buildResumeDocument({ ...saved, preferredFirstName: '   ' }, [], defaultResumeLayout()).name).toBe('Ada Lovelace');
+    const xml = strFromU8(unzipSync(createResumeDocx(document))['word/document.xml']!);
+    expect(xml).toContain('Addie Lovelace');
+    expect(xml).not.toContain('Ada Lovelace');
+  });
+
   it('includes all notes by default, separates explicit employment and project headers, and keeps prototype qualifications', () => {
     const facts = [
       note('role', 'Ada.pdf — Example Studio', 'Example Studio | Engineering intern | Remote | Jun 2025 – Aug 2025\nBuilt a prototype; not deployed in production.\n• Investigated reported defects.'),

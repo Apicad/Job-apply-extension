@@ -59,6 +59,8 @@ test('materials prompt treats career direction and the posting as intent, retain
   for (const term of ['untrusted','not applicant','prototype','contributor','education','tools','entry']) assert.ok(prompt.toLowerCase().includes(term), term);
   assert.ok(prompt.includes('Fictional Tools'));
   assert.ok(prompt.includes('synthetic-materials'));
+  assert.ok(prompt.includes('Names, contact details, document headers and links are assembled locally by the app.'));
+  assert.ok(prompt.includes('Do not report their absence or routine review instructions as missing qualifications'));
 });
 
 test('new materials reply envelope is bounded independently of unchanged draft limits', () => {

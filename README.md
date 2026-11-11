@@ -95,3 +95,8 @@ Edited wording is not verified against sentence-level sources. Original warnings
 ## Audit cycle 4
 
 [Cycle 4 disposition](docs/hackathon/AUDIT-CYCLE-4.md) covers one bounded persisted-state consistency repair. Preview and execution rederive the approved application/question identity from the current plan and target row. A privileged session edit cannot redirect an otherwise valid saved approval to a different target merely by changing row/plan references. No page or normal UI reachability was demonstrated. Legitimate explicit reuse, review, approval and save remain supported; this does not claim protection from arbitrary modification of all trusted extension state.
+
+
+### Preferred first name
+
+Profile home also stores an optional preferred first name, blank by default. Résumé and cover-letter names/signatures use it when supplied and otherwise use the regular first name. Autofill uses it only for explicit preferred first/given-name text questions; ordinary and legal first/full names keep the original identity. Ambiguous preferred-name questions remain manual. This value stays local during document generation, and changing it makes existing tailored documents stale until regenerated.

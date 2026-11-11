@@ -211,3 +211,8 @@ Needs Node 22.12 or newer (`.nvmrc` pins 24).
 - Everything a page returns is untrusted: validate shape, cap lengths, render
   as plain text. Never use `innerHTML`.
 - Do not commit unless asked.
+
+
+### Preferred first name
+
+Profile home also stores an optional preferred first name, blank by default. Résumé and cover-letter names/signatures use it when supplied and otherwise use the regular first name. Autofill uses it only for explicit preferred first/given-name text questions; ordinary and legal first/full names keep the original identity. Ambiguous preferred-name questions remain manual. This value stays local during document generation, and changing it makes existing tailored documents stale until regenerated.

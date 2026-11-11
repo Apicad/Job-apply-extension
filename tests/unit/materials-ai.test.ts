@@ -69,9 +69,10 @@ test('recorded live synthetic Codex materials pass the evidence contract without
   expect(evidence).toMatchObject({ provider: 'Codex', syntheticOnly: true, noToolEvents: true, installedHelperChanged: false });
   expect(reply.entries[0]?.entryId).toBe('prototype');
   expect(reply.entries[0]?.bullets[0]?.text).toContain('prototype');
-  expect(reply.entries[0]?.bullets[0]?.text).toContain('not been deployed to production');
+  expect(reply.entries[0]?.bullets.some(segment => segment.text.includes('not been deployed to production'))).toBe(true);
   expect(reply.summary.some(segment => segment.text.includes('no degree has been awarded'))).toBe(true);
   const wording = [...reply.summary,...reply.coverLetter,...reply.entries.flatMap(entry => entry.bullets)].map(segment => segment.text).join(' ');
   expect(wording).not.toContain('Kubernetes');
   expect(reply.missing.some(item => item.includes('Kubernetes'))).toBe(true);
+  expect(reply.missing.some(item => /contact|review|header|links/i.test(item))).toBe(false);
 });
