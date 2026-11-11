@@ -163,7 +163,7 @@ test('newly revealed required fields appear for review without another write or 
   const state = await settled(ui, tabId);
   expect(state.run.phase).toBe('review');
   expect(state.run.fields.filter((field: any) => field.status === 'filled').map((field: any) => field.label)).toEqual(['First name', 'Email', 'Phone', 'Country']);
-  expect(state.run.fields.find((field: any) => field.label === 'State')).toMatchObject({ status: 'review', detail: 'Complete this field on the application.' });
+  expect(state.run.fields.find((field: any) => field.label === 'State')).toMatchObject({ status: 'review', detail: 'Check this saved detail in Profile home. If it is already saved, choose the matching option on the application; this control may need a manual selection.' });
   expect(new Set(state.run.fields.map((field: any) => field.id)).size).toBe(state.run.fields.length);
   await expect(page.locator('#state')).toBeVisible(); await expect(page.locator('#state')).toHaveValue('');
   await expect(ui.getByText('State', { exact: true })).toBeVisible();
@@ -192,4 +192,16 @@ test('ARIA-only controls are reported once for manual review without events or s
   expect(await page.locator('[aria-checked]').evaluateAll(elements => elements.map(el => el.getAttribute('aria-checked')))).toEqual(['true', 'false', 'true']);
   expect(await page.evaluate(() => (window as any).events.filter((event: any) => ['department', 'custom-consent', 'custom-schedule', 'morning', 'evening'].includes(event.id)))).toEqual([]);
   await expect(page.locator('#submitted')).toHaveText('Not submitted');
+});
+
+test('review submission reveals the employer control without activating it', async ({ context, openExtensionPage }) => {
+ const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ await page.locator('button[type=submit]').evaluate(el => { el.textContent = 'Submit application'; el.addEventListener('click', () => { el.setAttribute('data-clicked', 'yes'); }); });
+ const ui = await openExtensionPage('sidepanel.html'); const tabId = await tabFor(ui, page);
+ await send(ui, { type: 'demo' }); await ui.goto(`${ui.url()}?tabId=${tabId}`);
+ await ui.getByRole('button', { name: 'Autofill', exact: true }).click(); await settled(ui, tabId);
+ await ui.getByRole('button', { name: 'Review & submit', exact: true }).click();
+ await expect(page.locator('#submitted')).toHaveText('Not submitted');
+ await expect(page.locator('button[type=submit]')).not.toHaveAttribute('data-clicked', 'yes');
+ await expect(page.locator('button[type=submit]')).toBeInViewport();
 });

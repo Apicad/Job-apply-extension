@@ -67,7 +67,7 @@ it('reports a newly revealed required native field without filling it or losing 
   const run = (await sidebarState(tabId)).run!;
   expect(run.phase).toBe('review');
   expect(run.fields.filter(field => field.status === 'filled').map(field => field.label)).toEqual(['First name', 'Email', 'Phone', 'Country']);
-  expect(run.fields.find(field => field.label === 'State')).toMatchObject({ status: 'review', detail: 'Complete this field on the application.' });
+  expect(run.fields.find(field => field.label === 'State')).toMatchObject({ status: 'review', detail: 'Check this saved detail in Profile home. If it is already saved, choose the matching option on the application; this control may need a manual selection.' });
   expect((document.querySelector('#state') as HTMLSelectElement).value).toBe('');
   expect(stateEvents).not.toHaveBeenCalled();
 });

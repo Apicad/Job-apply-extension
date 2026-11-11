@@ -217,6 +217,10 @@ function App() {
       {run.drafts.map(draft => <DraftCard key={draft.id} draft={draft} busy={busy || active} onUse={async (current, text) => { setBusy(true); try { await send('sidebar-approve', { tabId: run.tabId, runId: run.id, draftId: current.id, revision: current.revision, text }); await refresh(); } finally { setBusy(false); } }} />)}
       {attentionFields.length > 0 && <details className="attention" open><summary>Needs your attention <span className="count">{attentionFields.length}</span></summary><ul>{attentionFields.map(f => <li key={f.id}><span className="attention-dot" aria-hidden="true" /><div><strong>{f.label || 'Unlabelled field'}</strong><p>{f.detail || 'Complete this field on the application.'}</p></div></li>)}</ul></details>}
       {(filled.length > 0 || kept.length > 0) && <details className="completed-fields"><summary>Completed details <span className="count">{filled.length + kept.length}</span></summary><ul>{[...filled, ...kept].map(f => <li key={f.id}><span aria-hidden="true">✓</span><span>{f.label || 'Field'}<small>{f.status === 'kept' ? 'Your existing answer was kept' : f.detail || 'Filled and checked'}</small></span></li>)}</ul></details>}
+      {['review', 'finished'].includes(run.phase) && run.fields.length > 0 && <div className="submission-review">
+        <button className="secondary full" disabled={busy || active} onClick={() => void perform('sidebar-review-submission', { runId: run.id })}>Review &amp; submit</button>
+        <p className="helper">Shows the employer’s Submit button. Check every answer and remaining item, then submit on the application yourself.</p>
+      </div>}
     </section>}
 
     <div className="setup">

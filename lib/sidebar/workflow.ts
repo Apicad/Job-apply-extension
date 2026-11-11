@@ -1,3 +1,5 @@
+import { classifyField } from '../classify';
+import { missingFieldDetail } from './question-analysis';
 import { browser } from 'wxt/browser';
 import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, saveProfile, saveResume } from '../storage';
 import { normalizeProfile } from '../profile';
@@ -13,6 +15,7 @@ import { eligibleApplicationRows } from '../hackathon/engine';
 import { checkboxGroupViews } from '../hackathon/checkbox-groups';
 import { manualControlViews } from '../hackathon/manual-controls';
 import { checkAI, draftWithAI } from './ai';
+import { revealSubmission } from './submission-review';
 import type { SidebarRun, SidebarState, SidebarField, SidebarDraft } from './ui-types';
 
 interface StoredRun extends SidebarRun {
@@ -47,7 +50,7 @@ function fieldViews(plan: NativePlan): SidebarField[] {
     const outcome = plan.outcomes?.find(o => o.ref === row.field.ref && o.documentId === row.documentId);
     return { id: rowKey(row), label: row.field.descriptor.label || row.field.descriptor.name || 'Unlabelled field',
       status: !row.field.empty ? 'kept' : outcome?.ok ? 'filled' : row.action && plan.state === 'finished' ? 'failed' : 'review',
-      detail: !row.field.empty ? 'Your existing answer was kept.' : outcome?.ok ? 'Filled and checked on the page.' : row.action ? plan.state === 'finished' ? 'Could not verify this field. Check it on the page.' : 'Waiting to fill…' : row.status === 'Section autofill disabled' ? 'Autofill is off for this section. Complete this field on the application.' : supportedQuestion(row) ? 'Answer needs review.' : 'Complete this field on the application.' };
+      detail: !row.field.empty ? 'Your existing answer was kept.' : outcome?.ok ? 'Filled and checked on the page.' : row.action ? plan.state === 'finished' ? 'Could not verify this field. Check it on the page.' : 'Waiting to fill…' : row.status === 'Section autofill disabled' ? 'Autofill is off for this section. Complete this field on the application.' : supportedQuestion(row) ? 'AI can draft this from saved experience. Connect AI and add any missing facts in Profile home, then review the draft here.' : missingFieldDetail(classifyField(row.field.descriptor), row.field.descriptor.label) };
   }), ...checkboxGroupViews(plan.checkboxGroups ?? []), ...manualControlViews(plan.manualControls ?? [])];
 }
 
@@ -238,6 +241,15 @@ export async function handleSidebar(message: Record<string, unknown>): Promise<u
   }
   if (message.type === 'sidebar-save-resume') { await cancelAll(); await saveResume(message.resume); return { saved: true }; }
   if (tabId === undefined) throw Error('Open an application tab first.');
+  if (message.type === 'sidebar-review-submission') {
+    const run = await readHackathon<StoredRun>(runKey(tabId), true);
+    if (!run || run.id !== message.runId || active.has(tabId) || !['review', 'finished'].includes(run.phase) || !run.fields.length) throw Error('Run Autofill on this application before reviewing submission.');
+    const tab = await browser.tabs.get(tabId);
+    if (tab.url !== run.url) throw Error('The application changed. Run Autofill on the current page.');
+    const results = await browser.scripting.executeScript({ target: { tabId }, func: revealSubmission, args: [run.url] });
+    if (!results.some(result => result.frameId === 0 && result.result?.found === true)) throw Error('Could not identify one Submit application button. Review the page and use the employer’s button yourself.');
+    return { revealed: true };
+  }
   if (message.type === 'sidebar-cancel') { await cancel(tabId, String(message.runId)); return { cancelled: true }; }
   if (message.type === 'sidebar-approve') return { run: await useAnswer(message, tabId) };
   if (message.type === 'sidebar-autofill') {
