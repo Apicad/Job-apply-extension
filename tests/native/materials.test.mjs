@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 import { EventEmitter } from 'node:events';
 import { readFile } from 'node:fs/promises';
-import { decoder, encodeMessage, validateMessage, materialsPrompt, materialsResponseSchema, MAX_MATERIALS_REPLY_BYTES } from '../../native-host/protocol.mjs';
+import { decoder, encodeMessage, validateMessage, materialsPrompt, materialsResponseSchema, MAX_MATERIALS_REPLY_BYTES, RESPONSE_SCHEMA } from '../../native-host/protocol.mjs';
 import { generate, draftArguments, codexAnswer } from '../../native-host/runner.mjs';
 import { serve } from '../../native-host/host.mjs';
 
@@ -61,6 +61,25 @@ test('materials prompt treats career direction and the posting as intent, retain
   assert.ok(prompt.includes('synthetic-materials'));
   assert.ok(prompt.includes('Names, contact details, document headers and links are assembled locally by the app.'));
   assert.ok(prompt.includes('Do not report their absence or routine review instructions as missing qualifications'));
+  assert.ok(prompt.includes('zero-based statement indexes'));
+  assert.ok(prompt.includes('"statement":0'));
+});
+
+test('materials citations bind statement indexes to their own saved fact without broadening answer schemas', () => {
+  const r = request();
+  r.evidence[0].text = 'Project heading\nBuilt a Python prototype.\n\nDocumented edge cases.';
+  r.evidence.push({ id: 'other-employer', revision: 9, location: 'Other employer', text: 'Built a production dashboard.' });
+  const schema = materialsResponseSchema(r);
+  const entrySources = schema.properties.entries.items.anyOf[0].properties.bullets.items.properties.sources;
+  assert.equal(entrySources.items.anyOf.length, 1);
+  const source = entrySources.items.anyOf[0];
+  assert.equal(source.properties.id.const, 'project');
+  assert.deepEqual(source.properties.statement.enum, [0, 1, 3]);
+  assert.deepEqual(source.required, ['id', 'revision', 'statement']);
+  assert.equal(source.additionalProperties, false);
+  assert.equal(schema.properties.summary.items.properties.sources.items.anyOf.length, 2);
+  assert.ok(materialsPrompt(r).includes('"statement":3,"text":"Documented edge cases."'));
+  assert.deepEqual(Object.keys(RESPONSE_SCHEMA.properties.segments.items.properties.sources.items.properties).sort(), ['id', 'revision']);
 });
 
 test('new materials reply envelope is bounded independently of unchanged draft limits', () => {

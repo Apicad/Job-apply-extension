@@ -22,25 +22,50 @@ async function seed(home: Page) {
   return { profile, facts };
 }
 
-async function nativeStub(home: Page, hold = false, capable = true) {
-  await home.evaluate(({ hold, capable }) => {
+async function nativeStub(home: Page, hold = false, capable = true, reviewNotes = false) {
+  await home.evaluate(({ hold, capable, reviewNotes }) => {
     (globalThis as any).__materialsRequests = []; (globalThis as any).__materialsDisconnects = 0;
     (globalThis as any).chrome.runtime.connectNative = () => {
       let messageListener: (m: any) => void = () => {};
       return { onMessage: { addListener: (cb: any) => { messageListener = cb; } }, onDisconnect: { addListener: () => {} }, disconnect: () => { (globalThis as any).__materialsDisconnects++; }, postMessage: (message: any) => {
         if (message.type === 'status') { queueMicrotask(() => messageListener({ id: message.id, ok: true, data: { connected: true, provider: 'Codex', message: 'Synthetic test helper', capabilities: capable ? ['materials'] : [] } })); return; }
         const r = message.request; (globalThis as any).__materialsRequests.push(r);
-        const ref = (id: string) => { const fact = r.evidence.find((f: any) => f.id === id); return { id, revision: fact.revision }; };
+        const ref = (id: string): { id: string; revision: number; statement?: number } => { const fact = r.evidence.find((f: any) => f.id === id); return { id, revision: fact.revision }; };
         const reply = { schema: 1, kind: 'materials', requestId: r.id, sourceKey: r.sourceKey, expiresAt: r.expiresAt,
           summary: [{ text: 'Built Python and React prototypes for validation and visualization.', sources: [ref('role'), ref('project')] }],
           entries: [{ entryId: 'role', bullets: [{ text: 'Built a Python CSV validation prototype and documented edge cases.', sources: [ref('role')] }] }],
           coverLetter: [{ text: 'My Python CSV validation prototype and documented edge cases connect with the implementation work described in this role.', sources: [ref('role')] }, { text: 'I also built a React trace viewer prototype as a personal project.', sources: [ref('project')] }], missing: [] };
+        if (reviewNotes) {
+          reply.summary = [];
+          reply.entries[0]!.bullets = [{ text: 'Documented edge cases to help the team.', sources: [{ ...ref('role'), statement: 2 }] }];
+          (reply.missing as string[]) = ['Graduation date is unconfirmed.', 'Graduation date is unconfirmed.'];
+        }
         const deliver = () => messageListener({ id: message.id, ok: true, data: { raw: JSON.stringify(reply) } });
         if (hold) (globalThis as any).__releaseMaterials = deliver; else setTimeout(deliver, 10);
       } };
     };
-  }, { hold, capable });
+  }, { hold, capable, reviewNotes });
 }
+
+test('statement citations narrow prototype warnings and missing facts appear once beside a compact preview link', async ({ openExtensionPage }) => {
+  const home = await openExtensionPage('home.html'); await seed(home); await nativeStub(home, false, true, true);
+  await home.getByRole('button', { name: 'Create résumé & cover letter', exact: true }).click();
+  await expect(home.locator('.materials-status')).toContainText('Your drafts are ready');
+  await expect(home.getByText('Graduation date is unconfirmed.', { exact: true })).toHaveCount(1);
+  await expect(home.locator('.materials-review')).not.toContainText('prototype limitation');
+  await expect(home.locator('.resume-preview .preview-warning')).toHaveCount(0);
+  await expect(home.getByRole('link', { name: 'Review 1 document note', exact: true })).toHaveAttribute('href', '#materials-review');
+  await expect(home.getByRole('article', { name: 'Résumé document' })).toContainText('Documented edge cases to help the team.');
+  const saved = (await send(home, { type: 'sidebar-state' })).data.materials;
+  expect(saved.response.entries[0].bullets[0].sources).toEqual([{ id: 'role', revision: 1, statement: 2 }]);
+  await expect(home.getByRole('button', { name: 'Download Word', exact: true })).toBeDisabled();
+  await home.getByLabel('I reviewed both documents and checked the claims.', { exact: true }).check();
+  await expect(home.getByRole('button', { name: 'Download Word', exact: true })).toBeEnabled();
+  await home.reload();
+  await expect(home.getByText('Graduation date is unconfirmed.', { exact: true })).toHaveCount(1);
+  await home.getByRole('button', { name: 'Tailored résumé', exact: true }).click();
+  await expect(home.getByRole('button', { name: 'Download Word', exact: true })).toBeEnabled();
+});
 
 test('one generation uses saved evidence, previews both documents, preserves originals and exports reviewed edits', async ({ openExtensionPage }, testInfo) => {
   const home = await openExtensionPage('home.html'); await home.setViewportSize({ width: 1600, height: 1100 });

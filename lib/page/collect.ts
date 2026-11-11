@@ -75,11 +75,11 @@ export const collectControls: CollectControls = (doc) => {
 };
 
 /** Which form a control belongs to, as a number that is the same for every control of that form. */
-export const formIndex: FormIndex = (control) => {
-  const owner = control.el.form;
-  if (owner === null) return -1;
+export const formIndex: FormIndex = (control) => formIndexForOwner(control.el.form, control.el.ownerDocument);
 
-  const doc = control.el.ownerDocument;
+/** Shared form numbering for writable controls and read-only observations. */
+export function formIndexForOwner(owner: HTMLFormElement | null, doc: Document): number {
+  if (owner === null) return -1;
   // the same list as document.forms, which a <form name="forms"> would replace
   const forms: Element[] = Array.from(Document.prototype.querySelectorAll.call(doc, 'form'));
   const index = forms.indexOf(owner);
@@ -93,7 +93,7 @@ export const formIndex: FormIndex = (control) => {
   });
   const shadowIndex = shadowForms.indexOf(owner);
   return shadowIndex === -1 ? -1 : forms.length + shadowIndex;
-};
+}
 
 /**
  * Calls `visit` for every element of the document in document order, except <form> elements. The

@@ -3,6 +3,8 @@ import type { NativeOutcome } from './outcomes';
 import { stableKey } from './identity';
 import { collectControls, formIndex } from '../page/collect';
 import { collectCheckboxGroups } from '../page/checkbox-groups';
+import { collectManualControls } from '../page/manual-controls';
+import type { ManualControl } from './manual-controls';
 import type { CheckboxGroup } from './checkbox-groups';
 import { describeControl, isEmpty } from '../page/describe';
 import { isShown } from '../page/visibility';
@@ -16,7 +18,7 @@ import { textReadbackMatches, rememberUpload, uploadedFileVisible, mayVerifyNati
 import { fillGreenhouseCombobox, verifyGreenhouseCombobox, type GreenhouseTarget } from '../page/greenhouse';
 import type { ScannedField, PageEnv, Control, JobInfo, StoredResume } from '../types';
 export interface NativeField extends ScannedField { maxLength: number }
-export interface NativeScan { scanId: string; url: string; shown: boolean; job: JobInfo; fields: NativeField[]; checkboxGroups?: CheckboxGroup[] }
+export interface NativeScan { scanId: string; url: string; shown: boolean; job: JobInfo; fields: NativeField[]; checkboxGroups?: CheckboxGroup[]; manualControls?: ManualControl[] }
 export type NativeAction = { ref: number; signature: string; education?: { schoolRef: number; signature: string; value: string } } & ({ type: 'text' | 'answer'; value: string } | { type: 'select' | 'radio'; index: number } | { type: 'file'; resume: StoredResume } | { type: 'combobox'; target: GreenhouseTarget });
 export interface NativeCommand { job?: JobInfo; scanId: string; url: string; actions: NativeAction[] }
 const world = globalThis as typeof globalThis & { __jaaScan?: { id: string; url: string }; __jaaCommand?: NativeCommand };
@@ -32,7 +34,7 @@ export function scanNative(doc: Document, env: PageEnv): NativeScan {
  const shown = shownFrame(doc, env);
  const controls = shown ? collectControls(doc).filter(c => isShown(c, env)).slice(0, 400) : [];
  const refs = rememberControls(controls);
- return { scanId, url, shown, job: sanitizeJob(extractJob(doc, detectAts(url)))!, checkboxGroups: shown ? collectCheckboxGroups(doc, env) : [], fields: controls.flatMap((c, i) => { const descriptor = sanitizeNativeDescriptor(describeControl(c)); return descriptor ? [{ ref: refs[i]!, form: formIndex(c), descriptor, empty: isEmpty(c), maxLength: maximum(c) }] : []; }) };
+ return { scanId, url, shown, job: sanitizeJob(extractJob(doc, detectAts(url)))!, checkboxGroups: shown ? collectCheckboxGroups(doc, env) : [], manualControls: shown ? collectManualControls(doc, env) : [], fields: controls.flatMap((c, i) => { const descriptor = sanitizeNativeDescriptor(describeControl(c)); return descriptor ? [{ ref: refs[i]!, form: formIndex(c), descriptor, empty: isEmpty(c), maxLength: maximum(c) }] : []; }) };
 }
 function currentDocument(doc: Document, env: PageEnv, command: NativeCommand): boolean {
  return world.__jaaScan?.id === command.scanId && world.__jaaScan.url === command.url && doc.location.href === command.url && shownFrame(doc, env) && (!command.job || stableKey(sanitizeJob(extractJob(doc, detectAts(command.url)))) === stableKey(command.job));

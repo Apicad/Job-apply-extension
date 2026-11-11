@@ -66,7 +66,8 @@ export function ResumePreview({ profile, facts, layout, onChange, dirty, disable
     <div className="preview-meta"><span>Classic · US Letter</span><span>{tailored ? materials?.canExport ? 'Reviewed draft' : 'Needs your review' : dirty ? 'Unsaved preview' : 'Saved profile'}</span></div>
     {tailored && !materials?.canExport && <p className="materials-preview-hint">{materials?.stale ? 'Your source information changed. Create new drafts to use this version.' : 'Review both documents in the editor, then mark them reviewed to enable downloads.'}</p>}
     {downloadError && <p className="preview-warning" role="alert">{downloadError}</p>}
-    {document.warnings.map((warning, index) => <p key={index} className="preview-warning">{warning}</p>)}
+    {baseDocument.warnings.map((warning, index) => <p key={index} className="preview-warning">{warning}</p>)}
+    {tailored && materials && materials.reviewNotices.warnings.length + materials.reviewNotices.missing.length > 0 && <p className="materials-preview-hint"><a href="#materials-review">Review {materials.reviewNotices.warnings.length + materials.reviewNotices.missing.length} document {materials.reviewNotices.warnings.length + materials.reviewNotices.missing.length === 1 ? 'note' : 'notes'}</a></p>}
     {size.height > 1058 && <p className="preview-warning">This draft is longer than one page. Shorten notes or switch off entries to keep it to one page. Nothing is hidden from the export.</p>}
     <div className="paper-viewport" ref={viewport}><div className="paper-stage" style={{ height: size.height * size.scale }}>
       <article className="resume-paper" ref={paper} style={{ transform: `scale(${size.scale})` }} aria-label="Résumé document">

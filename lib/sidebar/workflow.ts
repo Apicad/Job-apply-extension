@@ -11,6 +11,7 @@ import { readLibrary, saveAnswer } from '../hackathon/library';
 import type { NativePlan, Row } from '../hackathon/engine';
 import { eligibleApplicationRows } from '../hackathon/engine';
 import { checkboxGroupViews } from '../hackathon/checkbox-groups';
+import { manualControlViews } from '../hackathon/manual-controls';
 import { checkAI, draftWithAI } from './ai';
 import type { SidebarRun, SidebarState, SidebarField, SidebarDraft } from './ui-types';
 
@@ -47,7 +48,43 @@ function fieldViews(plan: NativePlan): SidebarField[] {
     return { id: rowKey(row), label: row.field.descriptor.label || row.field.descriptor.name || 'Unlabelled field',
       status: !row.field.empty ? 'kept' : outcome?.ok ? 'filled' : row.action && plan.state === 'finished' ? 'failed' : 'review',
       detail: !row.field.empty ? 'Your existing answer was kept.' : outcome?.ok ? 'Filled and checked on the page.' : row.action ? plan.state === 'finished' ? 'Could not verify this field. Check it on the page.' : 'Waiting to fill…' : row.status === 'Section autofill disabled' ? 'Autofill is off for this section. Complete this field on the application.' : supportedQuestion(row) ? 'Answer needs review.' : 'Complete this field on the application.' };
-  }), ...checkboxGroupViews(plan.checkboxGroups ?? [])];
+  }), ...checkboxGroupViews(plan.checkboxGroups ?? []), ...manualControlViews(plan.manualControls ?? [])];
+}
+
+/** Scan handles restart at zero. Reconcile display outcomes by complete field identity,
+ * never by a handle or label that a newly inserted control could have inherited. */
+function refreshedFieldViews(previous: NativePlan, fresh: NativePlan): SidebarField[] {
+  const before = eligibleApplicationRows(previous.rows); const after = eligibleApplicationRows(fresh.rows);
+  const first = before[0]; const current = after[0];
+  // A changed application selection must not import another form's questions.
+  if (!first || !current || first.documentId !== current.documentId || first.field.form !== current.field.form) return fieldViews(previous);
+  const identity = (row: Row) => key([row.documentId, row.url, row.job, row.field.form, row.field.descriptor, row.field.maxLength]);
+  const previousViews = fieldViews(previous);
+  const byIdentity = new Map<string, Row[]>();
+  for (const row of before) { const id = identity(row); byIdentity.set(id, [...(byIdentity.get(id) ?? []), row]); }
+  const counts = new Map<string, number>();
+  for (const row of after) { const id = identity(row); counts.set(id, (counts.get(id) ?? 0) + 1); }
+  // This second scan is observation-only. A newly revealed field is never queued
+  // for another write or labelled "Waiting to fill" after the fill already ended.
+  const views = fieldViews({ ...fresh, rows: fresh.rows.map(row => ({ ...row, action: null })) });
+  for (const row of after) {
+    const candidates = byIdentity.get(identity(row));
+    if (candidates?.length !== 1 || counts.get(identity(row)) !== 1) continue;
+    const old = previousViews.find(view => view.id === rowKey(candidates[0]!));
+    const view = views.find(item => item.id === rowKey(row));
+    if (!old || !view) continue;
+    if (old.status === 'failed' || old.status === 'filled' && !row.field.empty) {
+      view.status = old.status; view.detail = old.detail;
+    }
+  }
+  // Upload widgets may remove their input after success. Preserve that verified
+  // outcome as history without attributing it to a fresh control's numeric handle.
+  for (const row of before) {
+    if (counts.has(identity(row))) continue;
+    const old = previousViews.find(view => view.id === rowKey(row));
+    if (old?.status === 'filled') views.push({ ...old, id: `previous:${old.id}` });
+  }
+  return views;
 }
 
 export async function sidebarState(tabId?: number): Promise<SidebarState> {
@@ -74,9 +111,8 @@ async function execute(task: Active): Promise<void> {
     assertActive(task); run.fields = fieldViews(plan);
     // Re-read after basic writes, which can reveal or change dependent fields.
     const questionsPlan = await scanTab(run.tabId); task.plan = questionsPlan; assertActive(task); await assertSnapshot(run);
-    // Basic fields may reveal checkbox questions. Refresh only observations so
-    // their current state is visible without replacing verified fill outcomes.
-    run.fields = fieldViews({ ...plan, checkboxGroups: questionsPlan.checkboxGroups });
+    // Include dependent questions without another write, preserving verified outcomes.
+    run.fields = refreshedFieldViews(plan, questionsPlan);
     const questions = eligibleApplicationRows(questionsPlan.rows).filter(supportedQuestion).slice(0, 5);
     const facts = (await loadFacts()).slice(0, 20);
     const enabled = await readHackathon<boolean>('sidebar-ai-enabled') === true;

@@ -147,3 +147,49 @@ test('cancellation between command preparation and fill dispatch prevents future
   await expect(page.locator('#first')).toHaveValue(''); await expect(page.locator('#email')).toHaveValue('');
   await expect(page.locator('#submitted')).toHaveText('Not submitted');
 });
+
+test('newly revealed required fields appear for review without another write or losing verified fills', async ({ context, openExtensionPage }) => {
+  const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+  await page.evaluate(() => {
+    document.querySelector('form')!.innerHTML = '<div id="dependent" hidden><label>State<select id="state" required><option value="">Select...</option><option value="CA">California</option></select></label></div><label>First name<input id="first"></label><label>Email<input id="email" type="email"></label><label>Phone<input id="phone" type="tel"></label><label>Country<select id="country"><option value="">Select...</option><option value="US">United States</option></select></label><button type="submit">Submit sample application manually</button>';
+    document.querySelector('#country')!.addEventListener('change', () => document.querySelector('#dependent')!.removeAttribute('hidden'));
+  });
+  const ui = await openExtensionPage('sidepanel.html'); const tabId = await tabFor(ui, page);
+  const before = (await send(ui, { type: 'sidebar-state', tabId })).data;
+  const profile = { ...before.profile, firstName: 'Ada', email: 'ada@example.com', phone: '555-0100', country: 'United States', state: 'California' };
+  expect((await send(ui, { type: 'sidebar-save-profile', profile, facts: [], expectedProfile: before.profile, expectedFacts: before.facts })).ok).toBe(true);
+  await ui.goto(`${ui.url()}?tabId=${tabId}`);
+  await ui.getByRole('button', { name: 'Autofill', exact: true }).click();
+  const state = await settled(ui, tabId);
+  expect(state.run.phase).toBe('review');
+  expect(state.run.fields.filter((field: any) => field.status === 'filled').map((field: any) => field.label)).toEqual(['First name', 'Email', 'Phone', 'Country']);
+  expect(state.run.fields.find((field: any) => field.label === 'State')).toMatchObject({ status: 'review', detail: 'Complete this field on the application.' });
+  expect(new Set(state.run.fields.map((field: any) => field.id)).size).toBe(state.run.fields.length);
+  await expect(page.locator('#state')).toBeVisible(); await expect(page.locator('#state')).toHaveValue('');
+  await expect(ui.getByText('State', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => (window as any).events.filter((event: any) => event.id === 'state'))).toEqual([]);
+  await expect(page.locator('#submitted')).toHaveText('Not submitted');
+});
+
+test('ARIA-only controls are reported once for manual review without events or submission', async ({ context, openExtensionPage }) => {
+  const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+  await page.evaluate(() => {
+    document.querySelector('form')!.innerHTML = '<label>First name<input id="first"></label><label>Email<input id="email" type="email"></label><label>Phone<input id="phone" type="tel"></label><div><span id="department-label">Department</span><button id="department" type="button" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-required="true" aria-labelledby="department-label">Choose...</button></div><div id="custom-consent" role="checkbox" aria-label="Application data consent" aria-checked="true" aria-required="true" tabindex="0">Application data consent</div><div id="custom-schedule" role="radiogroup" aria-label="Available schedule" aria-required="true"><div id="morning" role="radio" aria-checked="false" tabindex="0">Morning</div><div id="evening" role="radio" aria-checked="true" tabindex="-1">Evening</div></div><div hidden role="checkbox" aria-label="Hidden manual question">Hidden manual question</div><button type="submit">Submit sample application manually</button>';
+    document.body.insertAdjacentHTML('beforeend', '<form><div role="checkbox" aria-label="Unrelated newsletter">Unrelated newsletter</div></form>');
+  });
+  const ui = await openExtensionPage('sidepanel.html'); const tabId = await tabFor(ui, page);
+  expect((await send(ui, { type: 'demo' })).ok).toBe(true);
+  await ui.goto(`${ui.url()}?tabId=${tabId}`);
+  await ui.getByRole('button', { name: 'Autofill', exact: true }).click();
+  const state = await settled(ui, tabId);
+  expect(state.run.phase).toBe('review');
+  expect(state.run.fields.filter((field: any) => field.status === 'filled')).toHaveLength(3);
+  expect(state.run.fields.filter((field: any) => field.id.startsWith('manual:')).map((field: any) => [field.label, field.status])).toEqual([
+    ['Department', 'review'], ['Application data consent', 'review'], ['Available schedule', 'review'],
+  ]);
+  for (const label of ['Department', 'Application data consent', 'Available schedule']) await expect(ui.getByText(label, { exact: true })).toBeVisible();
+  expect(state.run.fields.some((field: any) => /Hidden manual question|Unrelated newsletter/.test(field.label))).toBe(false);
+  expect(await page.locator('[aria-checked]').evaluateAll(elements => elements.map(el => el.getAttribute('aria-checked')))).toEqual(['true', 'false', 'true']);
+  expect(await page.evaluate(() => (window as any).events.filter((event: any) => ['department', 'custom-consent', 'custom-schedule', 'morning', 'evening'].includes(event.id)))).toEqual([]);
+  await expect(page.locator('#submitted')).toHaveText('Not submitted');
+});

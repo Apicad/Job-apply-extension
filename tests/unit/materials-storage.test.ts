@@ -61,6 +61,25 @@ it('keeps a reviewed persisted draft readable and editable after its AI request 
   expect(updated.revision).toBe(2); expect(updated.reviewedFingerprint).toBeNull();
 });
 
+it('loads a 0.5.0 mixed-note warning set without losing the saved draft or its exact review stamp', async () => {
+  const production = 'Built a TypeScript production dashboard used daily by the team.';
+  const mixedFacts = [{ ...facts[0]!, text: `${facts[0]!.text}\n${production}` }];
+  await writeHackathon('facts', mixedFacts);
+  const request = await buildMaterialsRequest(profile, mixedFacts, layout, brief);
+  const sources = [{ id: mixedFacts[0]!.id, revision: mixedFacts[0]!.revision }];
+  const response = reviewMaterialsReply(request, { schema: 1, kind: 'materials', requestId: request.id, sourceKey: request.sourceKey, expiresAt: request.expiresAt,
+    summary: [], entries: [{ entryId: mixedFacts[0]!.id, bullets: [{ text: production, sources }] }], coverLetter: [{ text: 'I built a TypeScript prototype.', sources }], missing: [] });
+  expect(response.warnings).toEqual([]);
+  response.warnings = [`Check that this wording preserves the source's prototype limitation: ${production}`];
+  const legacy: SavedMaterials = { schema: 1, revision: 1, request, response, reviewedFingerprint: null };
+  legacy.reviewedFingerprint = await materialsReviewFingerprint(legacy);
+  await writeHackathon('materials', legacy);
+  expect(await loadSavedMaterials()).toEqual(legacy);
+  const updated = { ...legacy, response: reviewMaterialsReply(request, response), reviewedFingerprint: null };
+  const saved = await saveMaterials(updated, legacy);
+  expect(saved.response.warnings).toEqual([]); expect(saved.revision).toBe(2); expect(saved.reviewedFingerprint).toBeNull();
+});
+
 it('rejects two editors racing the same saved revision instead of letting the last write win', async () => {
   const saved = await saveMaterials(await draft(), null);
   const first = edit(saved, 'I built a TypeScript prototype at Example Labs.');

@@ -6,7 +6,7 @@ import { buildResumeDocument, defaultResumeLayout } from '../../lib/resume-previ
 import type { Fact } from '../../lib/hackathon/contracts';
 import {
   buildMaterialsRequest, createCoverLetterDocx, emptyMaterialsBrief, isMaterialsReply, isMaterialsRequest,
-  materialResumeDocument, materialsSourceKey, normalizeMaterialsBrief, parseMaterialsReply,
+  materialResumeDocument, materialsReviewNotices, materialsSourceKey, normalizeMaterialsBrief, parseMaterialsReply,
   promptForMaterials, reviewMaterialsReply, type MaterialsRequest, type MaterialsReplyWire,
 } from '../../lib/materials';
 
@@ -133,6 +133,93 @@ describe('materials reply boundary', () => {
     const result = parseMaterialsReply(JSON.stringify(output), r, 2000);
     expect(result.warnings).toContain('No saved evidence supports a Rust credential.');
     expect(result.warnings.join(' ')).toContain('coursework');
+  });
+
+  it('does not attach another statement’s prototype qualifier to unchanged source wording', async () => {
+    const production = 'Built a Node.js production dashboard used daily by the team.';
+    const mixed = [{ ...facts()[0]!, text: `Example Studio | Engineering intern | Remote | June 2025 – August 2025\n${production}\nBuilt a Python workflow editor prototype.` }];
+    const r = await buildMaterialsRequest(emptyProfile(), mixed, defaultResumeLayout(), brief(), 1000);
+    const output = reply(r); output.summary = [];
+    output.entries[0]!.bullets = [{ text: production, sources: [source()] }];
+    output.coverLetter = [{ text: 'Built a Python workflow editor prototype.', sources: [source()] }];
+    const current = reviewMaterialsReply(r, output);
+    expect(current.warnings).toEqual([]);
+    const legacy = { ...current, warnings: [`Check that this wording preserves the source's prototype limitation: ${production}`] };
+    expect(isMaterialsReply(legacy, r)).toBe(true);
+    expect(materialsReviewNotices(r, legacy)).toEqual({ warnings: [], missing: [] });
+    expect(isMaterialsReply({ ...legacy, warnings: ['An arbitrary saved warning'] }, r)).toBe(false);
+
+    for (const wording of ['Built a Python workflow editor.', 'Built a daily Node.js dashboard.', `${production} Built a workflow editor.`]) {
+      output.entries[0]!.bullets[0]!.text = wording;
+      const result = reviewMaterialsReply(r, output);
+      expect(result.warnings.some(item => item.includes('prototype limitation'))).toBe(true);
+      expect(isMaterialsReply({ ...result, warnings: [] }, r)).toBe(false);
+    }
+  });
+
+  it.each([
+    'Prototype work\nBuilt a Node.js dashboard.\nBuilt a Python prototype.',
+    'Example Studio | Prototype engineering intern | Remote\nBuilt a Node.js dashboard.\nBuilt a Python prototype.',
+    'Example Studio | Engineering intern | Remote\nPrototype work:\nBuilt a Node.js dashboard.\nBuilt a Python prototype.',
+    'Example Studio | Engineering intern | Remote\nBuilt a Node.js dashboard. It was a prototype.',
+  ])('keeps ambiguous note-level qualifications for %s', async text => {
+    const r = await buildMaterialsRequest(emptyProfile(), [{ ...facts()[0]!, text }], defaultResumeLayout(), brief(), 1000);
+    const output = reply(r); output.summary = []; output.entries[0]!.bullets[0]!.text = 'Built a Node.js dashboard.';
+    expect(reviewMaterialsReply(r, output).warnings.some(item => item.includes('prototype limitation'))).toBe(true);
+  });
+
+  it('uses statement citations for dashboard and migration paraphrases within a mixed employment note', async () => {
+    const lines = ['Example Studio | Engineering intern | Remote',
+      'Built a Node.js monitoring dashboard integrating marketing-platform REST APIs with SQLite; the team used it daily to monitor system health.',
+      'Built a workflow editor prototype that reads campaign workflows through APIs and presents them as an editable node graph.',
+      'Migrated 1,300 images using a Next.js upload tool and Python CLI that deduplicated files and updated image URLs in HTML.'];
+    const r = await buildMaterialsRequest(emptyProfile(), [{ ...facts()[0]!, text: lines.join('\n') }], defaultResumeLayout(), brief(), 1000);
+    const output = reply(r); output.summary = [];
+    output.entries[0]!.bullets = [
+      { text: 'Built a Node.js dashboard integrating marketing-platform REST APIs with SQLite, used daily by the team to monitor system health.', sources: [{ ...source(), statement: 1 }] },
+      { text: 'Migrated 1,300 images using a Next.js upload tool and Python CLI to deduplicate files and update image URLs in HTML.', sources: [{ ...source(), statement: 3 }] },
+    ];
+    output.coverLetter = [{ text: 'My Node.js dashboard and Python migration work connect with this role.', sources: [{ ...source(), statement: 1 }, { ...source(), statement: 3 }] }];
+    expect(reviewMaterialsReply(r, output).warnings).toEqual([]);
+    output.entries[0]!.bullets.push({ text: 'Built a workflow editor.', sources: [{ ...source(), statement: 2 }] });
+    expect(reviewMaterialsReply(r, output).warnings).toEqual(["Check that this wording preserves the source's prototype limitation: Built a workflow editor."]);
+    output.entries[0]!.bullets = [{ text: lines[1]!, sources: [{ ...source(), statement: 2 }] }];
+    expect(reviewMaterialsReply(r, output).warnings.some(item => item.includes('prototype limitation'))).toBe(true);
+  });
+
+  it('validates statement indexes, revisions and entry ownership, and keeps narrow evidence checks', async () => {
+    const r = await request(); r.evidence[0]!.text += '\n\nBuilt a 99 item fixture.';
+    const output = reply(r);
+    for (const ref of [{ ...source(), statement: -1 }, { ...source(), statement: 0.5 }, { ...source(), statement: 99 }, { ...source(), statement: 2 }, { ...source('role-a', 1), statement: 1 }, { ...source('project-b', 4), statement: 0 }]) {
+      output.entries[0]!.bullets[0]!.sources = [ref];
+      expect(() => reviewMaterialsReply(r, output)).toThrow(/source reference/);
+    }
+    output.entries[0]!.bullets[0] = { text: 'Built 99 Python prototypes.', sources: [{ ...source(), statement: 1 }] };
+    const reviewed = reviewMaterialsReply(r, output);
+    expect(reviewed.warnings.join(' ')).toContain('99');
+    expect(isMaterialsReply({ ...reviewed, warnings: [] }, r)).toBe(false);
+  });
+
+  it.each([
+    'Example Studio | Prototype engineering intern | Remote\nBuilt a Node.js dashboard.\nBuilt a Python prototype.',
+    'Prototype work\nBuilt a Node.js dashboard.\nBuilt a Python prototype.',
+    'Example Studio | Engineering intern | Remote\nBuilt a Node.js dashboard.\nPrototype work:',
+  ])('cannot use a statement citation to hide a qualification heading: %s', async text => {
+    const r = await buildMaterialsRequest(emptyProfile(), [{ ...facts()[0]!, text }], defaultResumeLayout(), brief(), 1000);
+    const output = reply(r); output.summary = [];
+    output.entries[0]!.bullets[0] = { text: 'Built a Node.js dashboard for the team.', sources: [{ ...source(), statement: 1 }] };
+    expect(reviewMaterialsReply(r, output).warnings.some(item => item.includes('prototype limitation'))).toBe(true);
+  });
+
+  it('groups repeated missing information separately without changing the stored warning contract', async () => {
+    const r = await request(); const output = reply(r);
+    output.missing = ['Graduation date is not supplied.', 'Graduation date is not supplied.'];
+    output.entries[0]!.bullets[0]!.text = 'Built a Rust prototype.';
+    const parsed = reviewMaterialsReply(r, output); const notices = materialsReviewNotices(r, parsed);
+    expect(parsed.warnings).toContain('Graduation date is not supplied.');
+    expect(notices.missing).toEqual(['Graduation date is not supplied.']);
+    expect(notices.warnings).not.toContain('Graduation date is not supplied.');
+    expect(notices.warnings.join(' ')).toContain('Rust');
   });
 });
 

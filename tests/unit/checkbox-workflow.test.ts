@@ -54,3 +54,46 @@ it('refreshes newly visible groups after basic fill, persists manual review, and
   expect(checkboxEvents).not.toHaveBeenCalled();
   expect((await sidebarState(tabId)).run).toEqual(run);
 });
+
+
+it('reports a newly revealed required native field without filling it or losing verified outcomes', async () => {
+  document.body.innerHTML = '<form><label>First name<input></label><label>Email<input></label><label>Phone<input></label><label>Country<select id="country"><option value="">Select...</option><option value="US">United States</option></select></label><div id="dependent" hidden><label>State<select id="state" required><option value="">Select...</option><option value="CA">California</option></select></label></div></form>';
+  await saveProfile(normalizeProfile({ firstName: 'Ada', email: 'ada@example.com', phone: '555-0100', country: 'United States', state: 'California' }));
+  const stateEvents = vi.fn();
+  document.querySelector('#state')!.addEventListener('change', stateEvents);
+  document.querySelector('#country')!.addEventListener('change', () => document.querySelector('#dependent')!.removeAttribute('hidden'));
+  await handleSidebar({ type: 'sidebar-autofill', tabId });
+  await vi.waitFor(() => expect(sidebarBusy(tabId)).toBe(false));
+  const run = (await sidebarState(tabId)).run!;
+  expect(run.phase).toBe('review');
+  expect(run.fields.filter(field => field.status === 'filled').map(field => field.label)).toEqual(['First name', 'Email', 'Phone', 'Country']);
+  expect(run.fields.find(field => field.label === 'State')).toMatchObject({ status: 'review', detail: 'Complete this field on the application.' });
+  expect((document.querySelector('#state') as HTMLSelectElement).value).toBe('');
+  expect(stateEvents).not.toHaveBeenCalled();
+});
+
+it('does not confuse shifted scan handles with a newly inserted field or hide a new AI-shaped question without AI', async () => {
+  document.body.innerHTML = '<form><label>Email<input id="email"></label><label>First name<input></label><label>Phone<input></label></form>';
+  document.querySelector('#email')!.addEventListener('input', () => {
+    document.querySelector('form')!.insertAdjacentHTML('afterbegin', '<label>Referral source<input id="referral" required></label><label>Describe a relevant project.<textarea required></textarea></label>');
+  });
+  await handleSidebar({ type: 'sidebar-autofill', tabId });
+  await vi.waitFor(() => expect(sidebarBusy(tabId)).toBe(false));
+  const run = (await sidebarState(tabId)).run!;
+  expect(run.phase).toBe('review');
+  expect(run.fields.filter(field => field.status === 'filled').map(field => field.label)).toEqual(['Email', 'First name', 'Phone']);
+  expect(run.fields.find(field => field.label === 'Referral source')?.status).toBe('review');
+  expect(run.fields.find(field => field.label === 'Describe a relevant project.')?.status).toBe('review');
+  expect(new Set(run.fields.map(field => field.id)).size).toBe(run.fields.length);
+});
+
+
+it('retains failed verification after the second scan sees a nonempty field', async () => {
+  document.body.innerHTML = '<form><label>First name<input></label><label>Email<input pattern=".+@company\\.example"></label><label>Phone<input></label></form>';
+  await handleSidebar({ type: 'sidebar-autofill', tabId });
+  await vi.waitFor(() => expect(sidebarBusy(tabId)).toBe(false));
+  const run = (await sidebarState(tabId)).run!;
+  expect(run.fields.find(field => field.label === 'Email')?.status).toBe('failed');
+  expect(run.fields.filter(field => field.status === 'filled')).toHaveLength(2);
+  expect(run.phase).toBe('review');
+});

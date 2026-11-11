@@ -9,9 +9,10 @@ import { countryCode, findCountries } from '../regions';
 import type { FieldDescriptor, Profile, JobInfo, StoredResume } from '../types';
 import type { NativeScan, NativeField, NativeAction } from './page';
 import { sanitizeCheckboxGroups, type ApplicationCheckboxGroup } from './checkbox-groups';
+import { sanitizeManualControls, type ApplicationManualControl } from './manual-controls';
 export interface Frame { frameId: number; documentId: string; scan: NativeScan }
 export interface Row { job: JobInfo; documentId: string; frameId: number; scanId: string; url: string; field: NativeField; action: NativeAction | null; status: string }
-export interface NativePlan { id: string; tabId: number; url: string; profileKey: string; resumeKey?: string; rows: Row[]; checkboxGroups?: ApplicationCheckboxGroup[]; state: 'preview' | 'executing' | 'finished' | 'invalidated'; answerBinding?: { id: string; revision: number; savedId?: string }; errors?: string[]; outcomes?: (NativeOutcome & { documentId: string })[] }
+export interface NativePlan { id: string; tabId: number; url: string; profileKey: string; resumeKey?: string; rows: Row[]; checkboxGroups?: ApplicationCheckboxGroup[]; manualControls?: ApplicationManualControl[]; state: 'preview' | 'executing' | 'finished' | 'invalidated'; answerBinding?: { id: string; revision: number; savedId?: string }; errors?: string[]; outcomes?: (NativeOutcome & { documentId: string })[] }
 export const fieldSignature = (descriptor: FieldDescriptor, form: number, maxLength: number): string => stableKey({ descriptor, form, maxLength });
 /** Scope automatic drafting to the same application group as basic autofill. */
 export function eligibleApplicationRows(rows: Row[]): Row[] {
@@ -30,6 +31,14 @@ export function planCheckboxGroups(frames: Frame[], rows: Row[]): ApplicationChe
  return frames.filter(frame => frame.scan.shown && frame.documentId === selected.documentId).flatMap(frame =>
   (sanitizeCheckboxGroups(frame.scan.checkboxGroups) ?? []).filter(group => group.form === selected.field.form)
    .map(group => ({ ...group, documentId: frame.documentId })));
+}
+/** Unsupported semantic controls are display-only and cannot nominate an application. */
+export function planManualControls(frames: Frame[], rows: Row[]): ApplicationManualControl[] {
+ const selected = eligibleApplicationRows(rows)[0];
+ if (!selected) return [];
+ return frames.filter(frame => frame.scan.shown && frame.documentId === selected.documentId).flatMap(frame =>
+  (sanitizeManualControls(frame.scan.manualControls) ?? []).filter(control => control.form === selected.field.form)
+   .map(control => ({ ...control, documentId: frame.documentId })));
 }
 export function planNative(frames: Frame[], profile: Profile, resume: StoredResume | null = null): Row[] {
  const groups = frames.flatMap(frame => [...new Set(frame.scan.fields.map(f => f.form))].map(form => {

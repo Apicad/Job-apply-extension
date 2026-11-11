@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { stableKey } from '../../lib/hackathon/identity';
 import { defaultResumeLayout } from '../../lib/resume-preview';
-import { buildMaterialsRequest, materialsSourceKey, parseMaterialsReply, reviewMaterialsReply, emptyMaterialsBrief, normalizeMaterialsBrief } from '../../lib/materials';
+import { buildMaterialsRequest, materialsSourceKey, parseMaterialsReply, reviewMaterialsReply, materialsReviewNotices, emptyMaterialsBrief, normalizeMaterialsBrief } from '../../lib/materials';
 import type { MaterialsBrief, MaterialsReply } from '../../lib/materials';
 import { materialsReviewFingerprint } from '../../lib/materials-storage';
 import type { SavedMaterials } from '../../lib/materials-storage';
@@ -112,8 +112,18 @@ export function useMaterials(state: SidebarState, profileDirty: boolean) {
     finally { if (mounted.current) setSaving(false); }
   }
   function reload() { cancel(); adopt(state.materials ?? null); setError(''); setMessage('Loaded the saved documents.'); }
+  let reviewNotices = { warnings: [] as string[], missing: [] as string[] };
+  if (draft) {
+    try { reviewNotices = materialsReviewNotices(draft.request, draft.response); }
+    catch {
+      // An incomplete editor change already shows its validation error. Keep
+      // the last review notes visible until the wording becomes valid again.
+      const missing = [...new Set(draft.response.missing)];
+      reviewNotices = { missing, warnings: draft.response.warnings.filter(item => !missing.includes(item)) };
+    }
+  }
   return { brief, setBrief, draft, dirty, generating, saving, stale, conflict, message, error, view, setView, generate, cancel, edit, review, save, reload, reviewChecked: reviewPending ?? !!draft?.reviewedFingerprint,
-    canExport: !!draft?.reviewedFingerprint && !stale && !generating && !saving && !conflict };
+    reviewNotices, canExport: !!draft?.reviewedFingerprint && !stale && !generating && !saving && !conflict };
 }
 export type MaterialsController = ReturnType<typeof useMaterials>;
 
@@ -135,11 +145,11 @@ export function MaterialsPanel({ model, profileDirty, disabled }: { model: Mater
     {model.error && <p className="materials-error" role="alert">{model.error}</p>}
     {model.message && <p className="materials-status" aria-live="polite">{model.message}</p>}
     {model.conflict && <p className="materials-notice">Saved documents changed in another window. <button type="button" className="text-button" onClick={model.reload}>Load saved documents</button></p>}
-    {draft && <div className="materials-review">
+    {draft && <div className="materials-review" id="materials-review">
       <h3>Preview, edit, make it yours.</h3><p>Switch between the résumé and cover letter in the preview.</p>
       {model.stale && <p className="materials-notice">Your profile or target changed. Create new drafts before downloading.</p>}
-      {!!draft.response.warnings.length && <div className="materials-notice"><strong>Check these details</strong><ul>{draft.response.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul></div>}
-      {!!draft.response.missing.length && <div className="materials-notice"><strong>Information still missing</strong><ul>{draft.response.missing.map((item, i) => <li key={i}>{item}</li>)}</ul></div>}
+      {!!model.reviewNotices.warnings.length && <div className="materials-notice"><strong>Check these details</strong><ul>{model.reviewNotices.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul></div>}
+      {!!model.reviewNotices.missing.length && <div className="materials-notice"><strong>Information still missing</strong><ul>{model.reviewNotices.missing.map((item, i) => <li key={i}>{item}</li>)}</ul></div>}
       <details className="materials-editor"><summary>Edit the writing</summary><fieldset disabled={model.generating || model.saving}>
         {draft.response.summary.map((segment, index) => <label className="field" key={`s${index}`}><span>Résumé summary {index + 1}</span><textarea aria-label={`Résumé summary ${index + 1}`} value={segment.text} maxLength={1500} onChange={e => model.edit(reply => ({ ...reply, summary: reply.summary.map((item, i) => i === index ? { ...item, text: e.target.value } : item) }))} /></label>)}
         {draft.response.entries.map(entry => <div key={entry.entryId}><h4>{draft.request.entries.find(item => item.id === entry.entryId)?.heading || 'Experience'}</h4>{entry.bullets.map((segment, index) => <label className="field" key={index}><span>Résumé bullet {index + 1}</span><textarea aria-label={`Résumé bullet ${entry.entryId} ${index + 1}`} value={segment.text} maxLength={1500} onChange={e => model.edit(reply => ({ ...reply, entries: reply.entries.map(item => item.entryId === entry.entryId ? { ...item, bullets: item.bullets.map((bullet, i) => i === index ? { ...bullet, text: e.target.value } : bullet) } : item) }))} /></label>)}</div>)}
