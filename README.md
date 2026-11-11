@@ -1,68 +1,54 @@
-# Job Apply Assistant · HackerSquad candidate
+# Job Apply Assistant · sidebar release
 
-Draft one application answer from saved experience, open the original sources behind each sentence, approve the exact wording, explicitly save it, and review what gets filled. **You submit manually.**
+Open an application, click **Autofill**, and review anything left in the sidebar. Saved profile details and your résumé fill first; AI drafts appear beside the application. **You submit manually.**
 
-This small Chrome extension uses a manual copy/paste AI connection. It does not include a provider key, hosted backend, automatic submission or live LinkedIn sync. Basic native profile autofill works without AI.
+This version builds on audited source `f3b7ef0d5dd3f1be9a16753a643e209665797b60`. Its new sidebar and local AI connection require their own review; earlier audit results do not certify these changes.
 
-## Setup
+## Use it
 
-Use Node **24** (`.nvmrc`; verified with 24.15.0), npm, and desktop Chrome/Chromium. From the exact candidate checkout or supplied source archive:
+Use Node 24 or newer and desktop Chrome. From this checkout:
 
 ```sh
 npm ci
-npx playwright install chromium
 npm run check
 npm run build
 ```
 
-`npm run check` type-checks, runs the unit suite, builds the E2E extension and launches isolated Chromium profiles against local synthetic fixtures. No model credential is required. The fixture server uses its own loopback port and refuses another checkout's server. `npm run build` writes the production extension to `.output/chrome-mv3`.
+Load `.output/chrome-mv3` using Chrome's **Load unpacked** control. Click the extension icon on the application tab to open the persistent sidebar and grant access to that tab.
 
-1. Create a separate Chrome profile for this synthetic demo. Open `chrome://extensions`, enable Developer mode, and **Load unpacked** → `.output/chrome-mv3`.
-2. Run `npm run fixtures`. Open [the sample application](http://localhost:5179/hackathon.html). It is labeled synthetic and never sends an application.
-3. Click the extension toolbar icon on the sample page. This explicit click grants access to that tab. Choose **Open review workspace** to keep the review screen open while switching to your AI chat. The workspace remains bound to the original application tab.
-4. Choose **Load synthetic applicant**. It refuses to overwrite a nonempty saved profile. Existing profile keys/files from other development streams are preserved.
+1. Open **Your details** and save your profile once. Add a résumé for attachment. Under **Experience for AI**, save up to 20 short factual notes about your work or projects. The résumé file is attached, not automatically parsed into these notes.
+2. Connect an existing signed-in AI tool with the local helper described in [native-host/README.md](native-host/README.md). Enable the optional connection from **AI connection**. Basic autofill works without it.
+3. Click **Autofill**. The extension scans the page and fills supported, empty fields from saved information. Existing answers are preserved. It shows filled, kept and needs-attention counts.
+4. Review any drafted project answers, expand the saved facts when useful, and edit if needed. **Use answer** approves, saves and fills that exact answer in one action. Unsupported claims and changed application contexts remain blocked.
+5. Check the employer's form and submit there yourself. The extension never submits or accepts attestations.
 
-The production manifest has only `storage`, `activeTab`, and `scripting`; no passive content scripts, broad host access, analytics or extension-origin AI requests. The E2E-only build permits localhost fixture origins. Do not distribute that test build as the production extension.
+There is no copy/paste JSON step, app credit balance, provider API key or paid fallback. AI uses the connected tool's existing account and remains subject to its subscription, organization policy and rate limits. Connecting a signed-in account does not establish that it can complete inference; request errors are shown in the sidebar without undoing basic fills.
 
-## Complete demo flow
+## Data and execution
 
-1. **Scan application**. Review the native-field preview; the page is unchanged.
-2. Select **Describe a relevant project.** (the other supported wording is **Tell us about a project you built.**). Other free-text questions remain manual.
-3. Enter reviewed job context and select the relevant saved facts. Keep requirements distinct from personal experience.
-4. **Preview exact AI request**, read the entire payload, then **Copy reviewed request**. Paste it into an authorized AI chat; request JSON only. Copy its actual JSON back to **Paste AI JSON response**, then **Validate response**. If clipboard access fails, copy the visible payload manually. Requests expire after 30 minutes; cancel or preview a new request to replace one. No automatic retries occur.
-5. Open every **Source** link. Compare each sentence with the original snippet and revision. Missing support, unfamiliar technology/credential terms and unsupported numbers are flagged. These bounded checks do not establish factual correctness. A model can cite a valid fact while making an unsupported claim; your review is essential.
-6. Edit as needed and choose **Apply edits for review**. Edits revoke approval and current sentence mappings; the original trace remains visible. Check the review confirmation and **Approve exact answer**.
-7. Select a save scope and **Save approved answer**. Default is the current application. Only factual project experience may be marked reusable, and using it elsewhere requires new approval. Approval, saving and filling are separate actions.
-8. Close/reopen the extension. Inspect **Saved answers**. To reuse: scan/select a current question, preview its current context, then **Open for review**. The reuse banner identifies the saved answer and revision; the original generation trace shows the original question/job context. No new AI response is generated by reuse. Approve and explicitly save the reviewed revision again before textarea preview is available. The library persists across browser restarts; unsaved review state is session-only.
-9. **Preview approved textarea fill**, inspect the exact text and all other planned values, then **Fill previewed fields**. Review the per-field verification results. Files, existing answers, consent/signatures, hidden controls and custom dropdowns remain untouched.
-10. For a safety demo, prepare a pending answer fill, edit its saved fact, then try that old preview: it is rejected. Changing jobs/questions or deleting an answer prevents stale reuse. Rescanning replaces the old plan; select the current question/context and open a saved answer for renewed review. After navigation or a browser restart, scan again.
+Profile and résumé stay in browser storage. When AI is enabled, only the saved experience notes, supported question, job title/company and opaque application/question identifiers are sent through a Chrome native-messaging helper to the selected local AI CLI. No browser cookies, complete page HTML, résumé bytes or authentication secrets are sent by the extension. The CLI manages its own existing sign-in. Helper requests have size/time limits and disconnect cancellation. No application-origin page can directly call the helper.
 
-If you fill native fields before drafting the textarea answer, **Scan application** again before selecting the question. Previously filled fields are kept. Then preview the current request/context, open the saved answer or generate a draft, review/approve/save and preview the new textarea fill. A consumed or invalidated preview cannot be reused.
+The production manifest uses `storage`, `activeTab`, `scripting` and `sidePanel`, with optional `nativeMessaging`. It has no passive content scripts or broad host permissions. The E2E-only build permits local fixture origins; do not distribute it as the production build.
 
-## AI access and evidence
-
-The copy/paste route requires no paid integration or repository secret. An account with an available free chat allowance is the proposed judging route. Official [ChatGPT pricing](https://learn.chatgpt.com/docs/pricing) lists a $0 Free plan; [the quickstart](https://learn.chatgpt.com/docs/quickstart) describes signing in and starting Chat. Availability, rollout and rate limits vary. **A newly created free judge account was not exercised here; confirm its access before submission. Do not purchase credits to run this demo.**
-
-[Real AI smoke record](docs/hackathon/AI-SMOKE.md) distinguishes the actual Codex-generated response from automated test stand-ins. The committed response is historical evidence, not a live response for a new request ID. To run a new smoke with your authorized AI chat:
+## Checks and scope
 
 ```sh
-npm run build:e2e
-JAA_SMOKE_DIR=/tmp/jaa-new-smoke node scripts/manual-ai-smoke.mjs
+npm run compile
+npm test
+npm run test:native
+npm run test:e2e
+npm run build
 ```
 
-Use an empty directory. Read its `request.txt`, obtain a real response in your AI chat, and write that JSON to `response.json`. The runner does not call a provider or fabricate a response. It uses synthetic data and a new isolated Chromium profile, then exercises validation/review/save/reopen/fill through the UI. The assistant's synthetic review in the recorded smoke is not a claim of independent human certification.
+Browser tests use isolated Chromium profiles and synthetic applications. Native transport stand-ins are test-only; a live CLI smoke is separate evidence. Files are limited to 4 MB. Writes are checked immediately and again after 100 ms, including native validation state; sites can change values later. An interrupted operation is never automatically replayed.
 
-## Scope and limitations
+Supported: conservative native text/select/radio fields, explicitly recognized résumé inputs, email confirmation, and the existing project-answer question wordings. The sidebar keeps uncertain fields visible for review. Custom dropdowns/typeaheads, repeating employment/education, cross-origin forms, new multi-step navigation, general free-text questions, résumé parsing/tailoring and universal ATS coverage remain outside this change. Sensitive choices are only filled from explicit saved answers, never inferred by AI.
 
-- One selected project textarea; exact supported question wording. Native text/select/radio fields use existing conservative classification and explicit saved profile choices. Synthetic defaults leave sensitive choices blank.
-- File attachment, custom widgets, cross-origin embeds, multi-step navigation, résumé tailoring, cover letters, broad ATS guarantees and LinkedIn import/sync are not implemented in this release. Existing résumé utilities/tests remain intact.
-- Text readback is exact, including a 100 ms delayed check. Unexpected masks/transforms are reported unverified. Sites may change values after that window; inspect the final form. No automatic write retry.
-- One best application-like form per scan. Unknown/unsupported fields remain manual. This is not a semantic hallucination detector or universal form recognition.
-- Saved answers depend on their original fact revisions. Changed/deleted facts require a new draft; this release intentionally has no automatic migration of stale evidence.
-- Storage failures and malformed/unknown library schemas fail visibly and preserve prior data. Capacity is 100 answers with no silent eviction. No automatic corruption repair.
-- Candidate source and separate verification evidence are published for independent audit. Each release handoff supplies the exact source SHA and its fresh-checkout results; an earlier audit is not a verdict on a later candidate. **Do not audit main as a substitute.**
+The original [hackathon plan](docs/plans/2026-11-09-jobright-inspired-autofill.md) and [build handoff](docs/plans/2026-11-09-hackersquad-build-handoff.md) remain in the source snapshot. The legacy review page remains addressable for regression coverage; the toolbar opens the sidebar.
 
-See [authoritative scope](docs/plans/2026-11-09-jobright-inspired-autofill.md), [build handoff](docs/plans/2026-11-09-hackersquad-build-handoff.md), [audit instructions](docs/plans/2026-11-09-grok-github-audit-prompt.md), [preliminary finding triage](docs/hackathon/AUDIT-TRIAGE.md), [contributions and license status](docs/hackathon/CREDITS.md), and [three-minute demo script](docs/hackathon/DEMO.md).
+## Historical audited foundation
+
+The records below describe the earlier multi-step review workflow and its fixes. Their passing results do not apply automatically to the new sidebar release.
 
 ## Audit cycle 1
 

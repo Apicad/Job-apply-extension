@@ -5,13 +5,15 @@ import { collectControls, formIndex } from '../page/collect';
 import { describeControl, isEmpty } from '../page/describe';
 import { isShown } from '../page/visibility';
 import { rememberControls, recallControl } from '../page/refs';
-import { fillText, fillSelect, fillRadio } from '../page/fill';
+import { fillText, fillSelect, fillRadio, fillFile } from '../page/fill';
+import { acceptsFile, isStoredResume, resumeToFile } from '../resume';
+import { classifyField } from '../classify';
 import { extractJob } from '../page/job';
 import { detectAts } from '../ats';
-import type { ScannedField, PageEnv, Control, JobInfo } from '../types';
+import type { ScannedField, PageEnv, Control, JobInfo, StoredResume } from '../types';
 export interface NativeField extends ScannedField { maxLength: number }
 export interface NativeScan { scanId: string; url: string; shown: boolean; job: JobInfo; fields: NativeField[] }
-export type NativeAction = { ref: number; signature: string } & ({ type: 'text' | 'answer'; value: string } | { type: 'select' | 'radio'; index: number });
+export type NativeAction = { ref: number; signature: string } & ({ type: 'text' | 'answer'; value: string } | { type: 'select' | 'radio'; index: number } | { type: 'file'; resume: StoredResume });
 export interface NativeCommand { job?: JobInfo; scanId: string; url: string; actions: NativeAction[] }
 const world = globalThis as typeof globalThis & { __jaaScan?: { id: string; url: string }; __jaaCommand?: NativeCommand };
 const maximum = (c: Control) => c.control === 'text' || c.control === 'textarea' ? c.el.maxLength : -1;
@@ -36,9 +38,13 @@ export function verifyNative(doc: Document, env: PageEnv, command: NativeCommand
  return command.actions.map(a => {
   const c = recallControl(a.ref);
   if (!c || !currentDocument(doc, env, command) || !isShown(c, env) || signature({ ref: a.ref, form: formIndex(c), descriptor: describeControl(c), empty: false, maxLength: maximum(c) }) !== a.signature) return { ref: a.ref, ok: false };
-  const ok = 'value' in a ? ((c.control === 'text' || c.control === 'textarea') && c.el.value === a.value) : a.type === 'select' ? c.control === 'select' && c.el.selectedIndex === a.index : c.control === 'radio' && c.radios[a.index]?.checked === true;
+  const ok = 'value' in a ? ((c.control === 'text' || c.control === 'textarea') && c.el.value === a.value && c.el.validity.valid) : a.type === 'select' ? c.control === 'select' && c.el.selectedIndex === a.index && c.el.validity.valid : a.type === 'radio' ? c.control === 'radio' && c.radios[a.index]?.checked === true && c.radios[a.index]?.validity.valid === true : a.type === 'file' && c.control === 'file' && fileMatches(c.el, a.resume);
   return { ref: a.ref, ok };
  });
+}
+function fileMatches(input: HTMLInputElement, resume: StoredResume): boolean {
+ const file = input.files?.[0];
+ return input.files?.length === 1 && !!file && file.name === resume.name && file.type === resume.type && file.size === resume.size && input.validity.valid;
 }
 export function applyNative(doc: Document, env: PageEnv, command: NativeCommand): NativeOutcome[] {
  return command.actions.map(action => {
@@ -50,10 +56,16 @@ export function applyNative(doc: Document, env: PageEnv, command: NativeCommand)
   const current: NativeField = { ref: action.ref, form: formIndex(c), descriptor: describeControl(c), empty: true, maxLength: maximum(c) };
   if (signature(current) !== action.signature) return refused;
   const onWrite = () => { written = true; };
-  if ((action.type === 'text' && c.control === 'text') || (action.type === 'answer' && c.control === 'textarea')) {
-   if (action.value && (maximum(c) < 0 || action.value.length <= maximum(c))) { fillText(c.el, action.value, onWrite); ok = c.el.value === action.value; }
-  } else if (action.type === 'select' && c.control === 'select') ok = fillSelect(c.el, action.index, onWrite);
-  else if (action.type === 'radio' && c.control === 'radio') { const radio = c.radios[action.index]; if (radio) ok = fillRadio(radio, onWrite); }
+  try {
+   if ((action.type === 'text' && c.control === 'text') || (action.type === 'answer' && c.control === 'textarea')) {
+    if (action.value && (maximum(c) < 0 || action.value.length <= maximum(c))) { fillText(c.el, action.value, onWrite); ok = c.el.value === action.value && c.el.validity.valid; }
+   } else if (action.type === 'select' && c.control === 'select') ok = fillSelect(c.el, action.index, onWrite) && c.el.validity.valid;
+   else if (action.type === 'radio' && c.control === 'radio') { const radio = c.radios[action.index]; if (radio) ok = fillRadio(radio, onWrite) && radio.validity.valid; }
+   else if (action.type === 'file' && c.control === 'file' && classifyField(current.descriptor) === 'resume' && isStoredResume(action.resume) && acceptsFile(c.el.accept, action.resume)) {
+    const file = resumeToFile(action.resume);
+    ok = fillFile(c.el, file, (input, files) => { onWrite(); env.assignFiles(input, files); }) && fileMatches(c.el, action.resume);
+   }
+  } catch { /* A malformed file or hostile control cannot stop the remaining fields. */ }
   return { ref: action.ref, ok: written && ok, status: written ? ok ? 'verified' : 'written-unverified' : 'refused' };
  });
 }

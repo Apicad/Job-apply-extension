@@ -1,5 +1,7 @@
 # Building-agent prompt: smaller HackerSquad release
 
+> November 10 sidebar follow-up: the user authorized one-click saved-detail autofill, a persistent sidebar, and an existing-account local AI connection. This supersedes the manual copy/paste and separate approve/save/preview UI sequence below for the new sidebar. Generated answers still require an explicit review-and-use action; final submission remains manual. The original plan is retained here as foundation history. See the root README for current scope and setup.
+
 Copy this prompt to the implementation agent. This is an instruction to build; this document does not establish that any feature or test is complete.
 
 ---

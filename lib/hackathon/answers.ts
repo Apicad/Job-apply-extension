@@ -13,7 +13,7 @@ async function digest(value: string): Promise<string> {
  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
  return Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('');
 }
-async function contextForRow(plan: NativePlan, row: Row, job: string): Promise<Context> {
+export async function contextForRow(plan: NativePlan, row: Row, job: string): Promise<Context> {
  // Opaque identities avoid sending page URLs/query tokens to AI. Derive them
  // again at both write gates rather than trusting persisted row/context pairs.
  const application = await digest(key([plan.url, row.job]));

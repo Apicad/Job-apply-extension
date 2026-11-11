@@ -26,6 +26,15 @@ export async function loadProfile(): Promise<Profile> {
   return normalizeProfile(await storage.getItem<unknown>(PROFILE_KEY));
 }
 
+export async function saveProfile(profile: unknown): Promise<void> {
+  await storage.setItem(PROFILE_KEY, normalizeProfile(profile));
+}
+
+export async function saveResume(resume: unknown): Promise<void> {
+  if (!isStoredResume(resume)) throw Error('Choose a valid résumé file up to 4 MB.');
+  await storage.setItem(RESUME_KEY, resume);
+}
+
 /** The file to attach when an application asks for a résumé, or null when there is none. */
 export async function loadResumeToAttach(): Promise<StoredResume | null> {
   const stored = await storage.getItem<unknown>(RESUME_KEY);

@@ -7,16 +7,25 @@ const E2E_HOSTS = ['http://localhost/*', 'http://127.0.0.1/*'];
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
+  hooks: {
+    'build:manifestGenerated': (_wxt, manifest) => {
+      // Keep the legacy review page addressable for regression tests, but the
+      // toolbar always opens the new in-context sidebar.
+      if (manifest.action) delete manifest.action.default_popup;
+    },
+  },
   manifest: ({ mode }) => ({
     name: 'Job Apply Assistant',
     description:
       'Fills job application forms from your saved profile. You review and submit.',
-    permissions: ['storage', 'activeTab', 'scripting'],
+    permissions: ['storage', 'activeTab', 'scripting', 'sidePanel'],
+    optional_permissions: ['nativeMessaging'],
+    side_panel: { default_path: 'sidepanel.html' },
     host_permissions: mode === 'e2e' ? E2E_HOSTS : [],
     commands: {
       autofill: {
         suggested_key: { default: 'Alt+Shift+F' },
-        description: 'Open the application review popup',
+        description: 'Open the application sidebar',
       },
     },
   }),

@@ -1,0 +1,194 @@
+import { browser } from 'wxt/browser';
+import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, saveProfile, saveResume } from '../storage';
+import { normalizeProfile } from '../profile';
+import { record, key, isFact, makeRequest, parseReply, approve, editAnswer, currentApproval, sameContext, resolveMissing } from '../hackathon/contracts';
+import type { Answer, Fact } from '../hackathon/contracts';
+import { scanTab, fillTab } from '../hackathon/service';
+import { loadFacts, supportedQuestion, contextForRow, rowKey, sessionKey, answerCommand, libraryStore } from '../hackathon/answers';
+import { readLibrary, saveAnswer } from '../hackathon/library';
+import type { NativePlan, Row } from '../hackathon/engine';
+import { eligibleApplicationRows } from '../hackathon/engine';
+import { checkAI, draftWithAI } from './ai';
+import type { SidebarRun, SidebarState, SidebarField, SidebarDraft } from './ui-types';
+
+interface StoredRun extends SidebarRun {
+  profileKey: string;
+  factsKey: string;
+  answers: Record<string, Answer>;
+}
+interface Active { run: StoredRun; abort: AbortController }
+const active = new Map<number, Active>();
+const runKey = (tabId: number) => `sidebar-run:${tabId}`;
+const jobText = (row: Row) => [row.job.title, row.job.company].filter(Boolean).join(' · ');
+const running = (run: SidebarRun) => ['scanning', 'filling', 'drafting'].includes(run.phase);
+const fail = (error: unknown) => error instanceof Error ? error.message : 'Unable to finish. Try again.';
+
+function publicRun(run: StoredRun): SidebarRun {
+  const { profileKey: _p, factsKey: _f, answers: _a, ...view } = run;
+  return view;
+}
+function assertActive(task: Active): void {
+  if (task.abort.signal.aborted || active.get(task.run.tabId) !== task) throw Error('Autofill cancelled.');
+}
+async function persist(task: Active): Promise<void> {
+  assertActive(task);
+  await writeHackathon(runKey(task.run.tabId), task.run, true);
+}
+async function assertSnapshot(run: StoredRun): Promise<void> {
+  if ((await browser.tabs.get(run.tabId)).url !== run.url) throw Error('The application changed. Click Autofill on the current page.');
+  if (key(await loadProfile()) !== run.profileKey || key(await loadFacts()) !== run.factsKey) throw Error('Your saved information changed. Click Autofill again.');
+}
+function fieldViews(plan: NativePlan): SidebarField[] {
+  return eligibleApplicationRows(plan.rows).map(row => {
+    const outcome = plan.outcomes?.find(o => o.ref === row.field.ref && o.documentId === row.documentId);
+    return { id: rowKey(row), label: row.field.descriptor.label || row.field.descriptor.name || 'Unlabelled field',
+      status: !row.field.empty ? 'kept' : outcome?.ok ? 'filled' : row.action && plan.state === 'finished' ? 'failed' : 'review',
+      detail: !row.field.empty ? 'Your existing answer was kept.' : outcome?.ok ? 'Filled and checked on the page.' : row.action ? plan.state === 'finished' ? 'Could not verify this field. Check it on the page.' : 'Waiting to fill…' : supportedQuestion(row) ? 'Answer needs review.' : 'Complete this field on the application.' };
+  });
+}
+
+export async function sidebarState(tabId?: number): Promise<SidebarState> {
+  let run = tabId === undefined ? null : await readHackathon<StoredRun>(runKey(tabId), true);
+  if (run && (await browser.tabs.get(run.tabId).catch(() => null))?.url !== run.url) run = null;
+  if (run && running(run) && !active.has(run.tabId)) {
+    run.phase = 'error'; run.message = 'Autofill was interrupted. Check the page before starting again; writes are never replayed automatically.';
+    await writeHackathon(runKey(run.tabId), run, true);
+  }
+  const resume = await loadResumeToAttach();
+  return { profile: await loadProfile(), facts: await loadFacts(), resume: resume ? { name: resume.name } : null,
+    run: run ? publicRun(run) : null, aiEnabled: await readHackathon<boolean>('sidebar-ai-enabled') === true };
+}
+
+async function execute(task: Active): Promise<void> {
+  const run = task.run;
+  try {
+    let plan = await scanTab(run.tabId); assertActive(task); await assertSnapshot(run);
+    run.job = plan.rows[0]?.job ?? { title: '', company: '' };
+    run.fields = fieldViews(plan);
+    run.phase = 'filling'; run.message = 'Filling your saved details…'; await persist(task);
+    if (plan.rows.some(r => r.action)) { assertActive(task); plan = await fillTab(run.tabId, plan.id, () => assertActive(task)); }
+    assertActive(task); run.fields = fieldViews(plan);
+    // Re-read after basic writes, which can reveal or change dependent fields.
+    const questionsPlan = await scanTab(run.tabId); assertActive(task); await assertSnapshot(run);
+    const questions = eligibleApplicationRows(questionsPlan.rows).filter(supportedQuestion).slice(0, 5);
+    const facts = (await loadFacts()).slice(0, 20);
+    const enabled = await readHackathon<boolean>('sidebar-ai-enabled') === true;
+    const library = await readLibrary(libraryStore);
+    if (questions.length && facts.length) {
+      run.phase = 'drafting'; run.message = 'Basic autofill finished. Preparing answers to review…'; await persist(task);
+      for (const row of questions) {
+        assertActive(task); await assertSnapshot(run);
+        const context = await contextForRow(questionsPlan, row, jobText(row));
+        const cached = library.find(a => currentApproval(a, context, facts));
+        if (!cached && !enabled) continue;
+        let answer: Answer;
+        try {
+          if (cached) answer = structuredClone(cached);
+          else {
+            const request = makeRequest(context, facts);
+            const raw = await draftWithAI(request, task.abort.signal);
+            assertActive(task); await assertSnapshot(run);
+            answer = parseReply(raw, request, await loadFacts());
+          }
+          const id = crypto.randomUUID();
+          run.answers[id] = answer;
+          run.drafts.push({ id, revision: answer.revision, question: context.question, text: answer.text,
+            sources: answer.trace.request.facts, gaps: answer.gaps, status: 'review' });
+          await persist(task);
+        } catch (error) {
+          assertActive(task);
+          run.message = `Basic autofill finished. AI could not finish: ${fail(error)}`;
+          run.phase = 'review'; await persist(task); return;
+        }
+      }
+    }
+    run.phase = run.fields.some(f => f.status === 'review' || f.status === 'failed') || run.drafts.length ? 'review' : 'finished';
+    run.message = !plan.rows.length ? 'No supported application fields found on this page.'
+      : questions.length && !facts.length ? 'Basic autofill finished. Add your experience to draft application answers.'
+      : questions.length && !enabled && !run.drafts.length ? 'Basic autofill finished. Connect your AI to draft answers, or complete them on the page.'
+      : 'Autofill finished. Review the remaining items, then submit on the application.';
+    await persist(task);
+  } catch (error) {
+    if (!task.abort.signal.aborted) { run.phase = 'error'; run.message = fail(error); await persist(task); }
+  } finally {
+    if (active.get(run.tabId) === task) active.delete(run.tabId);
+  }
+}
+
+async function cancel(tabId: number, id?: string): Promise<void> {
+  const task = active.get(tabId);
+  if (task && (!id || task.run.id === id)) {
+    task.abort.abort(); task.run.phase = 'cancelled'; task.run.message = 'Stopped. Fields already filled remain on the page; review them before continuing.';
+    await writeHackathon(runKey(tabId), task.run, true);
+  }
+}
+async function cancelAll(): Promise<void> { for (const tabId of active.keys()) await cancel(tabId); }
+export function sidebarBusy(tabId: number): boolean { return active.has(tabId); }
+export async function cancelForNavigation(tabId: number): Promise<void> { await cancel(tabId); }
+
+async function useAnswer(message: Record<string, unknown>, tabId: number): Promise<SidebarRun> {
+  if (active.has(tabId)) throw Error('Wait for Autofill to finish before using an answer.');
+  const run = await readHackathon<StoredRun>(runKey(tabId), true);
+  if (!run || run.id !== message.runId || !['review', 'finished'].includes(run.phase)) throw Error('This review is no longer current. Click Autofill again.');
+  const draft = run.drafts.find(d => d.id === message.draftId);
+  const original = draft && run.answers[draft.id];
+  if (!draft || !original || draft.status !== 'review' || draft.revision !== message.revision || typeof message.text !== 'string') throw Error('This draft changed. Reopen the current answer.');
+  await assertSnapshot(run);
+  const facts = await loadFacts();
+  const plan = await scanTab(tabId);
+  const candidates = await Promise.all(eligibleApplicationRows(plan.rows).filter(supportedQuestion).map(async row => ({ row, context: await contextForRow(plan, row, jobText(row)) })));
+  const matches = candidates.filter(c => sameContext(c.context, original.context));
+  if (matches.length !== 1) throw Error('This question changed or already has an answer. Click Autofill again.');
+  const target = matches[0]!;
+  let answer = message.text === original.text ? original : editAnswer(original, message.text);
+  if (answer.origin === 'edited' && message.text !== original.text && answer.trace.missing.length) answer = resolveMissing(answer, true);
+  const approved = approve(answer, target.context, facts, true);
+  // One explicit review action replaces separate approve/save/preview/fill screens.
+  const saved = await saveAnswer(libraryStore, approved, facts, 'application');
+  for (const row of plan.rows) row.action = null;
+  await writeHackathon(`plan:${tabId}`, plan, true);
+  await writeHackathon(sessionKey(tabId), { planId: plan.id, rowKey: rowKey(target.row), context: target.context,
+    request: null, sent: false, answer: saved, savedId: saved.id, savedRevision: saved.revision }, true);
+  const preview = await answerCommand({ type: 'answer-preview' }, plan) as { plan: NativePlan };
+  const filled = await fillTab(tabId, preview.plan.id);
+  const outcome = filled.outcomes?.find(o => o.documentId === target.row.documentId && o.ref === target.row.field.ref);
+  draft.status = outcome?.ok ? 'filled' : 'failed'; draft.text = saved.text; draft.revision = saved.revision;
+  run.answers[draft.id] = saved;
+  const field = run.fields.find(f => f.label === draft.question && f.status === 'review');
+  if (field) { field.status = outcome?.ok ? 'filled' : 'failed'; field.detail = outcome?.ok ? 'Reviewed answer filled and checked.' : 'Check this answer on the page.'; }
+  run.message = outcome?.ok ? 'Answer saved and filled. Review the application before submitting.' : 'The answer was saved, but its fill could not be verified. Check the page.';
+  await writeHackathon(runKey(tabId), run, true);
+  return publicRun(run);
+}
+
+/** Called only by the extension-origin listener; setup mutations are serialized. */
+export async function handleSidebar(message: Record<string, unknown>): Promise<unknown> {
+  const tabId = Number.isSafeInteger(message.tabId) && Number(message.tabId) >= 0 ? Number(message.tabId) : undefined;
+  if (message.type === 'sidebar-state') return sidebarState(tabId);
+  if (message.type === 'sidebar-ai-status') return checkAI();
+  if (message.type === 'sidebar-settings') {
+    if (typeof message.aiEnabled !== 'boolean') throw Error('Invalid AI setting.');
+    if (!message.aiEnabled) await cancelAll();
+    await writeHackathon('sidebar-ai-enabled', message.aiEnabled); return { saved: true };
+  }
+  if (message.type === 'sidebar-save-profile') {
+    if (!record(message.profile) || !Array.isArray(message.facts) || message.facts.length > 20 || !message.facts.every(isFact) || new Set(message.facts.map(f => f.id)).size !== message.facts.length) throw Error('Save up to 20 experience notes with valid text.');
+    const before = await loadFacts();
+    if (key(message.expectedProfile) !== key(await loadProfile()) || key(message.expectedFacts) !== key(before)) throw Error('Your saved information changed in another window. Reopen it before saving.');
+    const facts: Fact[] = message.facts.map((f: Fact) => { const old = before.find(v => v.id === f.id); return { id: f.id, text: f.text, location: f.location, revision: old ? old.revision + (old.text !== f.text || old.location !== f.location ? 1 : 0) : 1 }; });
+    await cancelAll(); await saveProfile(normalizeProfile(message.profile)); await writeHackathon('facts', facts); return { saved: true };
+  }
+  if (message.type === 'sidebar-save-resume') { await cancelAll(); await saveResume(message.resume); return { saved: true }; }
+  if (tabId === undefined) throw Error('Open an application tab first.');
+  if (message.type === 'sidebar-cancel') { await cancel(tabId, String(message.runId)); return { cancelled: true }; }
+  if (message.type === 'sidebar-approve') return { run: await useAnswer(message, tabId) };
+  if (message.type === 'sidebar-autofill') {
+    if (active.has(tabId)) throw Error('The previous run is still stopping. Please wait.');
+    const tab = await browser.tabs.get(tabId);
+    if (!tab.url || !/^https?:/.test(tab.url)) throw Error('Open a job application and click the extension icon on that tab.');
+    const run: StoredRun = { id: crypto.randomUUID(), tabId, url: tab.url, job: { title: '', company: '' }, phase: 'scanning', message: 'Finding application fields…', fields: [], drafts: [], answers: {}, profileKey: key(await loadProfile()), factsKey: key(await loadFacts()) };
+    const task: Active = { run, abort: new AbortController() }; active.set(tabId, task);
+    await persist(task); void execute(task).catch(() => undefined); return { run: publicRun(run) };
+  }
+  throw Error('Unknown sidebar action.');
+}

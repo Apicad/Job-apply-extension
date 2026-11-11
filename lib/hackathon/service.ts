@@ -2,7 +2,7 @@ import { collectOutcomes } from './outcomes';
 import { libraryState, recoverLibrary, deleteAnswer } from './library';
 import { answerCommand, loadFacts, libraryStore, validateAnswerBinding, invalidatePlan } from './answers';
 import { browser } from 'wxt/browser';
-import { loadProfile, readHackathon, writeHackathon, saveSyntheticProfile } from '../storage';
+import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, saveSyntheticProfile } from '../storage';
 import { sanitizeFrameScan } from '../report';
 import { planNative } from './engine';
 import type { Frame, NativePlan } from './engine';
@@ -10,6 +10,11 @@ import type { NativeScan, NativeCommand } from './page';
 import { DEMO_PROFILE, DEMO_FACTS } from './demo';
 import { key, record } from './contracts';
 const planKey = (tabId: number) => `plan:${tabId}`;
+// Hash rather than duplicating a multi-megabyte data URL in session storage.
+async function resumeFingerprint(value: unknown): Promise<string> {
+ const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key(value)));
+ return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+}
 export async function scanTab(tabId: number): Promise<NativePlan> {
  const tab = await browser.tabs.get(tabId);
  if (!tab.url || !/^https?:/.test(tab.url)) throw Error('Open a sample application in a web tab.');
@@ -21,31 +26,41 @@ export async function scanTab(tabId: number): Promise<NativePlan> {
   if (!clean || !value || typeof value.scanId !== 'string' || value.scanId.length > 100 || !r.documentId || new Set(clean.fields.map(f => f.ref)).size !== clean.fields.length || clean.fields.some(f => f.ref < 0 || f.form < -1)) continue;
   frames.push({ documentId: r.documentId, frameId: r.frameId, scan: { ...value, job: clean.job, fields: clean.fields.map(f => ({ ...f, maxLength: value.fields.find(v => v.ref === f.ref)?.maxLength ?? -1 })) } });
  }
- const profile = await loadProfile();
- const plan: NativePlan = { id: crypto.randomUUID(), tabId, url: tab.url, profileKey: key(profile), rows: planNative(frames, profile), state: 'preview' };
+ const profile = await loadProfile(); const resume = await loadResumeToAttach();
+ const rows = planNative(frames, profile, resume);
+ const plan: NativePlan = { id: crypto.randomUUID(), tabId, url: tab.url, profileKey: key(profile), rows, state: 'preview' };
+ if (rows.some(row => row.action?.type === 'file')) plan.resumeKey = await resumeFingerprint(resume);
  await writeHackathon(planKey(tabId), plan, true); return plan;
 }
 export async function getPlan(tabId: number): Promise<NativePlan> {
  const plan = await readHackathon<NativePlan>(planKey(tabId), true);
  if (!plan) throw Error('Scan this application first.'); return plan;
 }
-export async function fillTab(tabId: number, id: string): Promise<NativePlan> {
+export async function fillTab(tabId: number, id: string, shouldContinue: () => void = () => {}): Promise<NativePlan> {
  const plan = await getPlan(tabId);
+ shouldContinue();
  if (plan.id !== id || plan.state !== 'preview') throw Error('This preview was replaced or already used. Scan again; an interrupted fill is partial/unknown and will never replay automatically.');
  if ((await browser.tabs.get(tabId)).url !== plan.url || key(await loadProfile()) !== plan.profileKey) throw Error('Page or profile changed. Scan and review again.');
+ if (plan.rows.some(row => row.action?.type === 'file') && plan.resumeKey !== await resumeFingerprint(await loadResumeToAttach())) throw Error('Saved resume changed. Scan and review again.');
+ shouldContinue();
  await validateAnswerBinding(plan);
+ shouldContinue();
  plan.state = 'executing'; await writeHackathon(planKey(tabId), plan, true);
  const outcomes: NonNullable<NativePlan['outcomes']> = [];
  for (const documentId of new Set(plan.rows.map(r => r.documentId))) {
   const rows = plan.rows.filter(r => r.documentId === documentId && r.action); const first = rows[0]; if (!first) continue;
   const command: NativeCommand = { job: first.job, scanId: first.scanId, url: first.url, actions: rows.map(r => r.action!) };
+  shouldContinue();
   try {
+   shouldContinue();
    await browser.scripting.executeScript({ target: { tabId, documentIds: [documentId] }, func: (value: NativeCommand) => { (globalThis as typeof globalThis & { __jaaCommand?: NativeCommand }).__jaaCommand = value; }, args: [command] });
+   shouldContinue();
    const results = await browser.scripting.executeScript({ target: { tabId, documentIds: [documentId] }, files: ['/fill.js'] });
    const raw = results.filter(r => r.documentId === documentId).flatMap(r => Array.isArray(r.result) ? r.result : []);
    outcomes.push(...collectOutcomes(rows.map(r => r.field.ref), raw).map(o => ({ ...o, documentId })));
-  } catch (error) { outcomes.push(...rows.map(r => ({ ref: r.field.ref, documentId, ok: false, status: 'unreachable' as const }))); (plan.errors ??= []).push(String(error)); /* Never retry writes. */ }
+  } catch (error) { shouldContinue(); outcomes.push(...rows.map(r => ({ ref: r.field.ref, documentId, ok: false, status: 'unreachable' as const }))); (plan.errors ??= []).push(String(error)); /* Never retry writes. */ }
  }
+ shouldContinue();
  plan.outcomes = outcomes; plan.state = 'finished'; await writeHackathon(planKey(tabId), plan, true); return plan;
 }
 /** Called only by the extension-origin runtime listener, serialized across tabs. */

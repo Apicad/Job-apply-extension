@@ -2,7 +2,7 @@
   "name": "job-apply-extension",
   "description": "Chrome extension that fills job application forms from your saved profile. You review and submit.",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22.12"
@@ -17,8 +17,9 @@
     "test:watch": "vitest",
     "test:e2e": "npm run build:e2e && node scripts/e2e.mjs",
     "fixtures": "vite --config tests/fixtures/vite.config.ts --open",
-    "check": "npm run compile && npm run test && npm run test:e2e",
-    "postinstall": "wxt prepare"
+    "check": "npm run compile && npm run test && npm run test:native && npm run test:e2e",
+    "postinstall": "wxt prepare",
+    "test:native": "node --test tests/native/*.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/public-sans": "^5.3.0",
