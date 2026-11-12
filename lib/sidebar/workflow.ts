@@ -1,3 +1,4 @@
+import { automaticAnswer } from './automatic-answer';
 import { classifyField } from '../classify';
 import { missingFieldDetail } from './question-analysis';
 import { browser } from 'wxt/browser';
@@ -121,11 +122,11 @@ async function execute(task: Active): Promise<void> {
     const enabled = await readHackathon<boolean>('sidebar-ai-enabled') === true;
     const library = await readLibrary(libraryStore);
     if (questions.length && facts.length) {
-      run.phase = 'drafting'; run.message = 'Basic autofill finished. Preparing answers to review…'; await persist(task);
+      run.phase = 'drafting'; run.message = 'Saved details filled. Writing and filling AI answers…'; await persist(task);
       for (const row of questions) {
         assertActive(task); await assertSnapshot(run);
         const context = await contextForRow(questionsPlan, row, jobText(row));
-        const cached = library.find(a => currentApproval(a, context, facts));
+        const cached = library.find(a => a.approval?.method !== 'autofill' && currentApproval(a, context, facts));
         if (!cached && !enabled) continue;
         let answer: Answer;
         try {
@@ -141,6 +142,7 @@ async function execute(task: Active): Promise<void> {
           run.drafts.push({ id, revision: answer.revision, question: context.question, text: answer.text,
             sources: answer.trace.request.facts, gaps: answer.gaps, status: 'review' });
           await persist(task);
+          if (enabled) await fillAutomaticAnswer(task, run.drafts[run.drafts.length - 1]!, answer);
         } catch (error) {
           assertActive(task);
           run.message = `Basic autofill finished. AI could not finish: ${fail(error)}`;
@@ -181,6 +183,39 @@ async function cancel(tabId: number, id?: string): Promise<void> {
 async function cancelAll(): Promise<void> { for (const [tabId, task] of Array.from(active)) await cancel(tabId, task.run.id); }
 export function sidebarBusy(tabId: number): boolean { return active.has(tabId); }
 export async function cancelForNavigation(tabId: number): Promise<void> { await cancel(tabId); }
+
+async function fillAutomaticAnswer(task: Active, draft: SidebarDraft, original: Answer): Promise<void> {
+  const run = task.run;
+  assertActive(task); await assertSnapshot(run);
+  const facts = await loadFacts();
+  const answer = automaticAnswer(original, facts);
+  if (!answer) { draft.text = ''; await persist(task); return; }
+  const plan = await scanTab(run.tabId); task.plan = plan;
+  assertActive(task); await assertSnapshot(run);
+  const candidates = await Promise.all(eligibleApplicationRows(plan.rows).filter(supportedQuestion).map(async row => ({row, context: await contextForRow(plan,row,jobText(row))})));
+  const matches = candidates.filter(c => sameContext(c.context, original.context));
+  if (matches.length !== 1) { draft.status = 'failed'; draft.gaps.push('The question changed or already has an answer. Your page edits were preserved.'); await persist(task); return; }
+  const target = matches[0]!;
+  const approved = approve(answer, target.context, facts, true);
+  // User-initiated Autofill authorizes this write, not a claim of human review.
+  approved.approval!.method = 'autofill';
+  assertActive(task); await assertSnapshot(run);
+  const saved = await saveAnswer(libraryStore, approved, facts, 'application');
+  for (const row of plan.rows) row.action = null;
+  assertActive(task);
+  await writeHackathon(`plan:${run.tabId}`, plan, true);
+  await writeHackathon(sessionKey(run.tabId), { planId: plan.id, rowKey: rowKey(target.row), context: target.context,
+    request: null, sent: false, answer: saved, savedId: saved.id, savedRevision: saved.revision }, true);
+  const preview = await answerCommand({type:'answer-preview'},plan) as {plan:NativePlan}; task.plan=preview.plan;
+  assertActive(task); await assertSnapshot(run);
+  const filled = await fillTab(run.tabId,preview.plan.id,()=>assertActive(task));
+  assertActive(task);
+  const ok = filled.outcomes?.some(o=>o.documentId===target.row.documentId && o.ref===target.row.field.ref && o.ok);
+  draft.status=ok?'filled':'failed'; draft.text=saved.text;
+  const field = run.fields.find(f=>f.id===rowKey(target.row));
+  if(field) { field.status=ok?'filled':'failed'; field.detail=ok?'AI answer filled. Review it on the application.':'Could not verify the AI answer on the page.'; }
+  await persist(task);
+}
 
 async function useAnswer(message: Record<string, unknown>, tabId: number): Promise<SidebarRun> {
   if (active.has(tabId)) throw Error('Wait for Autofill to finish before using an answer.');

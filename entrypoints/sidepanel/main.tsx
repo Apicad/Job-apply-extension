@@ -84,25 +84,15 @@ function ProfileEditor({ state, send, refresh, disabled }: { state: SidebarState
   </details>;
 }
 
-function DraftCard({ draft, busy, onUse }: { draft: SidebarDraft; busy: boolean; onUse: (draft: SidebarDraft, text: string) => Promise<void> }) {
-  const [text, setText] = useState(draft.text);
-  const [error, setError] = useState('');
-  const [using, setUsing] = useState(false);
-  useEffect(() => { setText(draft.text); setError(''); }, [draft.id, draft.revision, draft.text]);
-  if (draft.status === 'filled') return <div className="review-card completed"><span aria-hidden="true">✓</span><p>{draft.question}<small>Your reviewed answer is filled.</small></p></div>;
-  if (draft.status === 'failed') return <div className="review-card"><h3>{draft.question}</h3><p className="helper">This answer could not be filled. Check the application, then use Autofill to scan its current fields.</p></div>;
-  const changed = text !== draft.text;
-  return <article className="review-card draft-card">
-    <div className="eyebrow">YOUR REVIEW</div>
-    <h3>{draft.question}</h3>
-    <label className="draft-label">Answer<textarea aria-label={`Answer: ${draft.question}`} value={text} maxLength={6000} onChange={e => { setText(e.target.value); setError(''); }} /></label>
-    {draft.gaps.length > 0 && <div className="gap-list"><strong>Check before using</strong><ul>{draft.gaps.map((gap, i) => <li key={i}>{gap}</li>)}</ul></div>}
-    <details className="sources"><summary>Saved facts used <span className="count">{draft.sources.length}</span></summary>{draft.sources.map(fact => <div key={fact.id}><strong>{fact.location}</strong><p>{fact.text}</p></div>)}</details>
-    <p className="helper">Check the wording and facts. “Use answer” saves this version and fills this question.</p>
-    {draft.gaps.length > 0 && changed && <p className="helper">Using your corrected answer confirms you resolved the notes above.</p>}
-    <button className="secondary full" disabled={busy || using || !text.trim() || (draft.gaps.length > 0 && !changed)} onClick={async () => { setUsing(true); setError(''); try { await onUse(draft, text); } catch (e) { setError(e instanceof Error ? e.message : 'Could not use this answer.'); } finally { setUsing(false); } }}>{using ? 'Filling answer…' : 'Use answer'}</button>
-    {error && <p className="inline-error" role="alert">{error}</p>}
-  </article>;
+function DraftCard({ draft }: { draft: SidebarDraft }) {
+ return <article className="review-card draft-card">
+  <div className="eyebrow">{draft.status === 'filled' ? 'FILLED ON APPLICATION' : 'NEEDS ATTENTION'}</div>
+  <h3>{draft.question}</h3>
+  {draft.text && <p>{draft.text}</p>}
+  {draft.gaps.length > 0 && <div className="gap-list"><strong>Missing information — still needs your attention</strong><ul>{draft.gaps.map((gap,i)=><li key={i}>{gap}</li>)}</ul></div>}
+  <p className="helper">{draft.status === 'filled' ? 'Review and edit this answer directly on the application. Missing details above have not been filled.' : draft.status === 'failed' ? 'The answer could not be verified. Check the application; existing answers are preserved.' : 'No supported answer was filled. Add the missing facts in Profile home and run Autofill again.'}</p>
+  <details className="sources"><summary>Saved facts used <span className="count">{draft.sources.length}</span></summary>{draft.sources.map(fact=><div key={fact.id}><strong>{fact.location}</strong><p>{fact.text}</p></div>)}</details>
+ </article>;
 }
 
 function App() {
@@ -204,7 +194,7 @@ function App() {
     <section className="action-section" aria-label="Application">
       <div className="context"><span className="eyebrow">CURRENT APPLICATION</span><h2>{run?.job.title || tabTitle}</h2><p>{run?.job.company || host || 'Open a job application in this tab.'}</p></div>
       <button className="autofill" disabled={loading || busy || active || !httpTab} onClick={() => void perform('sidebar-autofill')}><span aria-hidden="true">✦</span> Autofill</button>
-      <p className="under-button">Fills saved details. You review and submit.</p>
+      <p className="under-button">Fills saved details and AI answers. You review and submit.</p>
       {!httpTab && !loading && <p className="inline-message">Open an application, then click the extension’s toolbar icon.</p>}
       {!hasProfile && !loading && <p className="inline-message">Open your profile home to save your details once.</p>}
       {active && <div className="run-progress"><div><span className="pulse" aria-hidden="true" /><p>{run?.message || 'Working on your application…'}</p><button className="text-button" disabled={busy} onClick={() => void perform('sidebar-cancel', { tabId: run?.tabId, runId: run?.id })}>Cancel</button></div><progress aria-label="Autofill progress" /></div>}
@@ -214,7 +204,7 @@ function App() {
     {run && <section className="results" aria-label="Autofill results">
       <div className="result-summary"><span className="status-mark" aria-hidden="true">{run.phase === 'error' ? '!' : active ? '·' : '✓'}</span><div><h2>{active ? 'Working through the form' : run.phase === 'cancelled' ? 'Autofill stopped' : run.phase === 'error' ? 'Needs a closer look' : 'Ready for your review'}</h2><p role="status" aria-live="polite">{run.message}</p></div></div>
       <div className="counts"><span><b>{filled.length}</b> filled</span><span><b>{kept.length}</b> kept</span><span><b>{pending.length}</b> to check</span></div>
-      {run.drafts.map(draft => <DraftCard key={draft.id} draft={draft} busy={busy || active} onUse={async (current, text) => { setBusy(true); try { await send('sidebar-approve', { tabId: run.tabId, runId: run.id, draftId: current.id, revision: current.revision, text }); await refresh(); } finally { setBusy(false); } }} />)}
+      {run.drafts.map(draft => <DraftCard key={draft.id} draft={draft} />)}
       {attentionFields.length > 0 && <details className="attention" open><summary>Needs your attention <span className="count">{attentionFields.length}</span></summary><ul>{attentionFields.map(f => <li key={f.id}><span className="attention-dot" aria-hidden="true" /><div><strong>{f.label || 'Unlabelled field'}</strong><p>{f.detail || 'Complete this field on the application.'}</p></div></li>)}</ul></details>}
       {(filled.length > 0 || kept.length > 0) && <details className="completed-fields"><summary>Completed details <span className="count">{filled.length + kept.length}</span></summary><ul>{[...filled, ...kept].map(f => <li key={f.id}><span aria-hidden="true">✓</span><span>{f.label || 'Field'}<small>{f.status === 'kept' ? 'Your existing answer was kept' : f.detail || 'Filled and checked'}</small></span></li>)}</ul></details>}
       {['review', 'finished'].includes(run.phase) && run.fields.length > 0 && <div className="submission-review">

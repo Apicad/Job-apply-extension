@@ -204,7 +204,7 @@ const FIELD_NAMES: readonly LabelRule[] = [
   ['postalCode', /^(zip|postal) code$|^zip$|^postcode$|^zip ?(\/|or) ?postal code$/],
   ['country', /^country( of residence)?$/],
   // "Location (City)" is the label of Greenhouse's own location box. "City, State" is one box for both.
-  ['location', /^(current )?location$|^location \(city\)$|^city(, | and | & |\/)state$/],
+  ['location', /^where are you located\??$|^(current )?location$|^location \(city\)$|^city(, | and | & |\/)state$/],
   ['linkedin', /^linkedin( profile)?( url)?$/],
   ['github', /^github( profile)?( url)?$/],
   ['portfolio', /^(personal )?(website|portfolio)( url)?$/],

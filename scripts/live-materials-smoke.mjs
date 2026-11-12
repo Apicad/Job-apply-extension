@@ -125,21 +125,23 @@ try {
   const sidebar = await context.newPage(); await sidebar.goto(`${origin}sidepanel.html?tabId=${tabId}`);
   expect((await send({ type: 'sidebar-settings', aiEnabled: true })).ok).toBe(true);
   await sidebar.getByRole('button', { name: 'Autofill', exact: true }).click();
-  await expect(sidebar.getByRole('button', { name: 'Use answer', exact: true })).toBeEnabled({ timeout: 90_000 });
+  await expect.poll(async () => (await send({type:'sidebar-state',tabId})).data.run?.drafts?.[0]?.status, {timeout:90_000}).toBe('filled');
+  await expect(sidebar.getByRole('button', { name: 'Use answer', exact: true })).toHaveCount(0);
   await expect(application.locator('#first')).toHaveValue('Ada');
-  await expect(application.locator('#project')).toHaveValue('');
+
   const answerState = (await send({ type: 'sidebar-state', tabId })).data;
   expect(answerState.run.drafts.length).toBe(1);
   expect(answerState.run.drafts[0].text.length).toBeGreaterThan(20);
+  await expect(application.locator('#project')).toHaveValue(answerState.run.drafts[0].text);
   expect(trace.filter(item => item.type === 'draft')).toHaveLength(1);
   await expect(application.locator('#submitted')).toHaveText('Not submitted');
   await sidebar.screenshot({ path: path.join(out, 'live-answer-preview.png'), fullPage: true });
   await fs.writeFile(path.join(out, 'saved-answer-preview.json'), JSON.stringify(answerState.run.drafts, null, 2));
-  // Leave synthetic generated drafts unreviewed. The deterministic suite separately
+  // Leave synthetic generated document drafts unreviewed. The deterministic suite separately
   // checks human review, edits invalidating review, and actual DOCX/PDF export.
   await fs.writeFile(path.join(out, 'native-trace.json'), JSON.stringify(trace, null, 2));
   await fs.writeFile(path.join(out, 'saved-materials.json'), JSON.stringify(state.materials, null, 2));
-  await fs.writeFile(path.join(out, 'result.json'), JSON.stringify({ sha, dirty: false, version: JSON.parse(await fs.readFile('package.json', 'utf8')).version, elapsedMs, provider: 'Codex', liveInference: true, transport: 'Test browser port bridged to actual framed native host and signed-in CLI; OS registration not tested here', resumePreview: true, coverLetterPreview: true, liveAnswerPreview: true, answerKeptOutOfFormUntilReview: true, browserBuild: 'e2e with localhost grants', exportsBlockedUntilReview: true, submitted: false, syntheticOnly: true }, null, 2));
+  await fs.writeFile(path.join(out, 'result.json'), JSON.stringify({ sha, dirty: false, version: JSON.parse(await fs.readFile('package.json', 'utf8')).version, elapsedMs, provider: 'Codex', liveInference: true, transport: 'Test browser port bridged to actual framed native host and signed-in CLI; OS registration not tested here', resumePreview: true, coverLetterPreview: true, liveAnswerPreview: true, answerFilledAutomatically: true, browserBuild: 'e2e with localhost grants', exportsBlockedUntilReview: true, submitted: false, syntheticOnly: true }, null, 2));
   console.log(`LIVE_MATERIALS_PREVIEWS_PASSED ${out}`);
 } catch (error) {
   await fs.writeFile(path.join(out, 'failure.json'), JSON.stringify({ sha, error: String(error), trace }, null, 2));

@@ -64,7 +64,7 @@ export function planNative(frames: Frame[], profile: Profile, resume: StoredResu
     const custom=greenhouseAction(field,frame.scan.fields,frame.scan.url,profile,fieldSignature(d,field.form,field.maxLength));
     if (custom && !used.has(custom.usageKey)) { action=custom.action; used.add(custom.usageKey); status='Ready for preview'; }
    }
-   if (!action && inApplication && kind && usageKey && !used.has(usageKey) && kind !== 'location') {
+   if (!action && inApplication && kind && usageKey && !used.has(usageKey) && (kind !== 'location' || d.control === 'text' && /^where are you located[?✱*\s]*$/i.test(d.label.trim()))) {
     const signature = fieldSignature(d, field.form, field.maxLength);
     if (d.control === 'text') { const value = textValueFor(kind, profile, d); if (value && (field.maxLength < 0 || value.length <= field.maxLength)) action = { ref: field.ref, type: 'text', value, signature }; }
     if (d.control === 'select' || d.control === 'radio') { const choice = pickChoice(kind, profile, d.options); if (choice.status === 'match') action = { ref: field.ref, type: d.control, index: choice.index, signature }; }

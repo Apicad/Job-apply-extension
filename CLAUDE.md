@@ -220,3 +220,7 @@ Profile home also stores an optional preferred first name, blank by default. Ré
 ### General résumé and style addendum
 
 The November 11 owner request replaces the fixed one-page/base-only presentation with an editable General résumé, optional professional summary, Professional/Classic styles and a one-page or multi-page preference. A target position alone may start AI document generation; company/posting are optional. The helper explicitly advertises general-materials support before role-only evidence is sent. Preserve existing profile facts, attachments, source validation, explicit review and no-submit behavior. Saved layouts retain their classic template on migration; new profiles default to Professional. A larger ranked evidence database and saved role-version library remain separate work.
+
+### Direct application answers
+
+The owner now requests that one-button Autofill write supported AI answer segments directly, without a separate Use answer button. Keep missing facts in the sidebar even for a partial filled answer. Preserve the original response trace and distinguish automatic authorization from human review. Never invent missing years/preferences or overwrite existing answers. The exact plain-text question “Where are you located?” uses saved city/state/country; custom typeaheads remain gated. AI application answers should be professional and detailed with supported concrete examples.

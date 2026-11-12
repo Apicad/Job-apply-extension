@@ -71,3 +71,13 @@ it('C-4: oversized option values remain manual instead of signing a truncated ch
  fixture(); document.querySelector('form')!.insertAdjacentHTML('beforeend', `<label>Country<select><option value="">Select</option><option value="${'x'.repeat(201)}">United States</option></select></label>`);
  expect(scanNative(document, env).fields.some(f => f.descriptor.control === 'select')).toBe(false);
 });
+
+it('fills the explicit location question from saved location, preserves custom widgets and respects section settings', () => {
+ document.body.innerHTML='<form><label>First name<input></label><label>Email<input type="email"></label><label>Phone<input></label><label>Where are you located? <input id="where"></label><label>Current location<input role="combobox"></label></form>';
+ const scan=scanNative(document,env); const frames=[{frameId:0,documentId:'d',scan}];
+ const profile=normalizeProfile({city:'South San Francisco',state:'California',country:'United States'});
+ const plan=planNative(frames,profile);
+ expect(plan.find(r=>r.field.descriptor.label==='Where are you located?')?.action).toMatchObject({type:'text',value:'South San Francisco, California, United States'});
+ expect(plan.find(r=>r.field.descriptor.control==='combobox')?.action).toBeNull();
+ expect(planNative(frames,{...profile,fillLocation:'no'}).every(r=>!r.action)).toBe(true);
+});

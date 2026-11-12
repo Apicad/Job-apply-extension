@@ -351,6 +351,7 @@ function fits(text: string, inputType: string): boolean {
  * whose type would refuse the text.
  */
 export const textValueFor: TextValueFor = (kind, profile, field) => {
+  if (kind === 'location' && field.control === 'text' && /^where are you located[?✱*\s]*$/i.test(field.label.trim()) && autofillAllowed(profile, kind, field)) return [profile.city, profile.state, profile.country].map(v => v.trim()).filter(Boolean).join(', ');
   // A file input takes a file, never text.
   if (field.control === 'file' || !autofillAllowed(profile, kind, field)) return '';
   const text = answer(kind, profile, field.inputType);

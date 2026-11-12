@@ -5,7 +5,7 @@ This release targets **partial, conservative assistance**, not universal applica
 | Format | Demonstrated scope to verify | Manual / excluded |
 | --- | --- | --- |
 | Greenhouse | Contact fields, formatted phone, résumé upload, exact supported country/location and school/degree choices; ambiguous choices stay blank | Consent, checkbox groups, unmatched choices, repeated records, additional attachments |
-| Lever | Full name, email/phone, recognized links and résumé upload; existing answers preserved | Location typeahead, unsupported questions, signatures and consent |
+| Lever | Full name, email/phone, recognized links, explicit “Where are you located?” plain-text question and résumé upload; existing answers preserved | Location typeahead, unsupported questions, signatures and consent |
 | Ashby | Recognized fields in a layout without a form element, contact details and résumé upload | Custom location controls, consent and unsupported questions |
 
 Run `npm run test:platforms` for the focused suite. Run `npm run check` for all regressions, including document preview/edit/review/export checks and native protocol tests. Standard AI tests use deterministic boundary responses. They must be supplemented by a **fresh real signed-in CLI generation** for the candidate, with both documents rendered in preview. Connection status alone does not pass that check.
@@ -19,3 +19,7 @@ The generic practice page demonstrates project-answer drafting. Local question r
 Recognition means identifying supported visible application fields when the user activates Autofill. There is no passive monitoring or automatic navigation. Job listings without a form, inaccessible embeds, unsupported later steps and account-gated flows are not silently treated as completed applications. The user must inspect the entire form even when the sidebar has no outstanding items.
 
 Independent-device limits: Chrome is required; the AI helper currently supports macOS/Linux only. A fresh isolated browser profile on the developer's machine is useful evidence but is not a test on a second physical machine. Record those separately. Workday, LinkedIn integration, full repeated employment, a role-based résumé library and complete profile backup/restore are outside this hackathon release.
+
+## Direct AI answers
+
+With AI enabled, one user-initiated Autofill drafts professional, detailed answers and writes supported segments into empty matched textareas. Missing information remains visible in the sidebar; partial filled text is not a completed answer. Citation and token checks are bounded checks, not semantic proof. The original full response and warnings stay in the run record; automatic write authorizations are marked `autofill`, not human review, and are not silently reused as reviewed library answers. Existing page answers are never overwritten. Form/question identity, current facts, cancellation, length limits and exact readback are still checked. No action submits the application.

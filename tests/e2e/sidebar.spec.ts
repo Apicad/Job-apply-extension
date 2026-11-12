@@ -28,7 +28,7 @@ async function mockAI(worker: Worker, delay: number) {
           const request = value.request;
           const raw = JSON.stringify({ schema: 1, requestId: request.id, context: request.context,
             facts: request.facts.map(({ id, revision }: any) => ({ id, revision })),
-            segments: [{ text: request.facts[0].text, sources: [{ id: request.facts[0].id, revision: request.facts[0].revision }] }], missing: [] });
+            segments: [{ text: request.facts[0].text, sources: [{ id: request.facts[0].id, revision: request.facts[0].revision }] }], missing: (globalThis as any).__draftMissing ?? [] });
           // Intentionally deliver even after disconnect: stale replies must not be accepted.
           setTimeout(() => messages.forEach(fn => fn({ id: value.id, ok: true, data: { raw } })), delayMs);
         },
@@ -62,7 +62,7 @@ test('one Autofill action fills basics and resume, preserves existing answers, a
   expect(await page.locator('#resume').evaluate((el: HTMLInputElement) => el.files?.[0]?.name)).toBe('Ada.txt');
 });
 
-test('native AI draft appears beside the form, only explicit review fills it, and unrelated forms stay excluded', async ({ context, serviceWorker, openExtensionPage }, testInfo) => {
+test('one Autofill writes AI answers directly and leaves unrelated forms untouched', async ({ context, serviceWorker, openExtensionPage }, testInfo) => {
   const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
   await page.evaluate(() => { const form = document.createElement('form'); form.innerHTML = '<label>Describe a relevant project.<textarea id="unrelated"></textarea></label>'; document.body.append(form); });
   const ui = await openExtensionPage('sidepanel.html'); const tabId = await tabFor(ui, page);
@@ -71,28 +71,54 @@ test('native AI draft appears beside the form, only explicit review fills it, an
   expect((await send(ui, { type: 'sidebar-autofill', tabId })).ok).toBe(true);
   const state = await settled(ui, tabId); expect(state.run.drafts).toHaveLength(1);
   expect(await serviceWorker.evaluate(() => (globalThis as any).__draftRequests.length)).toBe(1);
-  await expect(page.locator('#project')).toHaveValue('');
   const draft = state.run.drafts[0];
+  expect(draft.status).toBe('filled');
   await ui.goto(`${ui.url()}?tabId=${tabId}`); await ui.setViewportSize({ width: 390, height: 900 });
-  await expect(ui.getByRole('button', { name: 'Use answer', exact: true })).toBeEnabled();
+  await expect(ui.getByRole('button', { name: 'Use answer', exact: true })).toHaveCount(0);
   await ui.screenshot({ path: testInfo.outputPath('sidebar-draft-review.png'), fullPage: true });
-  await ui.getByRole('button', { name: 'Use answer', exact: true }).click();
   await expect(page.locator('#project')).toHaveValue(draft.text);
   await expect(page.locator('#unrelated')).toHaveValue(''); await expect(page.locator('#submitted')).toHaveText('Not submitted');
   expect((await send(ui, { type: 'state', tabId })).data.library).toHaveLength(1);
 });
 
-test('changing saved facts prevents an old draft from being filled', async ({ context, serviceWorker, openExtensionPage }) => {
-  const page = await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
-  const ui = await openExtensionPage('sidepanel.html'); const tabId = await tabFor(ui, page);
-  await send(ui, { type: 'demo' }); await mockAI(serviceWorker, 15); await send(ui, { type: 'sidebar-settings', aiEnabled: true });
-  await send(ui, { type: 'sidebar-autofill', tabId }); const state = await settled(ui, tabId);
-  const draft = state.run.drafts[0]; expect(draft).toBeTruthy();
-  const changed = state.facts.map((fact: any, i: number) => i ? fact : { ...fact, text: 'I documented a different synthetic project.' });
-  expect((await send(ui, { type: 'sidebar-save-profile', profile: state.profile, facts: changed, expectedProfile: state.profile, expectedFacts: state.facts })).ok).toBe(true);
-  const result = await send(ui, { type: 'sidebar-approve', tabId, runId: state.run.id, draftId: draft.id, revision: draft.revision, text: draft.text });
-  expect(result.ok).toBe(false); expect(result.error).toMatch(/saved information changed/i);
-  await expect(page.locator('#project')).toHaveValue('');
+test('changing saved facts while AI is running prevents stale automatic writes', async ({ context, serviceWorker, openExtensionPage }) => {
+ const page=await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('sidepanel.html'); const tabId=await tabFor(ui,page);
+ await send(ui,{type:'demo'}); await mockAI(serviceWorker,1200); await send(ui,{type:'sidebar-settings',aiEnabled:true});
+ const state=(await send(ui,{type:'sidebar-state',tabId})).data;
+ await send(ui,{type:'sidebar-autofill',tabId});
+ await expect.poll(()=>serviceWorker.evaluate(()=>(globalThis as any).__draftRequests.length)).toBe(1);
+ const facts=state.facts.map((f:any,i:number)=>i?f:{...f,text:'I documented a different project.'});
+ expect((await send(ui,{type:'sidebar-save-profile',profile:state.profile,facts,expectedProfile:state.profile,expectedFacts:state.facts})).ok).toBe(true);
+ await new Promise(resolve=>setTimeout(resolve,1500));
+ await expect(page.locator('#project')).toHaveValue('');
+ await expect(page.locator('#submitted')).toHaveText('Not submitted');
+});
+
+test('partial AI answers fill while missing facts stay visible in the sidebar', async ({context,serviceWorker,openExtensionPage})=>{
+ const page=await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('sidepanel.html'); const tabId=await tabFor(ui,page);
+ await send(ui,{type:'demo'}); await mockAI(serviceWorker,15);
+ await serviceWorker.evaluate(()=>{(globalThis as any).__draftMissing=['Confirm approximate years of experience.'];});
+ await send(ui,{type:'sidebar-settings',aiEnabled:true}); await send(ui,{type:'sidebar-autofill',tabId});
+ const state=await settled(ui,tabId); const draft=state.run.drafts[0];
+ expect(draft.status).toBe('filled'); expect(draft.gaps).toContain('Confirm approximate years of experience.');
+ await expect(page.locator('#project')).toHaveValue(draft.text);
+ await ui.goto(`${ui.url()}?tabId=${tabId}`);
+ await expect(ui.getByText('Confirm approximate years of experience.',{exact:true})).toBeVisible();
+ await expect(ui.getByRole('button',{name:'Use answer',exact:true})).toHaveCount(0);
+ await expect(page.locator('#submitted')).toHaveText('Not submitted');
+});
+
+test('an answer typed while AI is pending is never overwritten',async({context,serviceWorker,openExtensionPage})=>{
+ const page=await context.newPage(); await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('sidepanel.html'); const tabId=await tabFor(ui,page);
+ await send(ui,{type:'demo'}); await mockAI(serviceWorker,1200); await send(ui,{type:'sidebar-settings',aiEnabled:true});
+ await send(ui,{type:'sidebar-autofill',tabId});
+ await expect.poll(()=>serviceWorker.evaluate(()=>(globalThis as any).__draftRequests.length)).toBe(1);
+ await page.locator('#project').fill('My own answer.'); await settled(ui,tabId);
+ await expect(page.locator('#project')).toHaveValue('My own answer.');
+ await expect(page.locator('#submitted')).toHaveText('Not submitted');
 });
 
 test('cancel disconnects AI and a late model reply cannot fill or restore the cancelled run', async ({ context, serviceWorker, openExtensionPage }) => {
