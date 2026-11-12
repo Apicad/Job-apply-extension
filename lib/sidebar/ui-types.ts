@@ -13,6 +13,7 @@ export interface SidebarField {
 export interface SidebarDraft {
   id: string;
   revision: number;
+  resolved?: boolean;
   question: string;
   text: string;
   sources: Fact[];

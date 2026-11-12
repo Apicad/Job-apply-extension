@@ -1,18 +1,26 @@
 # Job Apply Assistant · profile home and sidebar
 
-Save your information once in **Profile home**, then open an application and click **Autofill**. Your contact details, résumé, education, experience and saved application answers are reused from the same browser profile. Missing details stay visible for you to complete in the app. AI drafts appear beside the application. **You submit manually.**
+Save your information once in **Profile home**, then open an application and click **Autofill**. Your contact details, résumé, education, experience and saved application answers are reused from the same browser profile. Missing details stay visible for you to complete in the app. Complete, supported AI answers fill directly; review notes appear beside the application. **You submit manually.**
 
 This version builds on audited source `f3b7ef0d5dd3f1be9a16753a643e209665797b60`. Its new sidebar and local AI connection require their own review; earlier audit results do not certify these changes.
 
+## Repository contents
+
+`tests/`, `test/`, `research_notes/`, `reports/`, and `docs/plans/` are retained locally but excluded from current GitHub snapshots at the owner’s request. GitHub/source-ZIP users can install dependencies, type-check, and build the extension; the automated test suite and fixture-based practice commands require the separately retained local files. Published validation summaries are results, not a substitute for access to the test source. Existing Git history is unchanged.
+
+## Project status
+
+Job Apply Assistant is an ongoing project for reusable application profiles, connected-AI answers, and editable application documents. Current releases require unpacked Chrome installation and a local AI helper. Support is limited to tested controls and selected writing questions; universal application compatibility is not claimed. The next priorities are broader platform coverage, stronger answer evaluation, and simpler installation. Historical plans and audit records remain available for provenance.
+
 ## Use it
 
-**Hackathon quick start:** use the prebuilt bundle and [START-HERE](docs/hackathon/START-HERE.md) for installation, your own AI connection, and three safe practice applications. See [tested scope](docs/hackathon/COMPATIBILITY.md). Build a shareable bundle from a clean Git checkout with `npm run package:hackathon -- /absolute/path/to/new-output-folder`. No developer profile, account or local path is bundled.
+**Installation and practice:** use the prebuilt bundle and [START-HERE](docs/hackathon/START-HERE.md) for installation and your own AI connection. Practice applications require the separately retained local fixtures. See [tested scope](docs/hackathon/COMPATIBILITY.md). Build a shareable bundle from a clean Git checkout with `npm run package:release -- /absolute/path/to/new-output-folder`. No developer profile, account or local path is bundled.
 
 Use Node 24 or newer and desktop Chrome. From this checkout:
 
 ```sh
 npm ci
-npm run check
+npm run compile
 npm run build
 ```
 
@@ -60,7 +68,7 @@ Supported: conservative native text/select/radio fields, explicitly recognized r
 
 Checkbox reporting reads native checkbox questions and their visible labels without creating writable handles. It is scoped to the selected application form and refreshed after basic autofill so newly revealed groups can appear. Each group remains a review item even when some boxes were already checked; a checked box does not prove the whole answer is complete. Hidden controls and unrelated forms are excluded. This is bounded detection, not a guarantee that every proprietary widget, inaccessible frame or later step will be listed.
 
-The original [hackathon plan](docs/plans/2026-11-09-jobright-inspired-autofill.md) and [build handoff](docs/plans/2026-11-09-hackersquad-build-handoff.md) remain in the source snapshot. The legacy review page remains addressable for regression coverage; the toolbar opens the sidebar.
+The original planning documents remain on the owner’s machine and are excluded from current GitHub snapshots. The legacy review page remains addressable for regression coverage; the toolbar opens the sidebar.
 
 ## Historical audited foundation
 
@@ -68,9 +76,9 @@ The records below describe the earlier multi-step review workflow and its fixes.
 
 ## Audit cycle 1
 
-See [finding dispositions and verification limits](docs/hackathon/AUDIT-CYCLE-1.md). The canonical branch is `codex/release/candidate`; current fix branches use `codex/fix/<purpose>` and integrate through `codex/integration`. Older branch names in historical plans/worklogs describe their original checkpoints.
+See [finding dispositions and verification limits](docs/hackathon/AUDIT-CYCLE-1.md). Current development is on `codex/sidebar-autofill`, proposed for owner review before merging into `main`. Branch names in historical audit plans describe their original checkpoints.
 
-On a clean committed checkout run `JAA_REQUIRE_CLEAN=1 npm run check`, then `npm run build`. The Playwright JSON report records the exact SHA, tree, branch and dirty status; the release flag refuses a dirty tree. Development test runs remain allowed and are explicitly marked dirty. `node scripts/e2e.mjs` now adds the local tool binaries to PATH. Use `npm run test:e2e` to build first.
+On the owner’s checkout with the local test suite present, run `JAA_REQUIRE_CLEAN=1 npm run check`, then `npm run build`. The Playwright JSON report records the exact SHA, tree, branch and dirty status; the release flag refuses a dirty tree. Development test runs remain allowed and are explicitly marked dirty. `node scripts/e2e.mjs` now adds the local tool binaries to PATH. Use `npm run test:e2e` to build first.
 
 An executed, interrupted or invalidated fill plan cannot be previewed again. Inspect the page and scan again before reusing a saved answer. The UI distinguishes refused writes, attempted but unverified writes, verified writes, and unknown/unreachable outcomes. "Verified" covers immediate readback plus the existing 100 ms window only.
 
@@ -112,3 +120,5 @@ A target position alone can create AI drafts with helper protocol 3 (`general-ma
 The sidebar uses larger type and amber missing-information panels. **Show field on application** scrolls to and temporarily outlines one uniquely matching visible question without changing its answer. **Preview résumé** displays the saved PDF attachment locally, with page controls; plain-text résumés are also supported. Other attachment formats show an explicit limitation. This is the attachment Autofill uses, not a newly generated general or tailored résumé. Previewing never uploads or replaces it.
 
 Verified fills briefly pulse green on the application, without typing delays or extra input events; reduced-motion preferences are respected. The home preview offers a local **Job keyword check** comparing selected technical terms from the saved posting with saved evidence, the rendered résumé sections and cover-letter wording. It is a bounded vocabulary check, not a proficiency check or ATS score; missing terms are never inserted automatically.
+
+Autofill now checks essential parts of supported writing questions before inserting an AI answer: a baseline work-style preference, explicit technology durations, and proudest/from-scratch claims need saved evidence. These are conservative local checks, not a semantic correctness guarantee. Existing application answers are never replaced. Missing-information cards persist locally for the same application across runs and browser sessions. Complete the answer on the application and explicitly acknowledge every listed issue to **Mark resolved**, or regenerate a complete supported answer in an empty field. A populated field alone never clears a warning. Animated scan/fill/AI stages show current progress without artificial delays and respect reduced motion.

@@ -1,6 +1,8 @@
+import { answerRelevance } from './answer-relevance';
+import { carryReview, mergeReview, type ReviewHistory } from './review-history';
 import { automaticAnswer } from './automatic-answer';
 import { classifyField } from '../classify';
-import { missingFieldDetail } from './question-analysis';
+import { missingFieldDetail, writingIntent } from './question-analysis';
 import { browser } from 'wxt/browser';
 import { loadProfile, loadResumeToAttach, readHackathon, writeHackathon, saveProfile, saveResume } from '../storage';
 import { normalizeProfile } from '../profile';
@@ -41,6 +43,7 @@ function assertActive(task: Active): void {
 async function persist(task: Active): Promise<void> {
   assertActive(task);
   await writeHackathon(runKey(task.run.tabId), task.run, true);
+  if(task.run.job.title || task.run.job.company) await writeHackathon(`sidebar-review:${key(task.run.url)}`, {url:task.run.url,job:task.run.job,drafts:task.run.drafts});
 }
 async function assertSnapshot(run: StoredRun): Promise<void> {
   if ((await browser.tabs.get(run.tabId)).url !== run.url) throw Error('The application changed. Click Autofill on the current page.');
@@ -109,6 +112,9 @@ async function execute(task: Active): Promise<void> {
   try {
     let plan = await scanTab(run.tabId); task.plan = plan; assertActive(task); await assertSnapshot(run);
     run.job = plan.rows[0]?.job ?? { title: '', company: '' };
+    const history = await readHackathon<ReviewHistory>(`sidebar-review:${key(run.url)}`);
+    run.drafts = carryReview(history, run.url, run.job);
+    run.drafts = run.drafts.filter(d=>!d.resolved || eligibleApplicationRows(plan.rows).filter(r=>r.field.descriptor.label===d.question && !r.field.empty).length===1);
     run.fields = fieldViews(plan);
     run.phase = 'filling'; run.message = 'Filling your saved details…'; await persist(task);
     if (plan.rows.some(r => r.action)) { assertActive(task); plan = await fillTab(run.tabId, plan.id, () => assertActive(task)); }
@@ -119,12 +125,23 @@ async function execute(task: Active): Promise<void> {
     run.fields = refreshedFieldViews(plan, questionsPlan);
     const questions = eligibleApplicationRows(questionsPlan.rows).filter(supportedQuestion).slice(0, 5);
     const facts = (await loadFacts()).slice(0, 20);
+    // Old filled answers may predate review history. Surface missing essential evidence
+    // without reading, replacing or treating their presence as a resolved answer.
+    for(const row of eligibleApplicationRows(questionsPlan.rows)) {
+      if(row.field.empty || !supportedQuestion({...row,field:{...row.field,empty:true}})) continue;
+      const question=row.field.descriptor.label;
+      if(run.drafts.some(d=>d.question===question)) continue;
+      if(writingIntent(question)==='motivation') continue;
+      const gaps=answerRelevance(question,'',facts.map(f=>f.text).join('\n'),false);
+      if(gaps.length) run.drafts.push({id:crypto.randomUUID(),revision:1,question,text:'',sources:facts,gaps,status:'review'});
+    }
     const enabled = await readHackathon<boolean>('sidebar-ai-enabled') === true;
     const library = await readLibrary(libraryStore);
     if (questions.length && facts.length) {
       run.phase = 'drafting'; run.message = 'Saved details filled. Writing and filling AI answers…'; await persist(task);
       for (const row of questions) {
         assertActive(task); await assertSnapshot(run);
+        run.message = `Checking and answering: ${row.field.descriptor.label}`; await persist(task);
         const context = await contextForRow(questionsPlan, row, jobText(row));
         const cached = library.find(a => a.approval?.method !== 'autofill' && currentApproval(a, context, facts));
         if (!cached && !enabled) continue;
@@ -139,10 +156,14 @@ async function execute(task: Active): Promise<void> {
           }
           const id = crypto.randomUUID();
           run.answers[id] = answer;
-          run.drafts.push({ id, revision: answer.revision, question: context.question, text: answer.text,
-            sources: answer.trace.request.facts, gaps: answer.gaps, status: 'review' });
+          const newGaps = [...new Set([...answer.gaps,...answerRelevance(context.question,answer.text,facts.map(f=>f.text).join('\n'))])];
+          const oldGaps = run.drafts.find(d=>d.question===context.question)?.gaps ?? [];
+          const draft: SidebarDraft = { id, revision: answer.revision, question: context.question, text: answer.text,
+            sources: answer.trace.request.facts, gaps: [...new Set([...oldGaps,...newGaps])], status: 'review' };
+          run.drafts = mergeReview(run.drafts,draft);
           await persist(task);
-          if (enabled) await fillAutomaticAnswer(task, run.drafts[run.drafts.length - 1]!, answer);
+          if (enabled) await fillAutomaticAnswer(task, draft, answer);
+          if(draft.status==='filled') { draft.gaps=newGaps; await persist(task); }
         } catch (error) {
           assertActive(task);
           run.message = `Basic autofill finished. AI could not finish: ${fail(error)}`;
@@ -189,7 +210,7 @@ async function fillAutomaticAnswer(task: Active, draft: SidebarDraft, original: 
   assertActive(task); await assertSnapshot(run);
   const facts = await loadFacts();
   const answer = automaticAnswer(original, facts);
-  if (!answer) { draft.text = ''; await persist(task); return; }
+  if (!answer) { draft.text = ''; if(!draft.gaps.length) draft.gaps.push('No complete, supported answer was available. Add relevant facts or answer this question on the application.'); await persist(task); return; }
   const plan = await scanTab(run.tabId); task.plan = plan;
   assertActive(task); await assertSnapshot(run);
   const candidates = await Promise.all(eligibleApplicationRows(plan.rows).filter(supportedQuestion).map(async row => ({row, context: await contextForRow(plan,row,jobText(row))})));
@@ -294,6 +315,23 @@ export async function handleSidebar(message: Record<string, unknown>): Promise<u
     const results = await browser.scripting.executeScript({ target: { tabId }, func: revealSubmission, args: [run.url] });
     if (!results.some(result => result.frameId === 0 && result.result?.found === true)) throw Error('Could not identify one Submit application button. Review the page and use the employer’s button yourself.');
     return { revealed: true };
+  }
+  if(message.type==='sidebar-resolve-review') {
+    if(active.has(tabId)) throw Error('Wait for Autofill to finish.');
+    const run=await readHackathon<StoredRun>(runKey(tabId),true);
+    if(!run||run.id!==message.runId||message.confirmed!==true) throw Error('Review the current application first.');
+    await assertSnapshot(run);
+    const draft=run.drafts.find(d=>d.id===message.draftId);
+    if(!draft||!draft.gaps.length) throw Error('This review item is no longer current.');
+    const plan=await scanTab(tabId);
+    await assertSnapshot(run);
+    if(active.has(tabId)) throw Error('Autofill started; finish it before resolving this review.');
+    const rows=eligibleApplicationRows(plan.rows).filter(r=>r.field.descriptor.label===draft.question);
+    if(rows.length!==1||rows[0]!.field.empty) throw Error('Complete this question on the application before marking it resolved.');
+    draft.gaps=[];draft.resolved=true;draft.status='review';draft.text='';
+    await writeHackathon(runKey(tabId),run,true);
+    await writeHackathon(`sidebar-review:${key(run.url)}`,{url:run.url,job:run.job,drafts:run.drafts});
+    return {run:publicRun(run)};
   }
   if (message.type === 'sidebar-cancel') { await cancel(tabId, String(message.runId)); return { cancelled: true }; }
   if (message.type === 'sidebar-approve') return { run: await useAnswer(message, tabId) };

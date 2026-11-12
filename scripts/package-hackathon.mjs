@@ -28,14 +28,16 @@ const included = [
   'tests/fixtures/greenhouse-live.html', 'tests/fixtures/lever.html', 'tests/fixtures/ashby.html', 'tests/fixtures/hackathon.html',
   'docs/hackathon/START-HERE.md', 'docs/hackathon/COMPATIBILITY.md',
 ];
+const practiceFixturesIncluded = await fs.access(path.join(root, 'tests/fixtures/lever.html')).then(()=>true,()=>false);
 for (const file of included) {
+  if(file.startsWith('tests/') && !practiceFixturesIncluded) continue;
   const destination = path.join(bundle, file.startsWith('docs/hackathon/') ? path.basename(file) : file);
   await fs.mkdir(path.dirname(destination), { recursive: true });
   await fs.copyFile(path.join(root, file), destination);
 }
-for (const name of ['docs/plans/2026-11-09-jobright-inspired-autofill.md', 'docs/plans/2026-11-09-hackersquad-build-handoff.md']) git('cat-file', '-e', `${sha}:${name}`);
+// Owner-private tests and planning documents are deliberately excluded from the committed snapshot.
 git('archive', '--format=zip', '--prefix=source/', `--output=${path.join(bundle, 'source.zip')}`, sha);
-await fs.writeFile(path.join(bundle, 'RELEASE.json'), JSON.stringify({ version: pkg.version, sha, tree: git('rev-parse', 'HEAD^{tree}'), branch: git('rev-parse', '--abbrev-ref', 'HEAD'), build: 'production', plansIncludedInSource: true, createdAt: new Date().toISOString(), node: process.version, platformTests: 'See COMPATIBILITY.md and the separate exact-SHA evidence report.' }, null, 2) + '\n');
+await fs.writeFile(path.join(bundle, 'RELEASE.json'), JSON.stringify({ version: pkg.version, sha, tree: git('rev-parse', 'HEAD^{tree}'), branch: git('rev-parse', '--abbrev-ref', 'HEAD'), build: 'production', plansIncludedInSource: false, testsIncludedInSource: false, practiceFixturesIncluded, createdAt: new Date().toISOString(), node: process.version, platformTests: 'See COMPATIBILITY.md and the separate exact-SHA evidence report.' }, null, 2) + '\n');
 const zip = {}; const sums = [];
 async function collect(directory) {
   for (const name of (await fs.readdir(directory)).sort()) {

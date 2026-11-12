@@ -4,7 +4,7 @@ Use desktop Google Chrome. Basic autofill, local résumé import, general résum
 
 ## Install the prebuilt bundle
 
-1. Extract the complete `job-apply-assistant-0.6.0.zip` into a permanent folder. Keep it there while the extension is installed. Do not choose the ZIP itself.
+1. Extract the complete `job-apply-assistant-0.6.4.zip` into a permanent folder. Keep it there while the extension is installed. Do not choose the ZIP itself.
 2. Open `chrome://extensions` in Chrome. Turn on **Developer mode**, choose **Load unpacked**, and select the bundle's **extension** folder (the one containing `manifest.json`).
 3. Pin **Job Apply Assistant** from Chrome's puzzle-piece menu. Open its Details → Extension options to reach **Profile home**.
 4. Upload your résumé, review the extracted fields, add your experience/project notes, and **Save profile**. Nothing from the developer's account is bundled. Education and sensitive eligibility answers are optional; leave unknown answers blank.
@@ -44,19 +44,19 @@ A successful connection check proves CLI/account detection, not successful infer
 
 ## Rebuild and reproduce
 
-The bundle includes `source.zip` with the exact source and both hackathon plan documents. `RELEASE.json` identifies its SHA; `SHA256SUMS` identifies every bundled file. Extract `source.zip`, enter `source`, and run with Node 24+:
+The bundle includes `source.zip` with the exact committed application source. Tests, research notes, reports and planning documents are excluded at the owner’s request. `RELEASE.json` identifies its SHA; `SHA256SUMS` identifies every bundled file. Extract `source.zip`, enter `source`, and run with Node 24+:
 
 ```sh
 npm ci
+npm run compile
 npm run build
-npm run demo
 ```
 
 On Linux, Chromium may also need system libraries: `npx playwright install --with-deps chromium`. Load `.output/chrome-mv3` in Chrome. Never distribute `.output/chrome-mv3-e2e`, which has localhost permissions for automation. Automated tests use fresh synthetic profiles and do not submit applications. They do not prove the production toolbar's `activeTab` grant; check that manually with the practice pages.
 
-For the full test suite, clone `https://github.com/Apicad/Job-apply-extension.git` and check out the full SHA shown in `RELEASE.json`, then run `npm ci`, `npx playwright install chromium`, and `npm run check`. This preserves exact Git provenance for the browser test report. Unit/native tests can also run from the source ZIP with `npm test` and `npm run test:native`.
+The automated test suite is retained only in the owner’s local checkout. A fresh GitHub clone or source ZIP can build the extension but cannot run those tests. Practice pages require the local fixtures; check `practiceFixturesIncluded` in `RELEASE.json` before following the practice steps. `npm run check` and `npm run test:e2e` require the private local test directory.
 
-To package from a Git checkout: commit the reviewed source, run the checks, then `npm run package:hackathon -- /absolute/path/to/new-output-folder`. The command builds production assets and refuses a dirty checkout or existing destination. The source ZIP can be rebuilt without Git; the provenance-based tests and release packager require a Git checkout.
+To package from a Git checkout: commit the reviewed source, run the checks, then `npm run package:release -- /absolute/path/to/new-output-folder`. The command builds production assets and refuses a dirty checkout or existing destination. The source ZIP can be rebuilt without Git; the provenance-based tests and release packager require a Git checkout.
 
 ## If something does not work
 
