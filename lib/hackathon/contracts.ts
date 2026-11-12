@@ -1,3 +1,4 @@
+import { protectedClaimGaps } from './protected-claims';
 import { writingIntent } from '../sidebar/question-analysis';
 /** Versioned, browser-independent evidence and approval boundary. */
 export interface Fact { id: string; revision: number; text: string; location: string }
@@ -45,7 +46,7 @@ export const textareaText = (text: string): string => text.replace(/\r\n?/g, '\n
 // conservative review flags; matching a token is not proof of its attribution.
 const numericTokens = (text: string): string[] => text.replace(/\bone(?=\s+(?:of\b|part\s+of\b|(?:project|example)\b))/gi, '').match(/\d+(?:[.,]\d+)*%?|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/gi) ?? [];
 function unsupportedClaims(text: string, support: string): string[] {
- const gaps: string[] = []; const availableNumbers = new Set(numericTokens(support).map(n => n.toLowerCase()));
+ const gaps: string[] = protectedClaimGaps(text, support); const availableNumbers = new Set(numericTokens(support).map(n => n.toLowerCase()));
  const numbers = numericTokens(text).filter(n => !availableNumbers.has(n.toLowerCase()));
  const technologies = /\b(?:Rust|Python|JavaScript|TypeScript|Java|C\+\+|SQL|Oracle|AWS|Kubernetes|React|PhD|MBA|bachelor|master|certified)\b/gi;
  const terms = (text.match(technologies) ?? []).filter(term => !(support.match(technologies) ?? []).some(t => t.toLowerCase() === term.toLowerCase()));
@@ -56,7 +57,7 @@ function unsupportedClaims(text: string, support: string): string[] {
 const proseKey = (text: string) => textareaText(text).replace(/\s+/g, ' ').trim();
 const claimKey = (text: string) => proseKey(text).toLowerCase().replace(/[.!?]+$/, '');
 function segmentGaps(segment: Segment, facts: Fact[]): string[] {
- const support = segment.sources.map(ref => facts.find(f => f.id === ref.id && f.revision === ref.revision)?.text ?? '').join(' ');
+ const support = segment.sources.map(ref => facts.find(f => f.id === ref.id && f.revision === ref.revision)?.text ?? '').join('\n');
  return [...(segment.sources.length ? [] : [`No saved evidence: ${segment.text}`]), ...unsupportedClaims(segment.text, support)];
 }
 export const originalSourceWarnings = (a: Answer): string[] => [...new Set(a.trace.segments.flatMap(s => segmentGaps(s, a.trace.request.facts)))];
@@ -66,7 +67,7 @@ export function answerGaps(a: Answer): string[] {
  if (a.origin === 'ai') {
   for (const s of a.segments) gaps.push(...segmentGaps(s, a.trace.request.facts));
  } else {
-  gaps.push(...unsupportedClaims(a.text, a.trace.request.facts.map(f => f.text).join(' ')));
+  gaps.push(...unsupportedClaims(a.text, a.trace.request.facts.map(f => f.text).join('\n')));
   // An unchanged original claim cannot borrow a token from unrelated selected
   // facts merely because an edit removed its displayed sentence mappings.
   for (const s of a.trace.segments) if (claimKey(a.text).includes(claimKey(s.text))) gaps.push(...segmentGaps(s, a.trace.request.facts));
@@ -90,7 +91,7 @@ export function parseReply(raw: string, request: Request, facts: Fact[], now = D
   const sources: Source[] = item.sources.map(s => ({ id: s.id, revision: s.revision }));
   if (!factsCurrent(sources, request.facts)) throw Error('Invented or stale source reference. Job requirements cannot be applicant sources.');
   if (!sources.length) gaps.push(`No saved evidence: ${item.text}`);
-  const support = sources.map(s => request.facts.find(f => f.id === s.id)!.text).join(' ');
+  const support = sources.map(s => request.facts.find(f => f.id === s.id)!.text).join('\n');
   gaps.push(...unsupportedClaims(item.text, support));
   segments.push({ text: textareaText(item.text.trim()), sources });
  }

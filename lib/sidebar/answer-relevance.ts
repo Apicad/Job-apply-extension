@@ -1,7 +1,8 @@
+import { protectedClaimGaps } from '../hackathon/protected-claims';
 import { writingIntent } from './question-analysis';
 /** Bounded completeness gates for supported question types, not a semantic truth guarantee. */
 export function answerRelevance(question: string, answer: string, evidence: string, checkAnswer = true): string[] {
- const intent=writingIntent(question), gaps:string[]=[];
+ const intent=writingIntent(question), gaps:string[]=checkAnswer ? protectedClaimGaps(answer, evidence) : [];
  const positive=(text:string,pattern:RegExp)=>text.split(/[\n.!?]+/).some(sentence=>pattern.test(sentence)&&! /\b(?:not|never|no|unknown|missing|unconfirmed)\b|\b(?:don't|haven't|cannot)\b/i.test(sentence));
  if(intent==='work-style') {
   const preference=/(?=.*(?:\bI\s+(?:(?:generally|usually|typically)\s+)?(?:prefer|lean|prioritize|favo[u]?r|tend)|\bmy\s+(?:baseline|preference|tendency)\b))(?=.*\b(?:ship(?:ping)?|quickly|speed|perfection(?:ist)?|perfecting|quality|best solution)\b)/i;
@@ -24,7 +25,7 @@ export function answerRelevance(question: string, answer: string, evidence: stri
  * Unsupported personal assertions remain blocked, rather than merely annotated. */
 export function canFillPartialAnswer(question: string, answer: string, evidence: string): boolean {
  const intent = writingIntent(question);
- if (!answer.trim()) return false;
+ if (!answer.trim() || protectedClaimGaps(answer, evidence).length) return false;
  if (intent === 'work-style' || intent === 'motivation') return answerRelevance(question, answer, evidence).length === 0;
  if (intent === 'skills') return /\b(?:use|used|worked|built|developed|experience|skills|proficien)\w*\b|\w\s*:/i.test(answer);
  if (intent === 'project') {
