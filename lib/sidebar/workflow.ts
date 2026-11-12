@@ -165,9 +165,15 @@ async function execute(task: Active): Promise<void> {
           if (enabled) await fillAutomaticAnswer(task, draft, answer);
           if(draft.status==='filled') { draft.gaps=newGaps; await persist(task); }
         } catch (error) {
-          assertActive(task);
-          run.message = `Basic autofill finished. AI could not finish: ${fail(error)}`;
-          run.phase = 'review'; await persist(task); return;
+          // A bad answer must not prevent independent questions from being answered.
+          // Navigation, cancellation and changed saved facts still stop the whole run.
+          assertActive(task); await assertSnapshot(run);
+          const question = row.field.descriptor.label;
+          const oldGaps = run.drafts.find(d => d.question === question)?.gaps ?? [];
+          run.drafts = mergeReview(run.drafts, { id: crypto.randomUUID(), revision: 1,
+            question, text: '', sources: facts, status: 'review',
+            gaps: [...new Set([...oldGaps, `AI could not complete this question: ${fail(error)}. Retry Autofill or answer it on the application.`])] });
+          await persist(task);
         }
       }
     }

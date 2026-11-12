@@ -83,7 +83,7 @@ export function parseReply(raw: string, request: Request, facts: Fact[], now = D
  if (raw.length > 30_000 || now > request.expiresAt || !factsCurrent(request.facts, facts) || request.facts.some(f => !facts.some(current => key(current) === key(f)))) throw Error('Request expired or saved facts changed. Preview a new request.');
  let value: unknown; try { value = JSON.parse(raw); } catch { throw Error('Paste a JSON object only, without markdown fences.'); }
  if (!record(value) || value.schema !== 1 || value.requestId !== request.id || !isContext(value.context) || !sameContext(value.context, request.context) || key(value.facts) !== key(request.facts.map(({ id, revision }) => ({ id, revision })))) throw Error('Response identity or source revisions do not match this request.');
- if (!Array.isArray(value.segments) || value.segments.length < 1 || value.segments.length > 12 || !Array.isArray(value.missing) || value.missing.length > 20 || !value.missing.every(s => bounded(s, 500))) throw Error('Invalid sentence segments or missing-information notes.');
+ if (!Array.isArray(value.segments) || value.segments.length > 12 || !Array.isArray(value.missing) || value.missing.length > 20 || !value.missing.every(s => bounded(s, 500)) || (!value.segments.length && !value.missing.length)) throw Error('Invalid sentence segments or missing-information notes.');
  const segments: Segment[] = []; const gaps: string[] = [...value.missing];
  for (const item of value.segments) {
   if (!record(item) || !bounded(item.text, 2000) || !Array.isArray(item.sources) || item.sources.length > 20 || !item.sources.every(isSource)) throw Error('Invalid sentence or source list.');
