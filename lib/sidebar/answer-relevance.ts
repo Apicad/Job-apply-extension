@@ -19,3 +19,19 @@ export function answerRelevance(question: string, answer: string, evidence: stri
  if(checkAnswer&&intent==='motivation'&&!/\b(?:excited|interested|motivated|drawn|appeals|want to|would welcome|would love)\b/i.test(answer)) gaps.push('Explain why this specific opportunity interests you, connecting it to supported experience or interests.');
  return gaps;
 }
+
+/** Completeness notes can remain while a useful supported portion is filled.
+ * Unsupported personal assertions remain blocked, rather than merely annotated. */
+export function canFillPartialAnswer(question: string, answer: string, evidence: string): boolean {
+ const intent = writingIntent(question);
+ if (!answer.trim()) return false;
+ if (intent === 'work-style' || intent === 'motivation') return answerRelevance(question, answer, evidence).length === 0;
+ if (intent === 'skills') return /\b(?:use|used|worked|built|developed|experience|skills|proficien)\w*\b|\w\s*:/i.test(answer);
+ if (intent === 'project') {
+  const missing = answerRelevance(question, '', evidence, false);
+  if (missing.some(g => g.includes('most proud')) && /\b(?:most proud|proudest)\b/i.test(answer)) return false;
+  if (missing.some(g => g.includes('from scratch')) && /\bfrom scratch\b|\b(?:sole|solely|single-handedly)\b/i.test(answer)) return false;
+  return /\b(?:built|created|developed|implemented|designed|worked|project)\b/i.test(answer);
+ }
+ return false;
+}

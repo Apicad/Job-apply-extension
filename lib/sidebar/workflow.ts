@@ -1,4 +1,5 @@
 import { answerRelevance } from './answer-relevance';
+import { readJobDescription } from './job-context';
 import { carryReview, mergeReview, type ReviewHistory } from './review-history';
 import { automaticAnswer } from './automatic-answer';
 import { classifyField } from '../classify';
@@ -138,11 +139,13 @@ async function execute(task: Active): Promise<void> {
     const enabled = await readHackathon<boolean>('sidebar-ai-enabled') === true;
     const library = await readLibrary(libraryStore);
     if (questions.length && facts.length) {
+      const description = enabled ? await readJobDescription(run.tabId, questions[0]!) : '';
+      assertActive(task); await assertSnapshot(run);
       run.phase = 'drafting'; run.message = 'Saved details filled. Writing and filling AI answers…'; await persist(task);
       for (const row of questions) {
         assertActive(task); await assertSnapshot(run);
         run.message = `Checking and answering: ${row.field.descriptor.label}`; await persist(task);
-        const context = await contextForRow(questionsPlan, row, jobText(row));
+        const context = await contextForRow(questionsPlan, row, [jobText(row),description].filter(Boolean).join('\n').slice(0,4000));
         const cached = library.find(a => a.approval?.method !== 'autofill' && currentApproval(a, context, facts));
         if (!cached && !enabled) continue;
         let answer: Answer;
@@ -216,10 +219,10 @@ async function fillAutomaticAnswer(task: Active, draft: SidebarDraft, original: 
   assertActive(task); await assertSnapshot(run);
   const facts = await loadFacts();
   const answer = automaticAnswer(original, facts);
-  if (!answer) { draft.text = ''; if(!draft.gaps.length) draft.gaps.push('No complete, supported answer was available. Add relevant facts or answer this question on the application.'); await persist(task); return; }
+  if (!answer) { draft.text = ''; if(!draft.gaps.length) draft.gaps.push('No relevant, supported answer text was available. Add relevant facts or answer this question on the application.'); await persist(task); return; }
   const plan = await scanTab(run.tabId); task.plan = plan;
   assertActive(task); await assertSnapshot(run);
-  const candidates = await Promise.all(eligibleApplicationRows(plan.rows).filter(supportedQuestion).map(async row => ({row, context: await contextForRow(plan,row,jobText(row))})));
+  const candidates = await Promise.all(eligibleApplicationRows(plan.rows).filter(supportedQuestion).map(async row => ({row, context: await contextForRow(plan,row,original.context.job)})));
   const matches = candidates.filter(c => sameContext(c.context, original.context));
   if (matches.length !== 1) { draft.status = 'failed'; draft.gaps.push('The question changed or already has an answer. Your page edits were preserved.'); await persist(task); return; }
   const target = matches[0]!;
@@ -240,7 +243,7 @@ async function fillAutomaticAnswer(task: Active, draft: SidebarDraft, original: 
   const ok = filled.outcomes?.some(o=>o.documentId===target.row.documentId && o.ref===target.row.field.ref && o.ok);
   draft.status=ok?'filled':'failed'; draft.text=saved.text;
   const field = run.fields.find(f=>f.id===rowKey(target.row));
-  if(field) { field.status=ok?'filled':'failed'; field.detail=ok?'AI answer filled. Review it on the application.':'Could not verify the AI answer on the page.'; }
+  if(field) { field.status=ok?'filled':'failed'; field.detail=ok?(draft.gaps.length?'Supported answer text filled; missing details remain flagged.':'AI answer filled. Review it on the application.'):'Could not verify the AI answer on the page.'; }
   await persist(task);
 }
 
@@ -254,7 +257,7 @@ async function useAnswer(message: Record<string, unknown>, tabId: number): Promi
   await assertSnapshot(run);
   const facts = await loadFacts();
   const plan = await scanTab(tabId);
-  const candidates = await Promise.all(eligibleApplicationRows(plan.rows).filter(supportedQuestion).map(async row => ({ row, context: await contextForRow(plan, row, jobText(row)) })));
+  const candidates = await Promise.all(eligibleApplicationRows(plan.rows).filter(supportedQuestion).map(async row => ({ row, context: await contextForRow(plan, row, original.context.job) })));
   const matches = candidates.filter(c => sameContext(c.context, original.context));
   if (matches.length !== 1) throw Error('This question changed or already has an answer. Click Autofill again.');
   const target = matches[0]!;
