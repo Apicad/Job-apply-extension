@@ -106,3 +106,9 @@ Profile home also stores an optional preferred first name, blank by default. Ré
 ### General résumé setup (0.6.0)
 
 A target position alone can create AI drafts with helper protocol 3 (`general-materials`). Re-run the bundled helper installer to enable this; older helpers receive no role-only evidence and show an update instruction. Existing generated drafts remain readable, but the new summary/style/length settings change their source fingerprint: regenerate before reviewed export. Manual general summaries format user-entered text; AI drafting still grounds claims in saved experience/education/skills, not that summary or a desired job title. Multiple pages are allowed without shrinking or dropping content. There is not yet automatic project ranking or a multi-version résumé database.
+
+### Sidebar review aids
+
+The sidebar uses larger type and amber missing-information panels. **Show field on application** scrolls to and temporarily outlines one uniquely matching visible question without changing its answer. **Preview résumé** displays the saved PDF attachment locally, with page controls; plain-text résumés are also supported. Other attachment formats show an explicit limitation. This is the attachment Autofill uses, not a newly generated general or tailored résumé. Previewing never uploads or replaces it.
+
+Verified fills briefly pulse green on the application, without typing delays or extra input events; reduced-motion preferences are respected. The home preview offers a local **Job keyword check** comparing selected technical terms from the saved posting with saved evidence, the rendered résumé sections and cover-letter wording. It is a bounded vocabulary check, not a proficiency check or ATS score; missing terms are never inserted automatically.

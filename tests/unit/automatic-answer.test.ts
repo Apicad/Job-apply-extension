@@ -24,3 +24,11 @@ it('does not reuse edited answers or stale facts automatically', () => {
  expect(() => automaticAnswer(original,[{...facts[0]!,revision:2}])).toThrow();
  expect(automaticAnswer({...original,origin:'edited'},facts)).toBeNull();
 });
+it.each(['One project I built is a React dashboard.', 'One example is a React dashboard.'])('keeps a non-metric introduction: %s', text => {
+ const original=answer([{...supported,text},supported]);
+ expect(original.gaps).toEqual([]);
+ expect(automaticAnswer(original,facts)?.text).toBe(`${text} ${supported.text}`);
+});
+it.each(['I have one year of React experience.', 'I improved performance by one percent.', 'I led one team.'])('still flags a real unsupported quantity: %s', text=>{
+ expect(answer([{...supported,text}]).gaps.join(' ')).toContain('Unsupported number/date');
+});

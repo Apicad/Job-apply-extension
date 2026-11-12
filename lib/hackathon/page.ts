@@ -1,3 +1,4 @@
+import { pulseFilledField } from '../page/fill-feedback';
 import { sanitizeNativeDescriptor, sanitizeJob } from '../report';
 import type { NativeOutcome } from './outcomes';
 import { stableKey } from './identity';
@@ -130,6 +131,7 @@ export async function settleNativeVerification(doc: Document, env: PageEnv, comm
  return written.map(outcome => {
   const action = command.actions.find(item => item.ref === outcome.ref);
   const ok = outcome.status !== 'refused' && (outcome.ok || action?.type === 'file') && verified.some(result => result.ref === outcome.ref && result.ok);
+  if (ok) { const control = recallControl(outcome.ref); const target = control?.control === 'radio' && action?.type === 'radio' ? control.radios[action.index] : control?.el; if (target) pulseFilledField(target); }
   return { ...outcome, ok, status: outcome.status === 'refused' ? 'refused' : ok ? 'verified' : 'written-unverified' };
  });
 }

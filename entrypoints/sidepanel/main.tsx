@@ -1,3 +1,4 @@
+import { SidebarResumePreview } from './resume-preview';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
@@ -84,10 +85,10 @@ function ProfileEditor({ state, send, refresh, disabled }: { state: SidebarState
   </details>;
 }
 
-function DraftCard({ draft }: { draft: SidebarDraft }) {
+function DraftCard({ draft, onLocate, disabled }: { draft: SidebarDraft; onLocate: () => void; disabled: boolean }) {
  return <article className="review-card draft-card">
   <div className="eyebrow">{draft.status === 'filled' ? 'FILLED ON APPLICATION' : 'NEEDS ATTENTION'}</div>
-  <h3>{draft.question}</h3>
+  <h3>{draft.question}</h3><button className="locate-question" disabled={disabled} onClick={onLocate}>Show field on application</button>
   {draft.text && <p>{draft.text}</p>}
   {draft.gaps.length > 0 && <div className="gap-list"><strong>Missing information — still needs your attention</strong><ul>{draft.gaps.map((gap,i)=><li key={i}>{gap}</li>)}</ul></div>}
   <p className="helper">{draft.status === 'filled' ? 'Review and edit this answer directly on the application. Missing details above have not been filled.' : draft.status === 'failed' ? 'The answer could not be verified. Check the application; existing answers are preserved.' : 'No supported answer was filled. Add the missing facts in Profile home and run Autofill again.'}</p>
@@ -203,9 +204,9 @@ function App() {
 
     {run && <section className="results" aria-label="Autofill results">
       <div className="result-summary"><span className="status-mark" aria-hidden="true">{run.phase === 'error' ? '!' : active ? '·' : '✓'}</span><div><h2>{active ? 'Working through the form' : run.phase === 'cancelled' ? 'Autofill stopped' : run.phase === 'error' ? 'Needs a closer look' : 'Ready for your review'}</h2><p role="status" aria-live="polite">{run.message}</p></div></div>
-      <div className="counts"><span><b>{filled.length}</b> filled</span><span><b>{kept.length}</b> kept</span><span><b>{pending.length}</b> to check</span></div>
-      {run.drafts.map(draft => <DraftCard key={draft.id} draft={draft} />)}
-      {attentionFields.length > 0 && <details className="attention" open><summary>Needs your attention <span className="count">{attentionFields.length}</span></summary><ul>{attentionFields.map(f => <li key={f.id}><span className="attention-dot" aria-hidden="true" /><div><strong>{f.label || 'Unlabelled field'}</strong><p>{f.detail || 'Complete this field on the application.'}</p></div></li>)}</ul></details>}
+      <div className="counts"><span><b>{filled.length}</b> filled</span><span><b>{kept.length}</b> kept</span><span><b>{pending.length + (run?.drafts.filter(d => d.status === 'filled' && d.gaps.length > 0).length ?? 0)}</b> to check</span></div>
+      {run.drafts.map(draft => <DraftCard key={draft.id} draft={draft} disabled={busy || active} onLocate={() => void perform('sidebar-highlight-question', {runId:run.id,question:draft.question})} />)}
+      {attentionFields.length > 0 && <details className="attention" open><summary>Needs your attention <span className="count">{attentionFields.length}</span></summary><ul>{attentionFields.map(f => <li key={f.id}><span className="attention-dot" aria-hidden="true" /><div><strong>{f.label || 'Unlabelled field'}</strong><p>{f.detail || 'Complete this field on the application.'}</p><button className="locate-question" disabled={busy || active} onClick={() => void perform('sidebar-highlight-question', {runId:run.id,question:f.label})}>Show field on application</button></div></li>)}</ul></details>}
       {(filled.length > 0 || kept.length > 0) && <details className="completed-fields"><summary>Completed details <span className="count">{filled.length + kept.length}</span></summary><ul>{[...filled, ...kept].map(f => <li key={f.id}><span aria-hidden="true">✓</span><span>{f.label || 'Field'}<small>{f.status === 'kept' ? 'Your existing answer was kept' : f.detail || 'Filled and checked'}</small></span></li>)}</ul></details>}
       {['review', 'finished'].includes(run.phase) && run.fields.length > 0 && <div className="submission-review">
         <button className="secondary full" disabled={busy || active} onClick={() => void perform('sidebar-review-submission', { runId: run.id })}>Review &amp; submit</button>
@@ -213,6 +214,7 @@ function App() {
       </div>}
     </section>}
 
+    <SidebarResumePreview key={`${state.resume?.name}:${state.resume?.updatedAt}`} name={state.resume?.name ?? null} load={() => send('sidebar-resume-preview')} />
     <div className="setup">
       <a className="profile-home" href={browser.runtime.getURL('/home.html')} target="_blank" rel="noreferrer"><span><strong>Profile home</strong><small>Your résumé, experience and saved answers</small></span><span aria-hidden="true">↗</span></a>
       <ProfileEditor state={state} send={send} refresh={refresh} disabled={busy || active || loading} />

@@ -231,3 +231,35 @@ test('review submission reveals the employer control without activating it', asy
  await expect(page.locator('button[type=submit]')).not.toHaveAttribute('data-clicked', 'yes');
  await expect(page.locator('button[type=submit]')).toBeInViewport();
 });
+
+function syntheticPdf(text: string): Buffer {
+  const escape = (value: string) => value.replace(/([\\()])/g, '\\$1');
+  const stream = `BT /F1 12 Tf 16 TL 40 750 Td\n${text.split('\n').map((line, i) => `${i ? 'T* ' : ''}(${escape(line)}) Tj`).join('\n')}\nET`;
+  const objects = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>', `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`];
+  let pdf = '%PDF-1.4\n'; const offsets = [0];
+  objects.forEach((object, i) => { offsets.push(Buffer.byteLength(pdf)); pdf += `${i + 1} 0 obj\n${object}\nendobj\n`; });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf);
+}
+
+
+test('sidebar previews the saved PDF locally and highlights an unresolved question without changing it', async ({context,openExtensionPage},testInfo)=>{
+ const page=await context.newPage();await page.goto(`${ORIGIN.main}/hackathon.html`);
+ const ui=await openExtensionPage('sidepanel.html');const tabId=await tabFor(ui,page);
+ await send(ui,{type:'demo'});
+ const pdf=syntheticPdf('Ada Lovelace\nSoftware engineer\nBuilt a React dashboard.');
+ await send(ui,{type:'sidebar-save-resume',resume:{name:'Preview.pdf',type:'application/pdf',size:pdf.length,dataUrl:`data:application/pdf;base64,${pdf.toString('base64')}`,updatedAt:1}});
+ await send(ui,{type:'sidebar-autofill',tabId});await settled(ui,tabId);
+ await ui.goto(`${ui.url()}?tabId=${tabId}`);await ui.setViewportSize({width:440,height:1000});
+ await ui.getByRole('button',{name:'Preview résumé',exact:true}).click();
+ await expect(ui.getByText('Résumé preview ready.',{exact:true})).toBeVisible();
+ const canvas=ui.getByLabel('Résumé page 1');await expect(canvas).toBeVisible();
+ expect(await canvas.evaluate((el:HTMLCanvasElement)=>el.width)).toBeGreaterThan(500);
+ const card=ui.locator('.attention li').filter({hasText:'Signature'});
+ await card.getByRole('button',{name:'Show field on application'}).click();
+ await expect(page.locator('#signature')).toHaveCSS('outline-style','solid');
+ await expect(page.locator('#signature')).toHaveValue('');await expect(page.locator('#submitted')).toHaveText('Not submitted');
+ expect(await ui.locator('.helper').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(14);
+ await ui.screenshot({path:testInfo.outputPath('readable-sidebar-resume.png'),fullPage:true});
+});

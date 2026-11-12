@@ -224,3 +224,5 @@ The November 11 owner request replaces the fixed one-page/base-only presentation
 ### Direct application answers
 
 The owner now requests that one-button Autofill write supported AI answer segments directly, without a separate Use answer button. Keep missing facts in the sidebar even for a partial filled answer. Preserve the original response trace and distinguish automatic authorization from human review. Never invent missing years/preferences or overwrite existing answers. The exact plain-text question “Where are you located?” uses saved city/state/country; custom typeaheads remain gated. AI application answers should be professional and detailed with supported concrete examples.
+
+The owner also requests larger sidebar text, a visible field-location aid for unresolved questions, and an inline saved-attachment résumé preview. Field highlighting is read-only navigation (scroll and temporary outline), never a click/focus/value write. The contextual introductions “One project…” and “One example…” are not unsupported numeric claims; actual durations, metrics and counts remain checked.

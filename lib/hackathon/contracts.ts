@@ -43,7 +43,7 @@ export function promptFor(r: Request): string {
 export const textareaText = (text: string): string => text.replace(/\r\n?/g, '\n');
 // These discourse phrases do not assert a quantity. Other number tokens remain
 // conservative review flags; matching a token is not proof of its attribution.
-const numericTokens = (text: string): string[] => text.replace(/\bone(?=\s+(?:of\b|part\s+of\b))/gi, '').match(/\d+(?:[.,]\d+)*%?|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/gi) ?? [];
+const numericTokens = (text: string): string[] => text.replace(/\bone(?=\s+(?:of\b|part\s+of\b|(?:project|example)\b))/gi, '').match(/\d+(?:[.,]\d+)*%?|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/gi) ?? [];
 function unsupportedClaims(text: string, support: string): string[] {
  const gaps: string[] = []; const availableNumbers = new Set(numericTokens(support).map(n => n.toLowerCase()));
  const numbers = numericTokens(text).filter(n => !availableNumbers.has(n.toLowerCase()));

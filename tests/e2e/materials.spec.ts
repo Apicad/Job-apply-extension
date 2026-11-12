@@ -78,6 +78,11 @@ test('one generation uses saved evidence, previews both documents, preserves ori
   await expect(home.getByLabel('Preferred first name', { exact: true })).toHaveValue('Addie');
   await expect(paper.locator('.resume-document-header')).toContainText('Addie Lovelace');
   await expect(paper).toContainText('Built a Python CSV validation prototype and documented edge cases.');
+  await home.locator('.keyword-check > summary').click();
+  const keyword = home.locator('.keyword-check tbody tr').filter({ hasText: 'Python' });
+  await expect(keyword).toContainText('Mentioned');
+  await expect(keyword.getByText('Included', { exact: true })).toHaveCount(2);
+  await home.locator('.keyword-check > summary').click();
   await expect(paper).toContainText('Example Labs'); await expect(paper).toContainText('May 2025–August 2025');
   await expect(home.getByRole('button', { name: 'Download Word', exact: true })).toBeDisabled();
   const requests = await home.evaluate(() => (globalThis as any).__materialsRequests);

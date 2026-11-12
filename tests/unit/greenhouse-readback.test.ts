@@ -111,3 +111,15 @@ it('stops waiting after scan invalidation even if an upload later completes', as
  widget.innerHTML = completed();
  expect(verifyNative(document, env, command)[0]?.ok).toBe(false);
 });
+it.each([false, true])('pulses only verified fills, rejected=%s', async rejected => {
+ vi.useFakeTimers();
+ const input = document.querySelector<HTMLInputElement>('#email')!;
+ input.animate = vi.fn();
+ const command = textCommand('email', 'ada@example.com');
+ const written = applyNative(document, env, command);
+ if (rejected) input.value = '';
+ const result = settleNativeVerification(document, env, command, written);
+ await vi.advanceTimersByTimeAsync(100);
+ expect((await result)[0]?.ok).toBe(!rejected);
+ expect(input.animate).toHaveBeenCalledTimes(rejected ? 0 : 1);
+});

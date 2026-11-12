@@ -1,3 +1,4 @@
+import { keywordCoverage } from '../../lib/materials/keyword-coverage';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Profile } from '../../lib/types';
 import type { Fact } from '../../lib/hackathon/contracts';
@@ -19,6 +20,14 @@ export function ResumePreview({ profile, facts, layout, onChange, dirty, disable
     const value = tailored && materials?.draft && !letter ? materialResumeDocument(baseDocument, materials.draft.response) : baseDocument;
     return layout.sections.summary ? value : { ...value, sections: value.sections.filter(section => section.key !== 'summary') };
   }, [baseDocument, tailored, letter, materials?.draft, layout.sections.summary]);
+  const keywordRows = useMemo(() => {
+    const draft = materials?.draft;
+    if (!draft) return [];
+    const resume = materialResumeDocument(baseDocument, draft.response);
+    const text = resume.sections.filter(section => section.key !== 'summary' || layout.sections.summary)
+      .flatMap(section => section.entries.flatMap(entry => [entry.heading, entry.detail || '', ...entry.lines])).join(' ');
+    return keywordCoverage(draft.request.brief.jobDescription, draft.request.evidence.map(fact => fact.text).join(' '), text, draft.response.coverLetter.map(segment => segment.text).join(' '));
+  }, [baseDocument, materials?.draft, layout.sections.summary]);
   const viewport = useRef<HTMLDivElement>(null);
   const paper = useRef<HTMLElement>(null);
   const [size, setSize] = useState({ scale: .6, height: 1056 });
@@ -75,6 +84,11 @@ export function ResumePreview({ profile, facts, layout, onChange, dirty, disable
     {baseDocument.warnings.map((warning, index) => <p key={index} className="preview-warning">{warning}</p>)}
     {tailored && materials && materials.reviewNotices.warnings.length + materials.reviewNotices.missing.length > 0 && <p className="materials-preview-hint"><a href="#materials-review">Review {materials.reviewNotices.warnings.length + materials.reviewNotices.missing.length} document {materials.reviewNotices.warnings.length + materials.reviewNotices.missing.length === 1 ? 'note' : 'notes'}</a></p>}
     {size.height > 1058 && layout.pagePreference === 'one' && <p className="preview-warning">This draft is longer than one page. Choose multiple pages, shorten notes, or switch off entries. Nothing is hidden from the export.</p>}
+    {materials?.draft && <details className="keyword-check"><summary>Job keyword check</summary>
+      <p>Selected technical terms from the saved posting. This checks wording, not proficiency or an ATS score. Not every term belongs in both documents. Add only claims your experience supports.</p>
+      {materials.stale && <p className="preview-warning">Profile or posting changed. This comparison uses the saved draft posting; regenerate before relying on it.</p>}
+      {keywordRows.length ? <table><thead><tr><th>Term</th><th>Saved facts</th><th>Résumé</th><th>Letter</th></tr></thead><tbody>{keywordRows.map(row => <tr key={row.term}><th scope="row">{row.term}</th><td>{row.evidence ? 'Mentioned' : 'Not found'}</td><td>{row.resume ? 'Included' : 'Missing'}</td><td>{row.letter ? 'Included' : 'Missing'}</td></tr>)}</tbody></table> : <p>No terms from the supported vocabulary were found. Add a posting and review its requirements directly.</p>}
+    </details>}
     <div className="paper-viewport" ref={viewport}><div className="paper-stage" style={{ height: size.height * size.scale }}>
       <article className={`resume-paper template-${layout.template}`} ref={paper} style={{ transform: `scale(${size.scale})` }} aria-label="Résumé document">
         <header className="resume-document-header"><h1>{document.name || 'Your name'}</h1><div>{document.contact.map((item, index) => <span key={index}>{item.href ? <a href={item.href} target="_blank" rel="noreferrer">{item.text}</a> : item.text}</span>)}</div></header>

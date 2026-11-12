@@ -99,7 +99,7 @@ export async function sidebarState(tabId?: number): Promise<SidebarState> {
     await writeHackathon(runKey(run.tabId), run, true);
   }
   const resume = await loadResumeToAttach();
-  return { profile: await loadProfile(), facts: await loadFacts(), resume: resume ? { name: resume.name } : null,
+  return { profile: await loadProfile(), facts: await loadFacts(), resume: resume ? { name: resume.name, updatedAt: resume.updatedAt } : null,
     run: run ? publicRun(run) : null, aiEnabled: await readHackathon<boolean>('sidebar-ai-enabled') === true,
     resumeLayout: normalizeResumeLayout(await readHackathon('resume-layout')), materials: await loadSavedMaterials() };
 }
@@ -256,6 +256,7 @@ async function useAnswer(message: Record<string, unknown>, tabId: number): Promi
 export async function handleSidebar(message: Record<string, unknown>): Promise<unknown> {
   const tabId = Number.isSafeInteger(message.tabId) && Number(message.tabId) >= 0 ? Number(message.tabId) : undefined;
   if (message.type === 'sidebar-state') return sidebarState(tabId);
+  if (message.type === 'sidebar-resume-preview') return {resume:await loadResumeToAttach()};
   if (message.type === 'sidebar-ai-status') return checkAI();
   if (message.type === 'sidebar-save-materials') return { saved: true, materials: await saveMaterials(message.materials, message.expectedMaterials) };
   if (message.type === 'sidebar-settings') {
@@ -276,6 +277,15 @@ export async function handleSidebar(message: Record<string, unknown>): Promise<u
   }
   if (message.type === 'sidebar-save-resume') { await cancelAll(); await saveResume(message.resume); return { saved: true }; }
   if (tabId === undefined) throw Error('Open an application tab first.');
+  if (message.type === 'sidebar-highlight-question') {
+    const run=await readHackathon<StoredRun>(runKey(tabId),true);
+    if(!run || run.id!==message.runId || active.has(tabId) || typeof message.question!=='string' || ![...run.fields.map(f=>f.label),...run.drafts.map(d=>d.question)].includes(message.question)) throw Error('Run Autofill and select a current question first.');
+    if((await browser.tabs.get(tabId)).url!==run.url)throw Error('The application changed. Run Autofill again.');
+    await browser.scripting.executeScript({target:{tabId},func:(request:{url:string;label:string})=>{(globalThis as typeof globalThis & {__jaaHighlight?:typeof request}).__jaaHighlight=request;},args:[{url:run.url,label:message.question}]});
+    const results=await browser.scripting.executeScript({target:{tabId},files:['/highlight.js']});
+    if(!results.some(r=>r.frameId===0&&r.result===true))throw Error('Could not locate one visible matching question. Find this label on the application.');
+    return {highlighted:true};
+  }
   if (message.type === 'sidebar-review-submission') {
     const run = await readHackathon<StoredRun>(runKey(tabId), true);
     if (!run || run.id !== message.runId || active.has(tabId) || !['review', 'finished'].includes(run.phase) || !run.fields.length) throw Error('Run Autofill on this application before reviewing submission.');

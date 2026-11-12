@@ -34,7 +34,7 @@ export interface SidebarRun {
 export interface SidebarState {
   profile: Profile;
   facts: Fact[];
-  resume: { name: string } | null;
+  resume: { name: string; updatedAt?: number } | null;
   run: SidebarRun | null;
   aiEnabled: boolean;
   resumeLayout?: ResumeLayout;
