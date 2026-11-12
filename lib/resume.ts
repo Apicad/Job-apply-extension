@@ -5,7 +5,10 @@
  */
 import type { FileToStoredResume, ResumeMeta, ResumeToFile, StoredResume } from './types';
 
-/** The largest résumé we keep: 4 MiB, measured on the file itself, not on its base64 text (which is a third longer). */
+/**
+ * The largest résumé we keep: 4 MiB, measured on the file itself and not on
+ * its base64 text, which is a third longer. Extension storage holds 10 MB.
+ */
 export const MAX_RESUME_BYTES = 4 * 1024 * 1024;
 
 interface ResumeFormat {
@@ -78,7 +81,7 @@ export function isStoredResume(value: unknown): value is StoredResume {
 
   if (typeof name !== 'string' || !isBaseName(name)) return false;
   if (typeof type !== 'string' || !RESUME_MIME_TYPES.includes(type)) return false;
-  if (typeof size !== 'number' || !Number.isInteger(size) || size < 0 || size > MAX_RESUME_BYTES) return false;
+  if (typeof size !== 'number' || !Number.isInteger(size) || size < 1 || size > MAX_RESUME_BYTES) return false;
   if (typeof updatedAt !== 'number' || !Number.isFinite(updatedAt)) return false;
   if (typeof dataUrl !== 'string') return false;
 
@@ -164,7 +167,13 @@ export const fileToStoredResume: FileToStoredResume = async (file, now) => {
   } catch {
     throw new Error(UNREADABLE);
   }
-  const stored: StoredResume = { name, type, size: file.size, dataUrl: `data:${type};base64,${base64}`, updatedAt: now };
+  const stored: StoredResume = {
+    name,
+    type,
+    size: file.size,
+    dataUrl: `data:${type};base64,${base64}`,
+    updatedAt: now,
+  };
   // Whatever is saved must also be accepted when it is loaded again.
   if (!isStoredResume(stored)) {
     throw new Error(UNREADABLE);
@@ -172,20 +181,27 @@ export const fileToStoredResume: FileToStoredResume = async (file, now) => {
   return stored;
 };
 
+const UNUSABLE = 'The saved résumé cannot be used. Add it again on the options page.';
+
 /**
  * Rebuilds the file from storage. Synchronous, and deliberately decoded by
- * hand: `fetch(dataUrl)` would be a network-style request made from the job
- * site's page, and `Buffer` only exists in Node, not in Chrome.
+ * hand: fetching the data URL would be a network-style request made from the
+ * job site's page, and Node's Buffer does not exist in Chrome.
  */
 export const resumeToFile: ResumeToFile = (resume) => {
   // Checked again here, at the last step before the bytes reach a job site:
   // a damaged résumé must fail loudly, not be attached as a broken file.
   if (!isStoredResume(resume)) {
-    throw new Error('The saved résumé cannot be used. Add it again on the options page.');
+    throw new Error(UNUSABLE);
   }
   const base64 = resume.dataUrl.slice(resume.dataUrl.indexOf(',') + 1);
   // atob gives one character per byte; copy their codes into real bytes.
   const binary = atob(base64);
+  // All of the file or none of it. A résumé that lost its last pages on the
+  // way into storage is still sound base64; only its length gives it away.
+  if (binary.length !== resume.size) {
+    throw new Error(UNUSABLE);
+  }
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i);

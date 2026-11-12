@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "requestId": "146a9ae1-ec95-4ed6-80a9-b5e3c1153548",
+  "context": {
+    "application": "8f150a88af893fc4540b2fe080be7e0c74f73c923cb8b8d0bf3058b1716e6b8e",
+    "questionKey": "6fb0696556b20f77393bcd6b5058ecb9446ddfd3d920f79fe352f8a65ef4de9e",
+    "question": "Describe a relevant project.",
+    "job": "Fictional Community Tools needs small Python tools, tests for missing data, and clear local setup documentation. These are job requirements, not applicant facts.",
+    "control": "textarea"
+  },
+  "facts": [
+    { "id": "demo-project-build", "revision": 1 },
+    { "id": "demo-project-tests", "revision": 1 }
+  ],
+  "segments": [
+    {
+      "text": "I built a Python script to clean synthetic sensor readings and display them in a dashboard.",
+      "sources": [{ "id": "demo-project-build", "revision": 1 }]
+    },
+    {
+      "text": "I also wrote tests for missing readings and documented the steps for running the project locally.",
+      "sources": [{ "id": "demo-project-tests", "revision": 1 }]
+    }
+  ],
+  "missing": []
+}

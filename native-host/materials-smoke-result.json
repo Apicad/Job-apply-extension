@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-11T21:02:33.037Z",
+  "provider": "Codex",
+  "model": "CLI default; no model override",
+  "syntheticOnly": true,
+  "success": true,
+  "elapsedMs": 14147,
+  "noToolEvents": true,
+  "existingSignedInAccount": true,
+  "installedHelperChanged": false,
+  "contractValidated": true,
+  "promptClarifiesLocalHeaders": true,
+  "request": {
+    "schema": 1,
+    "kind": "materials",
+    "id": "synthetic-materials-live-smoke",
+    "expiresAt": 1794432738698,
+    "sourceKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "brief": {
+      "role": "Junior implementation developer",
+      "company": "Fictional Community Tools",
+      "jobDescription": "The fictional role values Python validation scripts, understandable documentation, and practical testing. Production Kubernetes experience is preferred but is not an applicant fact.",
+      "careerDirection": "Interested in junior software implementation work; this is a career direction, not prior employment.",
+      "tone": "natural"
+    },
+    "entries": [
+      {
+        "id": "prototype",
+        "revision": 1,
+        "heading": "CSV validation learning project",
+        "section": "projects",
+        "lines": [
+          "Contributed to a Python CSV validation prototype.",
+          "Documented manual checks for missing fields."
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "id": "prototype",
+        "revision": 1,
+        "location": "Synthetic learning project",
+        "text": "In a personal learning project, I contributed to a Python CSV validation prototype that flags missing fields. I documented two manual checks. The prototype has not been deployed to production."
+      },
+      {
+        "id": "profile:education",
+        "revision": 1,
+        "location": "Synthetic coursework",
+        "text": "Currently taking introductory computer science coursework at Example Community College; no degree has been awarded."
+      }
+    ]
+  },
+  "reply": {
+    "schema": 1,
+    "kind": "materials",
+    "requestId": "synthetic-materials-live-smoke",
+    "sourceKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "expiresAt": 1794432738698,
+    "summary": [
+      {
+        "text": "Contributor to a personal Python CSV validation prototype, with experience documenting manual checks.",
+        "sources": [
+          {
+            "id": "prototype",
+            "revision": 1
+          }
+        ]
+      },
+      {
+        "text": "Currently taking introductory computer science coursework at Example Community College; no degree has been awarded.",
+        "sources": [
+          {
+            "id": "profile:education",
+            "revision": 1
+          }
+        ]
+      }
+    ],
+    "entries": [
+      {
+        "entryId": "prototype",
+        "bullets": [
+          {
+            "text": "Contributed to a Python CSV validation prototype that flags missing fields in a personal learning project.",
+            "sources": [
+              {
+                "id": "prototype",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "text": "Documented two manual checks for the prototype, which has not been deployed to production.",
+            "sources": [
+              {
+                "id": "prototype",
+                "revision": 1
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "coverLetter": [
+      {
+        "text": "In a personal learning project, I contributed to a Python CSV validation prototype that flags missing fields and documented two manual checks. The prototype has not been deployed to production. I am also currently taking introductory computer science coursework at Example Community College; no degree has been awarded.",
+        "sources": [
+          {
+            "id": "prototype",
+            "revision": 1
+          },
+          {
+            "id": "profile:education",
+            "revision": 1
+          }
+        ]
+      }
+    ],
+    "missing": [
+      "Production Kubernetes experience is preferred by the posting but is not established by the supplied applicant evidence."
+    ]
+  },
+  "reviewWarnings": [
+    "Production Kubernetes experience is preferred by the posting but is not established by the supplied applicant evidence."
+  ],
+  "eventTypes": [
+    "thread.started",
+    "item.completed",
+    "turn.started",
+    "turn.completed"
+  ],
+  "itemTypes": [
+    "error",
+    "agent_message"
+  ]
+}

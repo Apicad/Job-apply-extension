@@ -14,6 +14,28 @@ is a separate tool and `docs/superpowers/` holds another build's design; do
 not edit either from this stream. Before editing a shared file, read it as it
 is at that moment.
 
+## Current hackathon candidate addendum
+
+The November 11 owner request supersedes the earlier blanket custom-widget exclusion for the narrowly scoped Greenhouse adapter. Its only extra clicks select one exact, uniquely matching option in the input’s linked listbox. No submit, consent, arbitrary button or navigation actions are allowed. Profile home is the primary setup page and reuses the same storage as the sidebar. Current README and plan addenda govern scope.
+
+The owner subsequently requested local résumé text extraction into the editable profile, with review/save before reuse. PDF.js and bounded DOCX/TXT extraction are permitted for this private home. LinkedIn account integration is explicitly deferred. Existing AI native-helper behavior remains governed by the README; historical manual-copy/paste descriptions below are not current feature restrictions.
+
+The November 11 checkbox follow-up adds read-only, application-scoped checkbox group observations to the sidebar. The historical exclusion from the writable control collector still applies: checkbox observations never receive fill handles, planned actions, AI answers or clicks. Report each visible question once under Needs your attention, including prechecked/partial groups, and preserve all selections.
+
+The subsequent home-profile request adds a live résumé preview and local Word/print export, section and per-note inclusion controls, and separate autofill switches for location, education, current employment and eligibility. Résumé generation formats saved wording; it does not invent or tailor claims. Citizenship country, nationality and U.S. citizenship are separate explicit answers, blank by default, never inferred from residence or work permission. Existing uploaded attachments stay unchanged. Repeating employment records still require a structured-data/ATS follow-up.
+
+The owner then explicitly requested AI-created résumés and cover letters adapted to a job posting plus career direction, with a preview before use. This supersedes the older tailoring exclusion for the bounded home document workflow. Generate pulls included saved résumé evidence into the existing restricted native helper; it never changes source profile/facts or uploads a generated file automatically. AI may revise summary, entry bullets and letter paragraphs, while company/title/date/link headers remain local and fixed. Target text is not applicant evidence. Source references and bounded checks aid explicit review but are not factual proof. New source/target edits invalidate reviewed exports; saved drafts have independent optimistic revisions and remain readable after inference expiry. Installed helper upgrades remain explicit; no paid fallback, submission or new ATS navigation is added.
+
+The authoritative smaller scope in `docs/plans/2026-11-09-jobright-inspired-autofill.md`
+and its build handoff governs this isolated candidate. `lib/hackathon/` implements
+the integrated worker, evidence/library contracts and execution wrapper; the old
+`lib/types.ts` planner contracts below remain for compatibility with other streams.
+The popup may fill one specifically reviewed, explicitly saved project textarea.
+All other textarea/consent/custom-widget exclusions remain. AI transfer is explicit
+manual copy/paste from a preview; extension and page scripts make no AI requests.
+See the README for actual supported behavior and release limitations. Earlier
+roadmap sections below are not a claim that their entire planned UI exists here.
+
 ## Product rules — do not break these
 
 1. **Never submit.** Never click buttons or links, never tick checkboxes.
@@ -61,8 +83,11 @@ popup ◀─ result ──┘                                              ◀�
     lists for the UI), `plan.ts` (scans + profile → preview + instructions),
     `report.ts` (attention rule, guards for untrusted input), `ats.ts`
     (job-site detection and the embed host list), `resume.ts`.
-  - Page side, `lib/page/` (DOM only; never imports the trusted side except
-    types and `ats.ts`): `collect.ts` (find controls, forms, comboboxes),
+  - Page side, `lib/page/` (DOM only; never imports storage/profile access).
+    The `lib/hackathon/page.ts` wrapper also imports the pure descriptor/job
+    sanitizers in `report.ts`, alongside types and `ats.ts`. This explicit
+    shared-sanitizer exception keeps scan/planner/live signatures identical;
+    `report.ts` has only type imports and no storage, profile or extension API access: `collect.ts` (find controls, forms, comboboxes),
     `describe.ts` (labels, options, emptiness), `visibility.ts` (markup
     checks) and `layout.ts` (the real-browser `PageEnv`), `refs.ts` (the
     handle table shared by scan and fill), `job.ts`, `scan.ts`, `apply.ts`.
@@ -118,10 +143,10 @@ popup ◀─ result ──┘                                              ◀�
   on a checked one. No `focus()`, `blur()`, `select()` or `scrollIntoView()`.
   After writing, a control that is still empty is `failed`.
 - **The keyboard shortcut opens the popup**; it never fills on its own.
-- **Embedded forms**: host permission only for hosts verified to serve
-  application forms inside other sites' pages (`job-boards.greenhouse.io`,
-  `job-boards.eu.greenhouse.io`, `jobs.ashbyhq.com`). Top-level pages on any
-  site are covered by the toolbar click.
+- **Embedded forms in this candidate**: production `host_permissions` is
+  empty. Cross-origin embedded application forms remain manual. The older
+  ATS host inventory does not grant access. The toolbar grants `activeTab`
+  for the top-level page; the e2e-only build adds localhost fixture grants.
 
 Not in version 1: operating custom dropdowns and typeaheads, date pickers,
 multi-step forms (Workday), answering free-text questions, LinkedIn or Indeed,
@@ -186,3 +211,20 @@ Needs Node 22.12 or newer (`.nvmrc` pins 24).
 - Everything a page returns is untrusted: validate shape, cap lengths, render
   as plain text. Never use `innerHTML`.
 - Do not commit unless asked.
+
+
+### Preferred first name
+
+Profile home also stores an optional preferred first name, blank by default. Résumé and cover-letter names/signatures use it when supplied and otherwise use the regular first name. Autofill uses it only for explicit preferred first/given-name text questions; ordinary and legal first/full names keep the original identity. Ambiguous preferred-name questions remain manual. This value stays local during document generation, and changing it makes existing tailored documents stale until regenerated.
+
+### General résumé and style addendum
+
+The November 11 owner request replaces the fixed one-page/base-only presentation with an editable General résumé, optional professional summary, Professional/Classic styles and a one-page or multi-page preference. A target position alone may start AI document generation; company/posting are optional. The helper explicitly advertises general-materials support before role-only evidence is sent. Preserve existing profile facts, attachments, source validation, explicit review and no-submit behavior. Saved layouts retain their classic template on migration; new profiles default to Professional. A larger ranked evidence database and saved role-version library remain separate work.
+
+### Direct application answers
+
+The owner now requests that one-button Autofill write supported AI answer segments directly, without a separate Use answer button. Keep missing facts in the sidebar even for a partial filled answer. Preserve the original response trace and distinguish automatic authorization from human review. Never invent missing years/preferences or overwrite existing answers. The exact plain-text question “Where are you located?” uses saved city/state/country; custom typeaheads remain gated. AI application answers should be professional and detailed with supported concrete examples.
+
+The owner also requests larger sidebar text, a visible field-location aid for unresolved questions, and an inline saved-attachment résumé preview. Field highlighting is read-only navigation (scroll and temporary outline), never a click/focus/value write. The contextual introductions “One project…” and “One example…” are not unsupported numeric claims; actual durations, metrics and counts remain checked.
+
+The 0.6.4 review flow retains unresolved writing-question cards in local application-scoped history. They never authorize a write. Resolution requires explicit user acknowledgement plus a fresh unique nonempty field on the current application, or successful regeneration; a subsequent empty field invalidates a prior acknowledgement. Bounded relevance gates supplement evidence checks for supported writing intents. Visual stages must never create artificial typing delays, focus changes or extra input events.

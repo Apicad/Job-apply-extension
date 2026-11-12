@@ -5,6 +5,7 @@
  *   stateCode('AL - Alabama')    -> 'AL'   what a state field or option says
  *   countryCode('U.S.A.')        -> 'US'   what a country field or option says
  *   findCountry('... work in the UK?') -> 'GB'   the country a question is about
+ *   findCountries('... in the UK or the EU?') -> ['GB', 'several']   every place it names
  *
  * Everything here compares whole words. Looking for letters inside a text
  * finds "us" in "focus", India in "Indiana" and Kansas in "Arkansas".
@@ -21,14 +22,22 @@ interface Word {
   capitals: boolean;
 }
 
-/** Marks that NFKD splits off a letter: the accent of "é", the cedilla of "ç". */
-const ACCENTS = /\p{M}+/gu;
+/**
+ * The accents NFKD splits off Latin, Greek and Cyrillic letters: the acute of
+ * "é", the cedilla of "ç". People leave these out ("Cote d'Ivoire"). The marks
+ * of other scripts stay, because there they spell another word: the vowel
+ * signs of Hindi and Thai, the voicing marks of Japanese ("ば" and "ぱ").
+ */
+const ACCENTS = /[\u0300-\u036f]+/g;
 /** Typographic apostrophes; forms write both "don’t" and "don't". */
 const CURLY_APOSTROPHES = /[‘’‚‛ʼ′`´]/g;
 /** Single letters with full stops between them: "U.S.", "u.s.a.", "D.C". Not "Ph.D." or "St.". */
 const DOTTED_INITIALS = /(?<![\p{L}\p{N}])\p{L}(?:\.\p{L})+(?![\p{L}\p{N}])\.?/gu;
-/** A word is letters and digits; an apostrophe inside it belongs to it ("don't"). */
-const WORD = /[\p{L}\p{N}']+/gu;
+/**
+ * A word starts with a letter or a digit and goes on with letters, digits and
+ * the marks that sit on them; an apostrophe inside it belongs to it ("don't").
+ */
+const WORD = /[\p{L}\p{N}][\p{L}\p{M}\p{N}']*/gu;
 
 function split(text: string): Word[] {
   const plain = text
@@ -44,9 +53,8 @@ function split(text: string): Word[] {
 
   const found: Word[] = [];
   for (const match of plain.match(WORD) ?? []) {
-    // Quotes around a word are punctuation, not part of it.
-    const raw = match.replace(/^'+|'+$/g, '');
-    if (raw === '') continue;
+    // A quote after a word is punctuation, not part of it ('Yes').
+    const raw = match.replace(/'+$/, '');
     const word = raw.toLowerCase();
     found.push({ word, capitals: raw === raw.toUpperCase() && raw !== word });
   }
@@ -199,7 +207,7 @@ export function stateCode(value: string): string | null {
 
 /**
  * ISO 3166-1 alpha-2 code, alpha-3 code, the usual English name, then other
- * ways the country is written. A name in capitals ("UK") is an abbreviation.
+ * ways the country is written.
  */
 export type CountryRow = readonly [code: string, alpha3: string, name: string, ...otherNames: string[]];
 
@@ -245,7 +253,8 @@ export const COUNTRIES: readonly CountryRow[] = [
   ['CC', 'CCK', 'Cocos (Keeling) Islands', 'Cocos Islands', 'Keeling Islands'],
   ['CD', 'COD', 'Democratic Republic of the Congo', 'DR Congo', 'DRC', 'Congo, Democratic Republic of the', 'Congo (Kinshasa)', 'Congo (DRC)'],
   ['CF', 'CAF', 'Central African Republic'],
-  ['CG', 'COG', 'Republic of the Congo', 'Congo', 'Congo, Republic of the', 'Congo (Brazzaville)', 'Congo Republic'],
+  // "Congo" alone is not listed: somebody from Kinshasa who types it must not be given Brazzaville.
+  ['CG', 'COG', 'Republic of the Congo', 'Congo, Republic of the', 'Congo (Brazzaville)', 'Congo Republic'],
   ['CH', 'CHE', 'Switzerland'],
   ['CI', 'CIV', "Côte d'Ivoire", 'Ivory Coast'],
   ['CK', 'COK', 'Cook Islands'],
@@ -361,7 +370,7 @@ export const COUNTRIES: readonly CountryRow[] = [
   ['MF', 'MAF', 'Saint Martin', 'Saint Martin (French part)'],
   ['MG', 'MDG', 'Madagascar'],
   ['MH', 'MHL', 'Marshall Islands'],
-  ['MK', 'MKD', 'North Macedonia', 'Macedonia', 'Republic of North Macedonia'],
+  ['MK', 'MKD', 'North Macedonia', 'Macedonia', 'Republic of North Macedonia', 'Macedonia, the Former Yugoslav Republic of'],
   ['ML', 'MLI', 'Mali'],
   ['MM', 'MMR', 'Myanmar', 'Burma', 'Myanmar (Burma)'],
   ['MN', 'MNG', 'Mongolia'],
@@ -486,18 +495,46 @@ export const countryCode: CountryCode = (value) => codeOf(value, COUNTRY_SPELLIN
 // ---------------------------------------------------------------------------
 
 /**
- * Names that hold the name of a country but mean something else, with the
- * country they do stand for ('' for none).
+ * What findCountries lists for a part of the world that is no single country:
+ * a continent, or a union such as the EU. It is never the code of a country,
+ * so "authorized to work in the EU?" is taken neither for a question about no
+ * place at all nor for one about the country the user lives in.
  */
-const NOT_WHAT_THEY_SEEM: readonly (readonly [name: string, code: string])[] = [
-  // "America" alone is the United States; a continent is no single country.
-  ['North America', ''],
-  ['South America', ''],
-  ['Latin America', ''],
-  ['Central America', ''],
+export const SEVERAL_COUNTRIES = 'several';
+
+/**
+ * Names that need a reading of their own when they stand in a sentence, with
+ * what they stand for there.
+ */
+const READ_IN_SENTENCES: readonly (readonly [name: string, code: string])[] = [
+  // "America" alone is the United States; with a word in front it is a continent.
+  ['North America', SEVERAL_COUNTRIES],
+  ['South America', SEVERAL_COUNTRIES],
+  ['Latin America', SEVERAL_COUNTRIES],
+  ['Central America', SEVERAL_COUNTRIES],
+  ['Americas', SEVERAL_COUNTRIES],
+  ['LATAM', SEVERAL_COUNTRIES],
+  // "Do you have the right to work in the EU?" is asked for jobs all over Europe.
+  // "European" also covers "European Union" and "European Economic Area".
+  ['Europe', SEVERAL_COUNTRIES],
+  ['European', SEVERAL_COUNTRIES],
+  ['EU', SEVERAL_COUNTRIES],
+  ['EEA', SEVERAL_COUNTRIES],
+  ['Schengen', SEVERAL_COUNTRIES],
+  ['Asia', SEVERAL_COUNTRIES],
+  ['APAC', SEVERAL_COUNTRIES],
+  ['Africa', SEVERAL_COUNTRIES],
+  ['Middle East', SEVERAL_COUNTRIES],
+  ['EMEA', SEVERAL_COUNTRIES],
+  ['Oceania', SEVERAL_COUNTRIES],
+  ['Caribbean', SEVERAL_COUNTRIES],
+  // They hold the name of a country and lie in another one.
   ['New England', 'US'],
   ['New South Wales', 'AU'],
   ['State of Georgia', 'US'],
+  // Which of the two Congos is not known, but a country is named, and the
+  // question is about that country, not about the reader's own.
+  ['Congo', 'CG'],
 ];
 
 /** "Georgia" is a US state and a country; which one is decided once the whole sentence is read. */
@@ -505,8 +542,14 @@ const GEORGIA = '?';
 
 /** Every name a sentence may use for a country, as words. ISO codes are left out: "IN", "IT" and "CAN" are words. */
 const NAMES_IN_SENTENCES = new Map<string, string>();
-/** Names that are abbreviations: they only count when written in capitals. */
-const ABBREVIATIONS = new Set<string>();
+
+/**
+ * The one abbreviation that is also an ordinary word: "us" in "about us" is a
+ * pronoun, so it names the country only in capitals ("US", "U.S."). The others
+ * ("uk", "usa", "uae", "eu") are nothing else, however they are typed, and a
+ * question about the UK that goes unnoticed gets the user's answer for home.
+ */
+const NEEDS_CAPITALS = 'us';
 
 // A US state names the United States: "authorized to work in California".
 for (const [, ...names] of US_STATES) {
@@ -514,22 +557,29 @@ for (const [, ...names] of US_STATES) {
 }
 // Countries go in after the states, so Puerto Rico and Guam keep their own ISO codes.
 for (const [code, , ...names] of COUNTRIES) {
-  for (const name of names) {
-    NAMES_IN_SENTENCES.set(placeKey(name), code);
-    if (name === name.toUpperCase()) ABBREVIATIONS.add(placeKey(name));
-  }
+  for (const name of names) NAMES_IN_SENTENCES.set(placeKey(name), code);
 }
-for (const [name, code] of NOT_WHAT_THEY_SEEM) NAMES_IN_SENTENCES.set(placeKey(name), code);
+for (const [name, code] of READ_IN_SENTENCES) NAMES_IN_SENTENCES.set(placeKey(name), code);
 NAMES_IN_SENTENCES.set('georgia', GEORGIA);
 
 const LONGEST_NAME = Math.max(...[...NAMES_IN_SENTENCES.keys()].map((key) => key.split(' ').length));
 
 /**
+ * A small "uk" or "eu" straight after a full stop is the end of a web or an
+ * e-mail address ("www.example.co.uk", "jobs@example.eu"), not a place.
+ */
+const ADDRESS_ENDING = /\.(?:uk|eu)\b/g;
+
+/**
  * The code of every country a text names, in the order they appear, each
- * once. A US state counts as the United States.
+ * once. A US state counts as the United States, and a continent or a union of
+ * countries is listed as SEVERAL_COUNTRIES.
+ *
+ * An empty list means "no place this table knows", which is not quite "no
+ * place": a city ("London") or a nationality ("Canadian") is not recognised.
  */
 export function findCountries(text: string): string[] {
-  const all = placeWords(text);
+  const all = placeWords(text.replace(ADDRESS_ENDING, ' '));
   const mentions: string[] = [];
   let at = 0;
   while (at < all.length) {
@@ -542,7 +592,7 @@ export function findCountries(text: string): string[] {
       const code = NAMES_IN_SENTENCES.get(key);
       if (code === undefined) continue;
       // "us" in "about us" is a pronoun; "US" is a country.
-      if (ABBREVIATIONS.has(key) && !run.every((entry) => entry.capitals)) continue;
+      if (key === NEEDS_CAPITALS && !run.every((entry) => entry.capitals)) continue;
       mentions.push(code);
       taken = length;
       break;
@@ -554,15 +604,17 @@ export function findCountries(text: string): string[] {
   // answered for a job in Tbilisi. Next to the United States or another state
   // ("Atlanta, Georgia ... work in the United States") it is the state.
   const georgia = mentions.includes('US') ? 'US' : 'GE';
-  const codes = mentions.map((code) => (code === GEORGIA ? georgia : code)).filter((code) => code !== '');
+  const codes = mentions.map((code) => (code === GEORGIA ? georgia : code));
   return [...new Set(codes)];
 }
 
 /**
  * The code of the one country a text names, or null when it names none or
- * more than one. Callers that must tell "none" from "several" use findCountries.
+ * more than one (a continent or a union of countries is more than one).
+ * Callers that must tell "none" from "several" use findCountries: the two call
+ * for opposite things, the user's own answer and no answer at all.
  */
 export const findCountry: FindCountry = (text) => {
   const [only, ...others] = findCountries(text);
-  return only !== undefined && others.length === 0 ? only : null;
+  return only !== undefined && only !== SEVERAL_COUNTRIES && others.length === 0 ? only : null;
 };

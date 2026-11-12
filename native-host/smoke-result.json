@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-10",
+  "provider": "Codex",
+  "cliVersion": "0.167.0-alpha.3.2",
+  "model": "CLI default; no model override",
+  "syntheticOnly": true,
+  "success": true,
+  "elapsedMs": 6082,
+  "noToolEvents": true,
+  "request": {
+    "schema": 1,
+    "id": "synthetic-smoke",
+    "context": {
+      "application": "synthetic-application",
+      "questionKey": "synthetic-question",
+      "question": "Describe a relevant project.",
+      "job": "Build small Python tools and tests.",
+      "control": "textarea"
+    },
+    "facts": [
+      {
+        "id": "project",
+        "revision": 1,
+        "text": "I built a Python script that checks a CSV file for missing entries.",
+        "location": "Synthetic test profile"
+      }
+    ],
+    "expiresAt": 1794359764118
+  },
+  "reply": {
+    "schema": 1,
+    "requestId": "synthetic-smoke",
+    "context": {
+      "application": "synthetic-application",
+      "questionKey": "synthetic-question",
+      "question": "Describe a relevant project.",
+      "job": "Build small Python tools and tests.",
+      "control": "textarea"
+    },
+    "facts": [
+      {
+        "id": "project",
+        "revision": 1
+      }
+    ],
+    "segments": [
+      {
+        "text": "I built a Python script that checks a CSV file for missing entries.",
+        "sources": [
+          {
+            "id": "project",
+            "revision": 1
+          }
+        ]
+      }
+    ],
+    "missing": []
+  },
+  "otherProviderAttempt": {
+    "provider": "Claude Code",
+    "outcome": "Provider refused subscription inference before token use",
+    "apiKeyFallback": false
+  }
+}

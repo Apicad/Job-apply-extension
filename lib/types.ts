@@ -15,6 +15,7 @@
 
 /** '' always means "not answered — never answer this for the user". */
 export type YesNo = '' | 'yes' | 'no';
+export type AutofillPreference = 'yes' | 'no';
 export type Gender = '' | 'male' | 'female' | 'nonbinary' | 'decline';
 export type Race =
   | ''
@@ -39,6 +40,8 @@ export type Disability = '' | 'yes' | 'no' | 'decline';
  */
 export interface Profile {
   firstName: string;
+  /** Optional preferred given name; never substitutes for legal application identity fields. */
+  preferredFirstName: string;
   lastName: string;
   email: string;
   phone: string;
@@ -73,6 +76,17 @@ export interface Profile {
   workAuthorization: YesNo;
   /** "Will you now or in the future require visa sponsorship?" Same scope. */
   sponsorship: YesNo;
+  /** Explicitly supplied citizenship and nationality; never derived from residence or other answers. */
+  citizenshipCountry: string;
+  nationality: string;
+  /** Only for a plain question explicitly asking whether the applicant is a United States citizen. */
+  usCitizenship: YesNo;
+
+  /** Section preferences retain the saved values. Missing preferences in older profiles default to yes. */
+  fillLocation: AutofillPreference;
+  fillEducation: AutofillPreference;
+  fillEmployment: AutofillPreference;
+  fillEligibility: AutofillPreference;
 
   // Voluntary self-identification. All optional; '' leaves the question alone.
   gender: Gender;
@@ -105,6 +119,7 @@ export type ResumeMeta = Pick<StoredResume, 'name' | 'type' | 'size'>;
 /** What a form field is asking for. "No kind" (null) means: leave it alone. */
 export type FieldKind =
   | 'firstName'
+  | 'preferredFirstName'
   | 'lastName'
   | 'fullName'
   | 'email'
@@ -131,6 +146,9 @@ export type FieldKind =
   | 'gpa'
   | 'workAuthorization'
   | 'sponsorship'
+  | 'citizenshipCountry'
+  | 'nationality'
+  | 'usCitizenship'
   | 'gender'
   | 'race'
   | 'veteran'
@@ -139,7 +157,7 @@ export type FieldKind =
   | 'resume';
 
 /** Kinds answered by choosing an option. Never typed into a text field. */
-export type EnumKind = 'workAuthorization' | 'sponsorship' | 'gender' | 'race' | 'veteran' | 'disability';
+export type EnumKind = 'workAuthorization' | 'sponsorship' | 'usCitizenship' | 'gender' | 'race' | 'veteran' | 'disability';
 
 /**
  * The control a descriptor describes.
@@ -461,10 +479,10 @@ export type RememberControls = (controls: readonly Control[]) => number[];
 /** lib/page/refs.ts — null when the handle is unknown or its element has left the document. */
 export type RecallControl = (ref: number) => Control | null;
 
-/** lib/page/fill.ts — each returns true when the control holds an answer afterwards. See "Writing" in CLAUDE.md. */
-export type FillText = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => boolean;
-export type FillSelect = (el: HTMLSelectElement, index: number) => boolean;
-export type FillRadio = (radio: HTMLInputElement) => boolean;
+/** lib/page/fill.ts — boolean is readback, optional observer records mutation/click dispatch before page reactions. See "Writing" in CLAUDE.md. */
+export type FillText = (el: HTMLInputElement | HTMLTextAreaElement, value: string, onWrite?: () => void) => boolean;
+export type FillSelect = (el: HTMLSelectElement, index: number, onWrite?: () => void) => boolean;
+export type FillRadio = (radio: HTMLInputElement, onWrite?: () => void) => boolean;
 export type FillFile = (input: HTMLInputElement, file: File, assignFiles: PageEnv['assignFiles']) => boolean;
 
 /** lib/regions.ts — ISO 3166-1 alpha-2 code of the one country a text names ("US" for "United States", "U.S.", "USA", "America"), or null when it names none or several. */

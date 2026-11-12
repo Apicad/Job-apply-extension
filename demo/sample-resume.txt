@@ -1,0 +1,22 @@
+Ada Lovelace
+ada@example.com
+(415) 555-0100
+San Francisco, California, United States
+
+EXPERIENCE
+Example Labs | Intern | Remote | May 2025 - August 2025
+Built a Python CSV validation prototype.
+Documented edge cases for the team.
+
+PROJECTS
+Trace viewer
+Built a React trace viewer prototype for a personal project.
+
+EDUCATION
+Example Community College
+Computer Science coursework
+
+SKILLS
+Python, React, documentation
+
+SYNTHETIC DEMO ONLY. This is a fictional applicant, not a real resume.

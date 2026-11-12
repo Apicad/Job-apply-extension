@@ -1,66 +1,124 @@
-# Job Apply Assistant
+# Job Apply Assistant · profile home and sidebar
 
-A Chrome extension project for filling job application forms using information
-the user saves in the extension. The goal is to make repetitive applications
-easier while keeping the user in control: review the preview, fill the form,
-then submit it yourself.
+Save your information once in **Profile home**, then open an application and click **Autofill**. Your contact details, résumé, education, experience and saved application answers are reused from the same browser profile. Missing details stay visible for you to complete in the app. Complete, supported AI answers fill directly; review notes appear beside the application. **You submit manually.**
 
-> **Development status:** This project is under active development. The
-> repository contains the form-recognition and fill-engine building blocks,
-> but the complete popup and profile-editing workflow is not yet wired into
-> the extension.
+This version builds on audited source `f3b7ef0d5dd3f1be9a16753a643e209665797b60`. Its new sidebar and local AI connection require their own review; earlier audit results do not certify these changes.
 
-## Safety and privacy goals
+## Repository contents
 
-- The extension never submits an application. You review and submit it.
-- It should only fill visible, unanswered fields, and should leave uncertain
-  fields for you to handle.
-- Profile and résumé data are intended to stay in browser storage and are not
-  sent to a service.
-- A fill should be previewed before any form fields are changed.
+`tests/`, `test/`, `research_notes/`, `reports/`, and `docs/plans/` are retained locally but excluded from current GitHub snapshots at the owner’s request. GitHub/source-ZIP users can install dependencies, type-check, and build the extension; the automated test suite and fixture-based practice commands require the separately retained local files. Published validation summaries are results, not a substitute for access to the test source. Existing Git history is unchanged.
 
-## Development setup
+## Project status
 
-You need Node.js 22.12 or newer. The `.nvmrc` file specifies the project's
-preferred Node version.
+Job Apply Assistant is an ongoing project for reusable application profiles, connected-AI answers, and editable application documents. Current releases require unpacked Chrome installation and a local AI helper. Support is limited to tested controls and selected writing questions; universal application compatibility is not claimed. The next priorities are broader platform coverage, stronger answer evaluation, and simpler installation. Historical plans and audit records remain available for provenance.
+
+## Use it
+
+**Installation and practice:** use the prebuilt bundle and [START-HERE](docs/hackathon/START-HERE.md) for installation and your own AI connection. Practice applications require the separately retained local fixtures. See [tested scope](docs/hackathon/COMPATIBILITY.md). Build a shareable bundle from a clean Git checkout with `npm run package:release -- /absolute/path/to/new-output-folder`. No developer profile, account or local path is bundled.
+
+Use Node 24 or newer and desktop Chrome. From this checkout:
 
 ```sh
 npm ci
-npm run dev
-```
-
-WXT starts the extension's development build. Since the user-facing workflow
-is still in progress, the development build may not yet provide a complete
-application experience.
-
-To create a production build, run:
-
-```sh
+npm run compile
 npm run build
 ```
 
-The unpacked extension is generated in `.output/chrome-mv3`. Load that folder
-through `chrome://extensions` with Developer mode enabled.
+Load `.output/chrome-mv3` using Chrome's **Load unpacked** control. Click the extension icon on the application tab to open the persistent sidebar and grant access to that tab.
 
-## Checks
+1. Open **Profile home** from the sidebar or the extension’s **Options** page. Save contact and location details, links, current education, optional application answers, and up to 20 factual experience/project notes. Upload a PDF, DOCX or UTF-8 TXT résumé to extract its text locally and propose contact, location, education and project/experience notes. Review the editable fields, then Save profile to make them available to Autofill. Existing nonblank values and saved project notes are preserved. The résumé attachment is saved immediately; imported profile edits remain unsaved until you review and save. Existing sidebar information is already there; the home and sidebar share one saved profile. This is a private application profile, not a published portfolio website.
+2. Connect an existing signed-in AI tool with the local helper described in [native-host/README.md](native-host/README.md). Enable AI from **AI connection**. Basic autofill works without it.
+3. Click **Autofill**. The extension scans the page and fills supported, empty fields from saved information. Existing answers are preserved. It shows filled, kept and needs-attention counts. Visible checkbox questions in the application appear once per group under **Needs your attention**, including groups with existing selections. Review and select those choices on the application; Autofill never checks or clears them.
+4. With connected AI enabled, **Autofill** writes supported AI answer segments directly into empty application text boxes. Review and edit them on the application. Missing facts remain flagged in the sidebar even when a partial answer was filled; internal evidence notes are not pasted. Existing answers, changed contexts and unsupported claims remain protected. No separate Use answer button is required.
+5. Check the employer's form and submit there yourself. The extension never submits or accepts attestations.
+
+There is no copy/paste JSON step, app credit balance, provider API key or paid fallback. AI uses the connected tool's existing account and remains subject to its subscription, organization policy and rate limits. Connecting a signed-in account does not establish that it can complete inference; request errors are shown in the sidebar without undoing basic fills.
+
+## Résumé preview and reusable answers
+
+**Create your application documents** pulls your saved résumé facts, education, skills and project notes into your connected AI. Enter the position you want, such as data analyst or software developer. Company and job posting are optional; add them later to tailor a draft. You can also describe your career direction and choose a writing style. One **Create résumé & cover letter** action produces both drafts. Switch between **General résumé**, **Tailored résumé** and **Cover letter**, edit the generated writing, review any missing-information/source warnings, and mark both documents reviewed to download Word or print/PDF. Review saves the exact current drafts. Edits invalidate review; changed source information or a different target requires new drafts. Documents are stored separately from the base profile and uploaded attachment.
+
+This feature requires the updated local helper: re-run its installer after upgrading. The home checks its materials capability before sending résumé facts, so older helpers remain usable for Autofill and show an update message for document creation. Generation is an explicit action and is independent of the Autofill question-drafting switch. Stop cancels inference; saving the completed result briefly locks the editor until storage acknowledges it. Requests expire, but already saved documents remain available after expiry when their source and target still match.
+
+Profile home includes a live résumé preview beside the editor. It formats the current draft in a US Letter layout. Professional uses a 26-point name, 10.5-point body, clearer spacing and restrained blue-grey headings; Classic retains the compact black-and-white 24/11/9-point format. Existing saved layouts retain Classic until you change them. The base preview keeps experience and project notes verbatim and needs no AI request. Choose the sections and individual notes to include, move a note between Experience and Projects, and enter a skills line. Education and the professional summary are optional. Edit your summary, choose a one-page preference or allow multiple pages, and include the notes you want. Unsaved edits are clearly labeled; Save profile persists the résumé choices with the profile.
+
+**Download Word** creates an editable DOCX locally. **Print / save PDF** opens the browser print dialog for the same preview. Choose Save as PDF and disable browser headers/footers if enabled. The preview warns when content exceeds a page and the one-page preference is selected; it never silently clips or shrinks facts to fit. Word may paginate differently when its fonts differ. Exports do not replace the uploaded résumé used on applications; review and upload the new file if you want it attached.
+
+Separate application switches enable or disable location, education, current company/title and saved eligibility answers without deleting their values. Citizenship country, nationality and U.S. citizenship are independent, blank-by-default fields. Residence, work permission and ethnicity never supply these answers. Only simple recognized text/native-choice questions qualify; compound sanctions/export-control questions, consent and checkbox groups remain manual. Full experience notes are available to the résumé and reviewed AI drafting, but repeating employment records are not filled by this release.
+
+## Data and execution
+
+Profile and résumé stay in browser storage. Résumé extraction runs locally with packaged PDF.js and bounded DOCX/TXT readers; it does not contact an AI service or fetch links in the document. PDF import is limited to 20 pages and extracted text to 100,000 characters. Legacy DOC/RTF files can still be attached but are not parsed. PDF.js and fflate attribution/licenses are packaged in `third-party-notices.txt`. Missing or ambiguous claims remain for review. LinkedIn account connection and profile import are deferred; the existing LinkedIn URL field remains available. Autofill question drafting sends saved experience notes, the supported question, job title/company and opaque application/question identifiers through a Chrome native-messaging helper to the selected local AI CLI. Explicit document generation sends included résumé evidence, selected education/skills, job posting, career direction and tone through the same helper; contact and eligibility profile fields are excluded, and a SHA-256 digest binds the complete source snapshot. Résumé headers stay fixed locally. Job requirements and career wishes are never treated as experience. No browser cookies, complete page HTML, résumé bytes or authentication secrets are sent by the extension. The CLI manages its own existing sign-in. Helper requests have size/time limits and disconnect cancellation. No application-origin page can directly call the helper.
+
+The production manifest uses `storage`, `activeTab`, `scripting`, `sidePanel` and `nativeMessaging`. The native connection permission is granted at installation so Chrome exposes its API to the background worker immediately; AI remains opt-in and the helper accepts only the installed extension origin. It has no passive content scripts or broad host permissions. The E2E-only build permits local fixture origins; do not distribute it as the production build. The production toolbar uses the normal action event to grant temporary tab access before opening the sidebar; Chrome's automatic sidebar toggle does not grant it. Validate this path in a real Chrome profile because fixture host grants cannot prove toolbar permission behavior.
+
+## Checks and scope
 
 ```sh
-npm run compile   # TypeScript
-npm test          # Unit tests
-npm run test:e2e  # Build the test variant and run Playwright tests
+npm run compile
+npm test
+npm run test:native
+npm run test:e2e
+npm run build
 ```
 
-Run all checks with `npm run check`.
+Browser tests use isolated Chromium profiles and synthetic applications. Native transport stand-ins are test-only; a live CLI smoke is separate evidence. Files are limited to 4 MB. Text writes are checked after page handlers settle, including native validation state. Phone checks tolerate punctuation changes while preserving every digit. Résumé checks observe the original upload group for the exact filename and completed attachment state for up to five seconds, without retrying the upload. Greenhouse choices are checked after their selection commits; sites can still change values later. An interrupted operation is never automatically replayed.
 
-## Project layout
+Supported: conservative native text/select/radio fields, explicitly recognized résumé inputs, email confirmation, and the existing project-answer question wordings. Greenhouse single-value dropdowns support exact country/location and education choices from the saved profile; end dates bind to their school row. Existing selections are preserved. Phone-country selection is limited to supported North American numbers and an explicit US/Canada profile country. No fuzzy school, degree or location matches are selected. Missing values remain unanswered. The sidebar keeps uncertain fields visible for review. Repeating employment/education, other custom widgets, cross-origin forms, new multi-step navigation, general application free-text questions, scanned-image OCR and universal ATS coverage remain outside this change. Sensitive choices are only filled through supported controls from explicit saved answers, never inferred by AI.
 
-- `entrypoints/` — WXT extension entrypoints.
-- `lib/` — profile, field classification, form handling, and related logic.
-- `tests/unit/` — Vitest unit tests.
-- `tests/e2e/` and `tests/fixtures/` — Playwright tests and local test pages.
-- `page-blueprint/` — a separate form-inspection tool.
-- `docs/superpowers/` — design notes and plans.
+Checkbox reporting reads native checkbox questions and their visible labels without creating writable handles. It is scoped to the selected application form and refreshed after basic autofill so newly revealed groups can appear. Each group remains a review item even when some boxes were already checked; a checked box does not prove the whole answer is complete. Hidden controls and unrelated forms are excluded. This is bounded detection, not a guarantee that every proprietary widget, inaccessible frame or later step will be listed.
 
-## License
+The original planning documents remain on the owner’s machine and are excluded from current GitHub snapshots. The legacy review page remains addressable for regression coverage; the toolbar opens the sidebar.
 
-No license has been specified yet.
+## Historical audited foundation
+
+The records below describe the earlier multi-step review workflow and its fixes. Their passing results do not apply automatically to the new sidebar release.
+
+## Audit cycle 1
+
+See [finding dispositions and verification limits](docs/hackathon/AUDIT-CYCLE-1.md). Current development is on `codex/sidebar-autofill`, proposed for owner review before merging into `main`. Branch names in historical audit plans describe their original checkpoints.
+
+On the owner’s checkout with the local test suite present, run `JAA_REQUIRE_CLEAN=1 npm run check`, then `npm run build`. The Playwright JSON report records the exact SHA, tree, branch and dirty status; the release flag refuses a dirty tree. Development test runs remain allowed and are explicitly marked dirty. `node scripts/e2e.mjs` now adds the local tool binaries to PATH. Use `npm run test:e2e` to build first.
+
+An executed, interrupted or invalidated fill plan cannot be previewed again. Inspect the page and scan again before reusing a saved answer. The UI distinguishes refused writes, attempted but unverified writes, verified writes, and unknown/unreachable outcomes. "Verified" covers immediate readback plus the existing 100 ms window only.
+
+Edits rerun the bounded numeric/technology checks against selected applicant facts, keep original missing notes visible, and remove sentence mappings. To resolve missing notes after correcting the answer, explicitly confirm their resolution; this is human review, not automated factual verification. Cross-application reuse creates a new record and preserves the original reusable answer.
+
+Synthetic loading requires absent raw profile and fact storage. If a saved-answer library is damaged, valid records and facts remain visible, while library mutations fail closed. Use **Inspect raw library**, optionally **Export raw library**, then explicitly confirm **Recover saved answers**. Recovery keeps the entire original envelope in local quarantine and restores only valid, unique records of the supported schema. Quarantine is preserved by later saves/deletes; it is not sent anywhere. An unknown schema recovers no records but retains its complete original data.
+
+## Audit cycle 2
+
+[Cycle 2 dispositions](docs/hackathon/AUDIT-CYCLE-2.md) document the residual fixes. Unchanged original claims retain their cited-fact warnings after edits; genuinely changed prose has no inherited sentence citations, and the original warnings remain inspectable. Common “one of” and “one part of” discourse phrasing does not count as a numeric claim. These checks are bounded heuristics, not semantic verification.
+
+Saved answers are replaced only for the same application **and question**. Other targets fork a new saved record after explicit review/approval/save. Legacy saved CR/CRLF text normalizes in a new reuse draft, before approval; its original trace stays unchanged. Exact readback still rejects meaningful page rewrites.
+
+Fields with oversized descriptors, placeholders or option values that cannot be signed whole are excluded from the automatic scan and may not appear in the preview. Inspect the entire application yourself; absence from the preview is not a claim that a field is completed.
+
+The release handoff supplies separate immutable links for the exact **tested source commit** and its **evidence commit**. Each evidence commit adds only sanitized evidence documents to its source; it is not a replacement source candidate. Its committed summary names the tested SHA, clean-checkout counts, actual smoke provenance and remaining manual gaps, with the fresh request/response/result and screenshots available to reviewers. Cycle 2 evidence uses `codex/audit/evidence-cycle-2`; later cycles have their own evidence branch.
+
+## Audit cycle 3
+
+[Cycle 3 dispositions](docs/hackathon/AUDIT-CYCLE-3.md) cover explicit save enforcement and visible reuse provenance. Both preview and execution require the exact saved record and current approval, independently of coincidentally matching revision numbers. Reuse always requires a fresh review, approval and explicit save. The current job context is separate from the original AI request context displayed in the trace.
+
+Edited wording is not verified against sentence-level sources. Original warnings stay visible for review even if a paraphrase no longer triggers the bounded checks. They may have been addressed by an edit, but the extension cannot determine that automatically; compare the exact answer with the original facts.
+
+## Audit cycle 4
+
+[Cycle 4 disposition](docs/hackathon/AUDIT-CYCLE-4.md) covers one bounded persisted-state consistency repair. Preview and execution rederive the approved application/question identity from the current plan and target row. A privileged session edit cannot redirect an otherwise valid saved approval to a different target merely by changing row/plan references. No page or normal UI reachability was demonstrated. Legitimate explicit reuse, review, approval and save remain supported; this does not claim protection from arbitrary modification of all trusted extension state.
+
+
+### Preferred first name
+
+Profile home also stores an optional preferred first name, blank by default. Résumé and cover-letter names/signatures use it when supplied and otherwise use the regular first name. Autofill uses it only for explicit preferred first/given-name text questions; ordinary and legal first/full names keep the original identity. Ambiguous preferred-name questions remain manual. This value stays local during document generation, and changing it makes existing tailored documents stale until regenerated.
+
+### General résumé setup (0.6.0)
+
+A target position alone can create AI drafts with helper protocol 3 (`general-materials`). Re-run the bundled helper installer to enable this; older helpers receive no role-only evidence and show an update instruction. Existing generated drafts remain readable, but the new summary/style/length settings change their source fingerprint: regenerate before reviewed export. Manual general summaries format user-entered text; AI drafting still grounds claims in saved experience/education/skills, not that summary or a desired job title. Multiple pages are allowed without shrinking or dropping content. There is not yet automatic project ranking or a multi-version résumé database.
+
+### Sidebar review aids
+
+The sidebar uses larger type and amber missing-information panels. **Show field on application** scrolls to and temporarily outlines one uniquely matching visible question without changing its answer. **Preview résumé** displays the saved PDF attachment locally, with page controls; plain-text résumés are also supported. Other attachment formats show an explicit limitation. This is the attachment Autofill uses, not a newly generated general or tailored résumé. Previewing never uploads or replaces it.
+
+Verified fills briefly pulse green on the application, without typing delays or extra input events; reduced-motion preferences are respected. The home preview offers a local **Job keyword check** comparing selected technical terms from the saved posting with saved evidence, the rendered résumé sections and cover-letter wording. It is a bounded vocabulary check, not a proficiency check or ATS score; missing terms are never inserted automatically.
+
+Autofill now checks essential parts of supported writing questions before inserting an AI answer: a baseline work-style preference, explicit technology durations, and proudest/from-scratch claims need saved evidence. These are conservative local checks, not a semantic correctness guarantee. Existing application answers are never replaced. Missing-information cards persist locally for the same application across runs and browser sessions. Complete the answer on the application and explicitly acknowledge every listed issue to **Mark resolved**, or regenerate a complete supported answer in an empty field. A populated field alone never clears a warning. Animated scan/fill/AI stages show current progress without artificial delays and respect reduced motion.

@@ -1,0 +1,17 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+const sha = git('rev-parse', 'HEAD');
+if (git('status', '--porcelain')) throw Error('Export only a clean, committed candidate.');
+// Attribution-corrected equivalent of the original 9540d64 baseline.
+// Validate ancestry before creating artifacts; never silently substitute main.
+const base = '949c96ab064fff73c638d9c8e73b45f12f66a453';
+try { git('merge-base', '--is-ancestor', base, sha); }
+catch { throw Error('Configured export baseline is not an ancestor of this candidate. Verify the attribution mapping before exporting.'); }
+const directory = path.resolve(process.argv[2] ?? `../release-artifacts/${sha}`);
+await fs.mkdir(directory, { recursive: true });
+for (const file of ['docs/plans/2026-11-09-jobright-inspired-autofill.md', 'docs/plans/2026-11-09-hackersquad-build-handoff.md', 'docs/plans/2026-11-09-grok-github-audit-prompt.md']) git('cat-file', '-e', `${sha}:${file}`);
+git('archive', '--format=zip', '--prefix=job-apply-assistant/', `--output=${path.join(directory,'source.zip')}`, sha);
+await fs.writeFile(path.join(directory, 'SNAPSHOT.json'), JSON.stringify({ candidate: sha, tree: git('rev-parse', 'HEAD^{tree}'), branch: git('rev-parse', '--abbrev-ref', 'HEAD'), base, plansIncluded: true, githubAccessible: null, accessNote: 'Local source export. No push is performed by this script; confirm GitHub accessibility separately.', createdAt: new Date().toISOString() }, null, 2) + '\n');
+console.log(JSON.stringify({sha,directory,archive:'source.zip'}));

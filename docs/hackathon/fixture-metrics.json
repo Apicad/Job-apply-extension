@@ -1,0 +1,82 @@
+[
+  {
+    "fixture": "generic",
+    "discovered": 24,
+    "planned": 5,
+    "verified": 5,
+    "manual": 19,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "greenhouse",
+    "discovered": 20,
+    "planned": 4,
+    "verified": 4,
+    "manual": 16,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "lever",
+    "discovered": 20,
+    "planned": 3,
+    "verified": 3,
+    "manual": 17,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "ashby",
+    "discovered": 9,
+    "planned": 3,
+    "verified": 3,
+    "manual": 6,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "hostile",
+    "discovered": 4,
+    "planned": 2,
+    "verified": 2,
+    "manual": 2,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "shadow",
+    "discovered": 4,
+    "planned": 4,
+    "verified": 4,
+    "manual": 0,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "same-origin-frame",
+    "discovered": 0,
+    "planned": 0,
+    "verified": 0,
+    "manual": 0,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "embed-hidden",
+    "discovered": 0,
+    "planned": 0,
+    "verified": 0,
+    "manual": 0,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "embed-host",
+    "discovered": 1,
+    "planned": 0,
+    "verified": 0,
+    "manual": 1,
+    "wrongWrites": 0
+  },
+  {
+    "fixture": "embed-blocked",
+    "discovered": 0,
+    "planned": 0,
+    "verified": 0,
+    "manual": 0,
+    "wrongWrites": 0
+  }
+]
