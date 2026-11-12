@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { defineConfig } from '@playwright/test';
-import { FIXTURE_PORT } from './tests/fixtures/vite.config';
+// Keep application compilation independent of the owner-local fixture directory.
+const FIXTURE_PORT = Number(process.env.JAA_FIXTURE_PORT ?? 5179);
 
 const git = (...args: string[]) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const source = { sha: git('rev-parse', 'HEAD'), tree: git('rev-parse', 'HEAD^{tree}'), branch: git('rev-parse', '--abbrev-ref', 'HEAD'), dirty: git('status', '--porcelain').length > 0 };
